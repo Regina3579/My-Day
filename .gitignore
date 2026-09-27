@@ -16,4 +16,4 @@ xcuserdata/
 
 # macOS
 .DS_Store
-screenshots/
+/screenshots/
