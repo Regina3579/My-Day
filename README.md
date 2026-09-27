@@ -64,4 +64,6 @@ such as iPhone SE, the home screen scrolls.
 ## Continuous integration
 
 `.github/workflows/ios-build.yml` builds the app for the iOS Simulator on every
-push and pull request.
+push and pull request. It then runs `scripts/screenshots.sh`, which opens every
+main screen in the iPhone simulators and uploads the screenshots as a build
+artifact. You can also run the script on a Mac: `./scripts/screenshots.sh`.

@@ -63,6 +63,9 @@ struct RootView: View {
         .task {
             WelcomeContent.seedIfNeeded(in: modelContext)
             refreshDay()
+            #if DEBUG
+            DebugLaunchRoute.apply(to: router, today: appState.today)
+            #endif
         }
     }
 
