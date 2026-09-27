@@ -105,88 +105,128 @@ struct NewTaskSheet: View {
     /// In photo mode (the Photo button) the photo comes first.
     private var photoFirst: Bool { task == nil && focus == .photo }
 
+    // The body is split into small steps so the compiler can type-check each one quickly.
     var body: some View {
+        withDialogs
+            .presentationDetents([.medium, .large], selection: $detent)
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(32)
+            .presentationBackground(Self.background)
+            .task { focusTitleIfNeeded() }
+    }
+
+    private static let background = LinearGradient(
+        colors: [Color(hex: 0xFFF5FA), Color(hex: 0xF7F0FF)], startPoint: .top, endPoint: .bottom
+    )
+
+    /// The scrolling form with the save button pinned to the bottom.
+    private var form: some View {
         ScrollViewReader { scroller in
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    header
-                    if photoFirst {
-                        photoSection
-                    }
-                    titleField
-                    categorySection
-                    options
-                    if task != nil {
-                        deleteButton
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 12)
+                formContent
             }
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 saveBar
             }
             .task {
-                if let focus, focus != .title, focus != .photo {
-                    try? await Task.sleep(for: .milliseconds(300))
-                    withAnimation { scroller.scrollTo(focus, anchor: .center) }
-                }
+                await scrollToFocus(with: scroller)
             }
         }
-        .presentationDetents([.medium, .large], selection: $detent)
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(32)
-        .presentationBackground(
-            LinearGradient(colors: [Color(hex: 0xFFF5FA), Color(hex: 0xF7F0FF)], startPoint: .top, endPoint: .bottom)
-        )
-        .onChange(of: reminderEnabled) { _, isOn in
-            if isOn { askForNotifications() }
-        }
-        .onChange(of: time) { _, newTime in
-            // Keep the reminder in step with the task time until the person turns it on.
-            if !reminderEnabled { reminderDate = date.startOfDay.atTime(of: newTime) }
-        }
-        .onChange(of: title) { _, newTitle in
-            if showsTitleHint, !newTitle.trimmed.isEmpty {
-                withAnimation { showsTitleHint = false }
+    }
+
+    private var formContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            header
+            if photoFirst {
+                photoSection
+            }
+            titleField
+            categorySection
+            options
+            if task != nil {
+                deleteButton
             }
         }
-        .onChange(of: pickerItem) { _, item in
-            loadPicked(item)
-        }
-        .photosPicker(isPresented: $showsLibrary, selection: $pickerItem, matching: .images)
-        .fullScreenCover(isPresented: $showsCamera) {
-            CameraPicker { image in usePhoto(image) }
-                .ignoresSafeArea()
-        }
-        .fullScreenCover(isPresented: $showsViewer) {
-            PhotoViewer(image: viewerImage)
-        }
-        .alert("Notifications are off", isPresented: $showsNotificationAlert) {
-            settingsButtons
-        } message: {
-            Text("Allow notifications for My Day in Settings to get reminders.")
-        }
-        .alert("Camera access is off", isPresented: $showsCameraAlert) {
-            settingsButtons
-        } message: {
-            Text("Allow camera access for My Day in Settings, or choose a photo from your library.")
-        }
-        .alert("That photo couldn't be added", isPresented: $showsPhotoError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Please try another photo.")
-        }
-        .confirmationDialog("Delete this to-do?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive, action: deleteTask)
-        }
-        .task {
-            if (task == nil && !photoFirst && focus == nil) || focus == .title {
-                focusedField = .title
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 12)
+    }
+
+    /// Keeps the reminder and the title hint in step, and loads a picked photo.
+    private var withChangeHandlers: some View {
+        form
+            .onChange(of: reminderEnabled) { _, isOn in
+                if isOn { askForNotifications() }
             }
+            .onChange(of: time) { _, newTime in
+                // Keep the reminder in step with the task time until the person turns it on.
+                if !reminderEnabled { reminderDate = date.startOfDay.atTime(of: newTime) }
+            }
+            .onChange(of: title) { _, newTitle in
+                hideTitleHint(for: newTitle)
+            }
+            .onChange(of: pickerItem) { _, item in
+                loadPicked(item)
+            }
+    }
+
+    /// The photo library, the camera and the full-size photo.
+    private var withPhotoScreens: some View {
+        withChangeHandlers
+            .photosPicker(isPresented: $showsLibrary, selection: $pickerItem, matching: .images)
+            .fullScreenCover(isPresented: $showsCamera) {
+                cameraScreen
+            }
+            .fullScreenCover(isPresented: $showsViewer) {
+                PhotoViewer(image: viewerImage)
+            }
+    }
+
+    private var cameraScreen: some View {
+        CameraPicker { image in usePhoto(image) }
+            .ignoresSafeArea()
+    }
+
+    private var withDialogs: some View {
+        withPhotoScreens
+            .alert("Notifications are off", isPresented: $showsNotificationAlert) {
+                settingsButtons
+            } message: {
+                Text("Allow notifications for My Day in Settings to get reminders.")
+            }
+            .alert("Camera access is off", isPresented: $showsCameraAlert) {
+                settingsButtons
+            } message: {
+                Text("Allow camera access for My Day in Settings, or choose a photo from your library.")
+            }
+            .alert("That photo couldn't be added", isPresented: $showsPhotoError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please try another photo.")
+            }
+            .confirmationDialog("Delete this to-do?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) { deleteTask() }
+            }
+    }
+
+    private func focusTitleIfNeeded() {
+        let isNewTask = task == nil && !photoFirst && focus == nil
+        if isNewTask || focus == .title {
+            focusedField = .title
         }
+    }
+
+    /// Opens at the section asked for (Change date/time, Add reminder, Repeat).
+    private func scrollToFocus(with scroller: ScrollViewProxy) async {
+        guard let focus, focus != .title, focus != .photo else { return }
+        try? await Task.sleep(for: .milliseconds(300))
+        withAnimation { scroller.scrollTo(focus, anchor: .center) }
+    }
+
+    private func hideTitleHint(for newTitle: String) {
+        guard showsTitleHint, !newTitle.trimmed.isEmpty else { return }
+        withAnimation { showsTitleHint = false }
     }
 
     // MARK: Sections
@@ -259,50 +299,71 @@ struct NewTaskSheet: View {
 
     private var options: some View {
         VStack(spacing: 10) {
-            OptionRow(emoji: "📅", title: "Date & Time", value: whenSummary, isExpanded: expanded == .when) {
-                toggle(.when)
-            } panel: {
-                whenPanel
-            }
-            .id(TaskSheetFocus.when)
-
-            OptionRow(emoji: "🔔", title: "Reminder", value: reminderSummary, isExpanded: expanded == .reminder) {
-                toggle(.reminder)
-            } panel: {
-                reminderPanel
-            }
-            .id(TaskSheetFocus.reminder)
-
-            OptionRow(emoji: "🔁", title: "Repeat", value: repeatOption.label, isExpanded: expanded == .repeatRule) {
-                toggle(.repeatRule)
-            } panel: {
-                repeatPanel
-            }
-            .id(TaskSheetFocus.repeatRule)
-
+            whenRow
+            reminderRow
+            repeatRow
             if !photoFirst {
-                OptionRow(emoji: "📷", title: "Photo", value: thumbnail == nil ? "None" : "Added",
-                          thumbnail: thumbnailImage, isExpanded: expanded == .photo) {
-                    toggle(.photo)
-                } panel: {
-                    photoPanel
-                }
-                .id(TaskSheetFocus.photo)
+                photoRow
             }
-
-            OptionRow(emoji: "📝", title: "Note", value: notes.trimmed.isEmpty ? "None" : notes.trimmed,
-                      isExpanded: expanded == .note) {
-                toggle(.note)
-            } panel: {
-                TextField("Add a little note…", text: $notes, axis: .vertical)
-                    .font(.rounded(.body))
-                    .lineLimit(2...6)
-                    .focused($focusedField, equals: .note)
-                    .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
-            }
-            .id(TaskSheetFocus.note)
+            noteRow
         }
+    }
+
+    private var whenRow: some View {
+        OptionRow(emoji: "📅", title: "Date & Time", value: whenSummary, isExpanded: expanded == .when) {
+            toggle(.when)
+        } panel: {
+            whenPanel
+        }
+        .id(TaskSheetFocus.when)
+    }
+
+    private var reminderRow: some View {
+        OptionRow(emoji: "🔔", title: "Reminder", value: reminderSummary, isExpanded: expanded == .reminder) {
+            toggle(.reminder)
+        } panel: {
+            reminderPanel
+        }
+        .id(TaskSheetFocus.reminder)
+    }
+
+    private var repeatRow: some View {
+        OptionRow(emoji: "🔁", title: "Repeat", value: repeatOption.label, isExpanded: expanded == .repeatRule) {
+            toggle(.repeatRule)
+        } panel: {
+            repeatPanel
+        }
+        .id(TaskSheetFocus.repeatRule)
+    }
+
+    private var photoRow: some View {
+        let value = thumbnail == nil ? "None" : "Added"
+        return OptionRow(emoji: "📷", title: "Photo", value: value, thumbnail: thumbnailImage,
+                         isExpanded: expanded == .photo) {
+            toggle(.photo)
+        } panel: {
+            photoPanel
+        }
+        .id(TaskSheetFocus.photo)
+    }
+
+    private var noteRow: some View {
+        let value = notes.trimmed.isEmpty ? "None" : notes.trimmed
+        return OptionRow(emoji: "📝", title: "Note", value: value, isExpanded: expanded == .note) {
+            toggle(.note)
+        } panel: {
+            noteField
+        }
+        .id(TaskSheetFocus.note)
+    }
+
+    private var noteField: some View {
+        TextField("Add a little note…", text: $notes, axis: .vertical)
+            .font(.rounded(.body))
+            .lineLimit(2...6)
+            .focused($focusedField, equals: .note)
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
     }
 
     private var photoSection: some View {
@@ -337,6 +398,10 @@ struct NewTaskSheet: View {
         .padding(.top, 4)
     }
 
+    private static let saveBarFade = LinearGradient(
+        colors: [Color(hex: 0xF7F0FF).opacity(0), Color(hex: 0xF7F0FF)], startPoint: .top, endPoint: .center
+    )
+
     private var saveBar: some View {
         Button(action: save) {
             Text(task == nil ? "Add Task ✨" : "Save Changes ✨")
@@ -346,10 +411,7 @@ struct NewTaskSheet: View {
         .padding(.horizontal, 20)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .background(
-            LinearGradient(colors: [Color(hex: 0xF7F0FF).opacity(0), Color(hex: 0xF7F0FF)],
-                           startPoint: .top, endPoint: .center)
-        )
+        .background(Self.saveBarFade)
     }
 
     // MARK: Panels

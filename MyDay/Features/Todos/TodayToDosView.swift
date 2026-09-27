@@ -42,73 +42,115 @@ struct TodayToDosView: View {
 
     private var doneCount: Int { tasks.filter(\.isCompleted).count }
 
+    // The body is split into small steps so the compiler can type-check each one quickly.
     var body: some View {
-        GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    TodosHero(width: proxy.size.width, safeTop: proxy.safeAreaInsets.top)
-                        .onGeometryChange(for: Bool.self) { geometry in
-                            geometry.frame(in: .global).maxY > 150
-                        } action: { isVisible in
-                            heroIsVisible = isVisible
-                        }
-
-                    content
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 20)
-                        .frame(maxWidth: .infinity)
-                        .background(alignment: .top) {
-                            UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
-                                .fill(LinearGradient(colors: [Color(hex: 0xFFF7FA), TodosBackdrop.base],
-                                                     startPoint: .top, endPoint: .bottom))
-                                .shadow(color: Palette.hotPink.opacity(0.12), radius: 10, x: 0, y: -4)
-                        }
-                        .padding(.top, -24)
+        withSheets
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    principalTitle
                 }
             }
-            .scrollDismissesKeyboard(.interactively)
-            .tabBarSafeArea()
-            .ignoresSafeArea(edges: .top)
+            #if DEBUG
+            .task { openDebugSheet() }
+            #endif
+    }
+
+    private var page: some View {
+        GeometryReader { proxy in
+            scrollingPage(width: proxy.size.width, safeTop: proxy.safeAreaInsets.top)
         }
         .background(TodosBackdrop())
         .overlay(alignment: .bottom) {
-            if let toast {
-                TodoToast(text: toast)
-                    .padding(.bottom, tabBarClearance + 12)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .allowsHitTesting(false)
-            }
+            toastView
         }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text(title)
-                    .font(.rounded(.headline, weight: .bold))
-                    .foregroundStyle(Palette.ink)
-                    .opacity(heroIsVisible ? 0 : 1)
-                    .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
-                    .accessibilityHidden(heroIsVisible)
-            }
-        }
-        .sheet(item: $sheet) { sheet in
-            sheetContent(sheet)
-        }
-        .confirmationDialog("Delete this to-do?", isPresented: deleteBinding, titleVisibility: .visible,
-                            presenting: pendingDelete) { task in
-            Button("Delete “\(task.title)”", role: .destructive) { delete(task) }
-        } message: { _ in
-            Text("This can't be undone.")
-        }
-        #if DEBUG
-        .task {
-            if let route = DebugLaunchRoute.takeTodosSheet() {
-                sheet = TodoSheet(debugRoute: route)
-            }
-        }
-        #endif
     }
+
+    private func scrollingPage(width: CGFloat, safeTop: CGFloat) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                hero(width: width, safeTop: safeTop)
+                panel
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .tabBarSafeArea()
+        .ignoresSafeArea(edges: .top)
+    }
+
+    /// The scene; once it scrolls away, the title appears in the navigation bar.
+    private func hero(width: CGFloat, safeTop: CGFloat) -> some View {
+        TodosHero(width: width, safeTop: safeTop)
+            .onGeometryChange(for: Bool.self) { geometry in
+                geometry.frame(in: .global).maxY > 150
+            } action: { isVisible in
+                heroIsVisible = isVisible
+            }
+    }
+
+    /// Everything below the scene, on a rounded panel that overlaps it slightly.
+    private var panel: some View {
+        content
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 20)
+            .frame(maxWidth: .infinity)
+            .background(alignment: .top) {
+                panelBackground
+            }
+            .padding(.top, -24)
+    }
+
+    private var panelBackground: some View {
+        UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+            .fill(Self.panelFill)
+            .shadow(color: Palette.hotPink.opacity(0.12), radius: 10, x: 0, y: -4)
+    }
+
+    private static let panelFill = LinearGradient(
+        colors: [Color(hex: 0xFFF7FA), TodosBackdrop.base], startPoint: .top, endPoint: .bottom
+    )
+
+    @ViewBuilder
+    private var toastView: some View {
+        if let toast {
+            TodoToast(text: toast)
+                .padding(.bottom, tabBarClearance + 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .allowsHitTesting(false)
+        }
+    }
+
+    private var principalTitle: some View {
+        Text(title)
+            .font(.rounded(.headline, weight: .bold))
+            .foregroundStyle(Palette.ink)
+            .opacity(heroIsVisible ? 0 : 1)
+            .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
+            .accessibilityHidden(heroIsVisible)
+    }
+
+    private var withSheets: some View {
+        page
+            .sheet(item: $sheet) { sheet in
+                sheetContent(sheet)
+            }
+            .confirmationDialog("Delete this to-do?", isPresented: deleteBinding, titleVisibility: .visible,
+                                presenting: pendingDelete) { task in
+                Button("Delete “\(task.title)”", role: .destructive) { delete(task) }
+            } message: { _ in
+                Text("This can't be undone.")
+            }
+    }
+
+    #if DEBUG
+    private func openDebugSheet() {
+        if let route = DebugLaunchRoute.takeTodosSheet() {
+            sheet = TodoSheet(debugRoute: route)
+        }
+    }
+    #endif
 
     // MARK: Content
 
@@ -151,28 +193,39 @@ struct TodayToDosView: View {
         } else {
             VStack(spacing: 10) {
                 ForEach(Array(rows.enumerated()), id: \.element.persistentModelID) { index, task in
-                    TodoRow(
-                        task: task,
-                        tint: RowTint.at(index),
-                        onToggle: { toggle(task) },
-                        onOpen: { sheet = .edit(task, nil) },
-                        onAction: { action in handle(action, for: task) }
-                    )
-                    .draggable(task.id.uuidString) {
-                        Text(task.title)
-                            .font(.rounded(.body, weight: .semibold))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Capsule().fill(Color.white))
-                    }
-                    .dropDestination(for: String.self) { items, _ in
-                        move(items.first, onto: task)
-                    }
-                    .transition(.asymmetric(insertion: .scale(scale: 0.92).combined(with: .opacity),
-                                            removal: .opacity))
+                    row(task, index: index)
                 }
             }
         }
+    }
+
+    private func row(_ task: TaskItem, index: Int) -> some View {
+        TodoRow(
+            task: task,
+            tint: RowTint.at(index),
+            onToggle: { toggle(task) },
+            onOpen: { sheet = .edit(task, nil) },
+            onAction: { action in handle(action, for: task) }
+        )
+        .draggable(task.id.uuidString) {
+            dragPreview(for: task)
+        }
+        .dropDestination(for: String.self) { items, _ in
+            move(items.first, onto: task)
+        }
+        .transition(Self.rowTransition)
+    }
+
+    private static let rowTransition = AnyTransition.asymmetric(
+        insertion: .scale(scale: 0.92).combined(with: .opacity), removal: .opacity
+    )
+
+    private func dragPreview(for task: TaskItem) -> some View {
+        Text(task.title)
+            .font(.rounded(.body, weight: .semibold))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Capsule().fill(Color.white))
     }
 
     @ViewBuilder
