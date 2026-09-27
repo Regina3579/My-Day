@@ -85,7 +85,13 @@ for i in "${!UDIDS[@]}"; do
       echo "---- $route: busiest code on the main thread ----"
       sed -n '/Sort by top of stack/,/Binary Images/p' "$report" | head -40 || true
       echo "---- $route: main thread call graph ----"
-      sed -n '/Call graph:/,/Total number in stack/p' "$report" | grep -v "^ *$" | head -220 | cut -c1-220 || true
+      sed -n '/Call graph:/,/Total number in stack/p' "$report" | grep -v "^ *$" | head -60 | cut -c1-220 || true
+      echo "---- $route: app log ----"
+      xcrun simctl spawn "$udid" log show --last 30s --style compact \
+        --predicate 'process == "MyDay"' 2>/dev/null | grep -v "^Timestamp" | tail -80 | cut -c1-300 || true
+      # A second look, to tell a slow screen from one that never appears.
+      sleep 12
+      xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}-later.png" >/dev/null
     fi
     n=$((n + 1))
   done
