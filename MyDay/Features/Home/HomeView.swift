@@ -52,7 +52,7 @@ struct HomeView: View {
                 )
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
                 HomeHeader(
                     date: today,
                     onMenu: {
@@ -61,8 +61,9 @@ struct HomeView: View {
                     onCalendar: { router.tab = .calendar },
                     onReminders: { router.sheet = .reminders }
                 )
+                // Kept small and to the left so it never covers the girl's bow.
                 DailyQuoteView(date: today)
-                    .padding(.leading, width * 0.06)
+                    .padding(.leading, width * 0.015)
             }
             .padding(.top, topInset + 4)
         }

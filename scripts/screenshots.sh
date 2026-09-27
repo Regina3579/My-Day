@@ -72,7 +72,7 @@ for i in "${!UDIDS[@]}"; do
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
     xcrun simctl launch "$udid" "$BUNDLE_ID" -screenshotRoute "$route" >/dev/null
     sleep "$wait_seconds"
-    wait_seconds=5
+    wait_seconds=8
     xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}.png" >/dev/null
     n=$((n + 1))
   done

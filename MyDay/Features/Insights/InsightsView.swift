@@ -70,6 +70,15 @@ struct InsightsView: View {
             }
             .chartYAxis(.hidden)
             .frame(height: 170)
+            .overlay {
+                if stats.weekDone == 0 {
+                    Text("Finish a to-do to watch your week bloom 🌸")
+                        .font(.rounded(.subheadline, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+            }
         }
         .cuteCard(tint: Palette.grape)
     }

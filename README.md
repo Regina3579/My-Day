@@ -5,6 +5,14 @@
 A colourful, cosy iPhone app for planning the day, choosing what matters most,
 and keeping a private journal. It is built with **SwiftUI** and **SwiftData**.
 
+## Screenshots
+
+Captured automatically in the iPhone 17 Pro simulator by CI.
+
+| Home | Quick Add | Today's Priority | My Journal | Calendar |
+| --- | --- | --- | --- | --- |
+| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-02-quickadd.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-priority.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-06-journal.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-07-calendar.jpg" width="170"> |
+
 ## Features
 
 | Screen | What you can do |
@@ -79,4 +87,6 @@ iPhone SE).
 `.github/workflows/ios-build.yml` builds the app for the iOS Simulator on every
 push and pull request. It then runs `scripts/screenshots.sh`, which opens every
 main screen in the iPhone simulators and uploads the screenshots as a build
-artifact. You can also run the script on a Mac: `./scripts/screenshots.sh`.
+artifact. Running the workflow by hand with *publish_screenshots* also commits small
+JPEG copies to `docs/screenshots/`. You can run the script on a Mac too:
+`./scripts/screenshots.sh`.

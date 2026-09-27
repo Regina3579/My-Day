@@ -15,7 +15,6 @@ struct HomeHeader: View {
 
             Spacer(minLength: 2)
             HomeTitle()
-                .padding(.top, 2)
             Spacer(minLength: 2)
 
             HeaderButton(label: "Calendar, today is \(date.formatted(date: .complete, time: .omitted))",
@@ -89,7 +88,7 @@ struct HomeTitle: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
 
-            Swoosh().frame(width: 128, height: 8)
+            Swoosh().frame(width: 128, height: 6)
         }
         .shadow(color: Color.white, radius: 0.5)
         .shadow(color: Color.white.opacity(0.9), radius: 6)
