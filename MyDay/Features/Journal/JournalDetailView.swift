@@ -8,7 +8,7 @@ struct JournalDetailView: View {
     @Environment(AppState.self) private var appState
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     let entry: JournalEntry
-    @State private var photo: UIImage?
+    @State private var images: [UIImage] = []
     @State private var isEditing = false
     @State private var confirmDelete = false
 
@@ -47,28 +47,36 @@ struct JournalDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityLabel("More")
             }
         }
-        .sheet(isPresented: $isEditing, onDismiss: { loadPhoto() }) {
-            JournalEditorView(entry: entry, date: entry.date)
+        .sheet(isPresented: $isEditing, onDismiss: { loadImages() }) {
+            NewJournalEntrySheet(entry: entry)
         }
         .confirmationDialog("Delete this page?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete Page", role: .destructive, action: deleteEntry)
         } message: {
             Text("This can't be undone.")
         }
-        .task { loadPhoto() }
+        .task { loadImages() }
     }
 
     private var page: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if let photo {
-                    Image(uiImage: photo)
-                        .resizable()
-                        .scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        .shadow(color: Palette.hotPink.opacity(0.25), radius: 12, x: 0, y: 6)
+                if !images.isEmpty {
+                    TabView {
+                        ForEach(images.indices, id: \.self) { index in
+                            Color.clear
+                                .overlay(Image(uiImage: images[index]).resizable().scaledToFill())
+                                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                                .padding(.horizontal, 2)
+                                .accessibilityLabel("Photo \(index + 1) of \(images.count)")
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .always : .never))
+                    .frame(height: 280)
+                    .shadow(color: Palette.hotPink.opacity(0.25), radius: 12, x: 0, y: 6)
                 }
 
                 HStack(spacing: 8) {
@@ -101,8 +109,8 @@ struct JournalDetailView: View {
         }
     }
 
-    private func loadPhoto() {
-        photo = entry.photoData.flatMap(UIImage.init(data:))
+    private func loadImages() {
+        images = entry.sortedPhotos.compactMap { UIImage(data: $0.imageData) }
     }
 
     private func deleteEntry() {

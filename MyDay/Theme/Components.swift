@@ -10,7 +10,7 @@ struct DreamyBackground: View {
         ZStack {
             if theme == .garden {
                 GeometryReader { proxy in
-                    Image("HomeArt")
+                    Image("HomeScene")
                         .resizable()
                         .scaledToFill()
                         .frame(width: proxy.size.width, height: proxy.size.height)

@@ -34,16 +34,16 @@ enum AppRoute: Hashable {
 
 /// Sheets that can be opened from anywhere in the app.
 enum AppSheet: Identifiable {
-    case newTask(day: Date, priority: Bool)
+    case newTask(Date)
+    case newPriority(Date)
     case newJournal(Date)
-    case quickCapture
     case reminders
 
     var id: String {
         switch self {
-        case .newTask(let day, let priority): "task-\(day.timeIntervalSince1970)-\(priority)"
+        case .newTask(let date): "task-\(date.timeIntervalSince1970)"
+        case .newPriority(let date): "priority-\(date.timeIntervalSince1970)"
         case .newJournal(let date): "journal-\(date.timeIntervalSince1970)"
-        case .quickCapture: "quick-capture"
         case .reminders: "reminders"
         }
     }
@@ -56,6 +56,7 @@ final class Router {
     var calendarPath = NavigationPath()
     var sheet: AppSheet?
     var isMenuOpen = false
+    var isQuickAddOpen = false
 
     /// Jumps to the My Day tab and shows `route` on top of the home screen.
     func open(_ route: AppRoute) {
@@ -92,9 +93,9 @@ extension View {
     func appDestinations() -> some View {
         navigationDestination(for: AppRoute.self) { route in
             switch route {
-            case .todos(let day): TodosView(day: day)
-            case .priority(let day): PriorityView(day: day)
-            case .journal: JournalListView()
+            case .todos(let day): TodayToDosView(day: day)
+            case .priority(let day): TodaysPriorityView(day: day)
+            case .journal: JournalView()
             }
         }
         .navigationDestination(for: JournalEntry.self) { entry in

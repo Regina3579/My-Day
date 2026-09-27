@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 import Combine
 
-/// Hosts the four tabs, the floating tab bar, the side menu and app-wide sheets.
+/// Hosts the four tabs, the floating tab bar, the Quick Add menu, the side menu
+/// and the app-wide sheets.
 struct RootView: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
@@ -12,23 +13,24 @@ struct RootView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let screen = CGSize(
-                width: proxy.size.width + proxy.safeAreaInsets.leading + proxy.safeAreaInsets.trailing,
-                height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-            )
-            let space = ArtSpace(container: screen)
-            let bar = TabBarMetrics(space: space)
-            let reserved = max(0, bar.height + bar.bottomPadding - proxy.safeAreaInsets.bottom) + 8
+            let barBottom = TabBarLayout.bottomPadding(safeAreaBottom: proxy.safeAreaInsets.bottom)
+            let reserved = max(0, TabBarLayout.height + barBottom - proxy.safeAreaInsets.bottom) + 8
 
             ZStack(alignment: .bottom) {
                 tabs(reserved: reserved)
 
-                MyDayTabBar(selection: tabBinding, metrics: bar) { tab in
+                BottomTabBar(selection: tabBinding) { tab in
                     router.popToRoot(tab)
                 }
-                .padding(.bottom, bar.bottomPadding)
+                .padding(.horizontal, 12)
+                .padding(.bottom, barBottom)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .ignoresSafeArea(edges: .bottom)
+
+                if showsQuickAdd {
+                    quickAddLayer(aboveBottom: barBottom + TabBarLayout.height + 16)
+                        .transition(.opacity)
+                }
 
                 if router.isMenuOpen {
                     Color.black.opacity(0.28)
@@ -45,10 +47,13 @@ struct RootView: View {
                         .zIndex(2)
                 }
             }
-            .environment(\.artSpace, space)
+            .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
         }
         .sheet(item: sheetBinding) { sheet in
             sheetContent(sheet)
+        }
+        .onChange(of: router.tab) { _, _ in
+            router.isQuickAddOpen = false
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -80,7 +85,7 @@ struct RootView: View {
             .tabLayer(visible: router.tab == .home, reserved: reserved)
 
             NavigationStack(path: calendarPathBinding) {
-                CalendarScreen()
+                CalendarView()
                     .appDestinations()
             }
             .tabLayer(visible: router.tab == .calendar, reserved: reserved)
@@ -98,15 +103,65 @@ struct RootView: View {
         }
     }
 
+    // MARK: Quick Add
+
+    private var showsQuickAdd: Bool {
+        router.tab == .home && router.homePath.isEmpty
+    }
+
+    private func quickAddLayer(aboveBottom: CGFloat) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            if router.isQuickAddOpen {
+                // Tapping anywhere outside the menu closes it.
+                Color.black.opacity(0.15)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { setQuickAdd(open: false) }
+                    .transition(.opacity)
+                    .accessibilityLabel("Close quick add")
+                    .accessibilityAddTraits(.isButton)
+            }
+
+            VStack(alignment: .trailing, spacing: 16) {
+                if router.isQuickAddOpen {
+                    QuickAddMenu(
+                        onTask: { quickAdd(.newTask(appState.today)) },
+                        onPriority: { quickAdd(.newPriority(appState.today)) },
+                        onJournal: { quickAdd(.newJournal(.now)) }
+                    )
+                    .transition(.scale(scale: 0.4, anchor: .bottomTrailing).combined(with: .opacity))
+                }
+                QuickAddButton(isOpen: router.isQuickAddOpen) {
+                    setQuickAdd(open: !router.isQuickAddOpen)
+                }
+            }
+            .padding(.trailing, 18)
+            .padding(.bottom, aboveBottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    private func setQuickAdd(open: Bool) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            router.isQuickAddOpen = open
+        }
+    }
+
+    private func quickAdd(_ sheet: AppSheet) {
+        setQuickAdd(open: false)
+        router.sheet = sheet
+    }
+
     @ViewBuilder
     private func sheetContent(_ sheet: AppSheet) -> some View {
         switch sheet {
-        case .newTask(let day, let priority):
-            TaskEditorView(mode: .new(day: day, priority: priority))
+        case .newTask(let date):
+            NewTaskSheet(date: date)
+        case .newPriority(let date):
+            NewPrioritySheet(date: date)
         case .newJournal(let date):
-            JournalEditorView(entry: nil, date: date)
-        case .quickCapture:
-            QuickCaptureView()
+            NewJournalEntrySheet(date: date)
         case .reminders:
             NavigationStack {
                 RemindersView(showsDoneButton: true)
@@ -168,5 +223,5 @@ private extension View {
     RootView()
         .environment(Router())
         .environment(AppState())
-        .modelContainer(for: [TaskItem.self, JournalEntry.self], inMemory: true)
+        .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self], inMemory: true)
 }

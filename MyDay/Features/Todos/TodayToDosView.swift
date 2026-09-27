@@ -2,12 +2,12 @@ import SwiftUI
 import SwiftData
 
 /// "Today's To-Dos — Plan • Do • Achieve". Also used for any other day from the calendar.
-struct TodosView: View {
+struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
     @AppStorage(Prefs.showCompleted) private var showCompleted = true
     @Query private var tasks: [TaskItem]
     @State private var draft = ""
-    @State private var draftIsPriority = false
+    @State private var filter: TaskCategory?
     @State private var editing: TaskItem?
     @State private var isComposing = false
     @FocusState private var draftFocused: Bool
@@ -18,19 +18,25 @@ struct TodosView: View {
         let end = start.nextDay
         self.day = start
         _tasks = Query(
-            filter: #Predicate<TaskItem> { $0.day >= start && $0.day < end },
-            sort: [SortDescriptor(\TaskItem.sortIndex), SortDescriptor(\TaskItem.createdAt)]
+            filter: #Predicate<TaskItem> { $0.date >= start && $0.date < end },
+            sort: [SortDescriptor(\TaskItem.sortOrder), SortDescriptor(\TaskItem.createdAt)]
         )
     }
 
-    private var openTasks: [TaskItem] { tasks.filter { !$0.isDone } }
+    private var visible: [TaskItem] {
+        guard let filter else { return tasks }
+        return tasks.filter { $0.category == filter }
+    }
+
+    private var openTasks: [TaskItem] { visible.filter { !$0.isCompleted } }
 
     private var doneTasks: [TaskItem] {
-        tasks.filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
+        visible.filter(\.isCompleted)
+            .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
 
     private var progress: Double {
-        tasks.isEmpty ? 0 : Double(doneTasks.count) / Double(tasks.count)
+        tasks.isEmpty ? 0 : Double(tasks.filter(\.isCompleted).count) / Double(tasks.count)
     }
 
     private var title: String {
@@ -47,6 +53,11 @@ struct TodosView: View {
         }
     }
 
+    private var usedCategories: [TaskCategory] {
+        let used = Set(tasks.map(\.category))
+        return TaskCategory.allCases.filter { used.contains($0) }
+    }
+
     var body: some View {
         List {
             Section {
@@ -60,6 +71,9 @@ struct TodosView: View {
 
             Section {
                 addRow
+                if usedCategories.count > 1 {
+                    categoryFilter
+                }
             }
             .listRowBackground(Color.white.opacity(0.85))
 
@@ -114,10 +128,10 @@ struct TodosView: View {
             }
         }
         .sheet(item: $editing) { task in
-            TaskEditorView(mode: .edit(task))
+            NewTaskSheet(task: task)
         }
         .sheet(isPresented: $isComposing) {
-            TaskEditorView(mode: .new(day: day, priority: false))
+            NewTaskSheet(date: day, category: filter ?? .personal)
         }
     }
 
@@ -134,17 +148,33 @@ struct TodosView: View {
                 .focused($draftFocused)
                 .onSubmit { addDraft() }
             Button {
-                draftIsPriority.toggle()
-                Haptics.tap()
+                isComposing = true
             } label: {
-                Image(systemName: draftIsPriority ? "star.fill" : "star")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(draftIsPriority ? Palette.honey : Color.secondary.opacity(0.6))
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Palette.grape)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(draftIsPriority ? "Will be a priority" : "Make it a priority")
+            .accessibilityLabel("More options")
         }
         .padding(.vertical, 4)
+    }
+
+    private var categoryFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                FilterChip(title: "All", symbol: "square.grid.2x2.fill", tint: Palette.grape, isOn: filter == nil) {
+                    filter = nil
+                }
+                ForEach(usedCategories) { category in
+                    FilterChip(title: category.label, symbol: category.symbol, tint: category.color,
+                               isOn: filter == category) {
+                        filter = filter == category ? nil : category
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
     }
 
     private var celebration: some View {
@@ -163,21 +193,10 @@ struct TodosView: View {
     }
 
     private func row(_ task: TaskItem) -> some View {
-        TaskRow(task: task, tint: Palette.grape,
-                onToggle: { toggle(task) },
-                onStar: { star(task) },
-                onOpen: { editing = task })
-            .swipeActions(edge: .leading) {
-                Button {
-                    star(task)
-                } label: {
-                    Label(task.isPriority ? "Unstar" : "Priority", systemImage: task.isPriority ? "star.slash" : "star.fill")
-                }
-                .tint(Palette.honey)
-            }
+        TaskRow(task: task, onToggle: { toggle(task) }, onOpen: { editing = task })
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) {
-                    delete(task)
+                    withAnimation(.snappy) { TaskActions.delete(task, in: context) }
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
@@ -190,85 +209,119 @@ struct TodosView: View {
         let clean = draft.trimmed
         guard !clean.isEmpty else { return }
         withAnimation(.snappy) {
-            context.insert(TaskItem(title: clean, day: day, isPriority: draftIsPriority))
+            context.insert(TaskItem(title: clean, category: filter ?? .personal, date: day))
         }
         draft = ""
-        draftIsPriority = false
         Haptics.tap()
         draftFocused = true
     }
 
     private func toggle(_ task: TaskItem) {
-        withAnimation(.snappy) { task.toggleDone() }
-        ReminderCenter.sync(task)
-        if task.isDone { Haptics.success() } else { Haptics.tap() }
-    }
-
-    private func star(_ task: TaskItem) {
-        withAnimation(.snappy) { task.isPriority.toggle() }
-        Haptics.tap()
-    }
-
-    private func delete(_ task: TaskItem) {
-        ReminderCenter.cancel(taskID: task.uuid)
-        withAnimation(.snappy) { context.delete(task) }
+        withAnimation(.snappy) { TaskActions.toggle(task, in: context) }
     }
 
     private func move(from source: IndexSet, to destination: Int) {
         var reordered = openTasks
         reordered.move(fromOffsets: source, toOffset: destination)
         for (index, task) in reordered.enumerated() {
-            task.sortIndex = Double(index)
+            task.sortOrder = Double(index)
         }
     }
 }
 
-/// A single to-do: checkbox, title, note, reminder time and priority star.
+/// A single to-do: checkbox, title, category, time, reminder and repeat.
 struct TaskRow: View {
     let task: TaskItem
-    var tint: Color = Palette.grape
     let onToggle: () -> Void
-    let onStar: () -> Void
     let onOpen: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             Button(action: onToggle) {
-                CheckBubble(isOn: task.isDone, tint: tint)
+                CheckBubble(isOn: task.isCompleted, tint: task.category.color)
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
+            .accessibilityLabel(task.isCompleted ? "Mark \(task.title) as not done" : "Mark \(task.title) as done")
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.rounded(.body, weight: .semibold))
-                    .strikethrough(task.isDone, color: tint)
-                    .foregroundStyle(task.isDone ? Color.secondary : Palette.ink)
+                    .strikethrough(task.isCompleted, color: task.category.color)
+                    .foregroundStyle(task.isCompleted ? Color.secondary : Palette.ink)
                 if !task.notes.isEmpty {
                     Text(task.notes)
                         .font(.rounded(.caption))
                         .foregroundStyle(Color.secondary)
                         .lineLimit(2)
                 }
-                if let reminder = task.reminderAt, !task.isDone {
-                    Label(reminder.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
-                        .font(.rounded(.caption2, weight: .bold))
-                        .foregroundStyle(Palette.hotPink)
-                }
+                TaskMetaLine(task: task)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(perform: onOpen)
             .accessibilityAddTraits(.isButton)
-
-            Button(action: onStar) {
-                Image(systemName: task.isPriority ? "star.fill" : "star")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(task.isPriority ? Palette.honey : Color.secondary.opacity(0.6))
-            }
-            .buttonStyle(.borderless)
-            .accessibilityLabel(task.isPriority ? "Remove from priorities" : "Make it a priority")
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Category, time, reminder and repeat, shown in small type under a to-do.
+struct TaskMetaLine: View {
+    let task: TaskItem
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Label(task.category.label, systemImage: task.category.symbol)
+                .foregroundStyle(task.category.color)
+            if let time = task.time {
+                Label(time.formatted(date: .omitted, time: .shortened), systemImage: "clock")
+                    .foregroundStyle(Palette.inkSoft)
+            }
+            if let reminder = task.activeReminder, !task.isCompleted {
+                Label(reminder.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
+                    .foregroundStyle(Palette.hotPink)
+            }
+            if task.repeatOption != .never {
+                Image(systemName: "repeat")
+                    .foregroundStyle(Palette.inkSoft)
+                    .accessibilityLabel(task.repeatOption.label)
+            }
+        }
+        .font(.rounded(.caption2, weight: .bold))
+        .labelStyle(CompactLabelStyle())
+        .lineLimit(1)
+    }
+}
+
+private struct CompactLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 3) {
+            configuration.icon
+            configuration.title
+        }
+    }
+}
+
+struct FilterChip: View {
+    let title: String
+    let symbol: String
+    let tint: Color
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            withAnimation(.snappy) { action() }
+        } label: {
+            Label(title, systemImage: symbol)
+                .font(.rounded(.caption, weight: .bold))
+                .foregroundStyle(isOn ? Color.white : tint)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Capsule().fill(isOn ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(tint.opacity(0.12))))
+        }
+        .buttonStyle(.borderless)
+        .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
     }
 }

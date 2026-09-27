@@ -1,7 +1,10 @@
 import Foundation
 import UserNotifications
 
-/// Local notifications: one-off to-do reminders and the two daily nudges.
+/// Local notifications for to-do reminders and the two daily nudges.
+///
+/// Permission is requested only from `requestPermission()`, which the UI calls
+/// the first time the person switches a reminder on — never at launch.
 enum ReminderCenter {
     private static var center: UNUserNotificationCenter { .current() }
 
@@ -31,11 +34,11 @@ enum ReminderCenter {
         }
     }
 
-    /// Asks for permission the first time; afterwards returns the saved answer.
+    /// Shows the system prompt if the person has not decided yet.
+    /// Returns whether notifications may be delivered.
     @discardableResult
     static func requestPermission() async -> Bool {
-        let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
+        switch await authorizationStatus() {
         case .authorized, .provisional, .ephemeral:
             return true
         case .notDetermined:
@@ -49,23 +52,29 @@ enum ReminderCenter {
         await center.notificationSettings().authorizationStatus
     }
 
+    private static func isAllowed() async -> Bool {
+        switch await authorizationStatus() {
+        case .authorized, .provisional, .ephemeral: true
+        default: false
+        }
+    }
+
     // MARK: To-do reminders
 
     private static func identifier(for taskID: UUID) -> String { "task-\(taskID.uuidString)" }
 
     /// Schedules the reminder that belongs to `task`, or removes it when it is
-    /// done, has no reminder, or the time has passed.
+    /// done, switched off or already in the past. Never shows a permission prompt.
     static func sync(_ task: TaskItem) {
-        let id = identifier(for: task.uuid)
+        let id = identifier(for: task.id)
         let title = task.title
-        let fireDate = task.reminderAt
-        let isDone = task.isDone
+        let fireDate = task.isCompleted ? nil : task.activeReminder
 
         center.removePendingNotificationRequests(withIdentifiers: [id])
-        guard let fireDate, !isDone, fireDate > .now else { return }
+        guard let fireDate, fireDate > .now else { return }
 
         Task {
-            guard await requestPermission() else { return }
+            guard await isAllowed() else { return }
             let content = UNMutableNotificationContent()
             content.title = "My Day 💖"
             content.body = title
@@ -87,8 +96,8 @@ enum ReminderCenter {
         guard enabled else { return }
 
         Task {
-            guard await requestPermission() else { return }
-            // The switch may have been turned off while we waited for permission.
+            guard await isAllowed() else { return }
+            // The switch may have been turned off in the meantime.
             guard UserDefaults.standard.bool(forKey: kind.enabledKey) else { return }
 
             let content = UNMutableNotificationContent()

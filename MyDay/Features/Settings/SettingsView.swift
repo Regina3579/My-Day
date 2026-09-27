@@ -54,7 +54,7 @@ struct SettingsView: View {
 
             Section("To-Dos") {
                 Toggle(isOn: $carryOver) {
-                    Label("Move unfinished to-dos to today", systemImage: "arrow.uturn.forward.circle.fill")
+                    Label("Move unfinished items to today", systemImage: "arrow.uturn.forward.circle.fill")
                 }
                 Toggle(isOn: $showCompleted) {
                     Label("Show finished to-dos", systemImage: "checkmark.circle.fill")
@@ -78,7 +78,7 @@ struct SettingsView: View {
                 Button {
                     confirmClearDone = true
                 } label: {
-                    Label("Clear finished to-dos", systemImage: "checkmark.circle.badge.xmark")
+                    Label("Clear finished items", systemImage: "checkmark.circle.badge.xmark")
                 }
                 Button(role: .destructive) {
                     confirmEraseAll = true
@@ -103,10 +103,10 @@ struct SettingsView: View {
         } message: {
             Text(lockMessage ?? "")
         }
-        .confirmationDialog("Clear all finished to-dos?", isPresented: $confirmClearDone, titleVisibility: .visible) {
-            Button("Clear finished to-dos", role: .destructive, action: clearFinished)
+        .confirmationDialog("Clear finished to-dos and priorities?", isPresented: $confirmClearDone, titleVisibility: .visible) {
+            Button("Clear finished items", role: .destructive, action: clearFinished)
         }
-        .confirmationDialog("Erase all to-dos and journal pages?", isPresented: $confirmEraseAll,
+        .confirmationDialog("Erase all to-dos, priorities and journal pages?", isPresented: $confirmEraseAll,
                             titleVisibility: .visible) {
             Button("Erase everything", role: .destructive, action: eraseAll)
         } message: {
@@ -142,10 +142,16 @@ struct SettingsView: View {
     // MARK: Data
 
     private func clearFinished() {
-        let finished = (try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDone == true }))) ?? []
+        router.homePath = NavigationPath()
+        router.calendarPath = NavigationPath()
+        let finished = (try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isCompleted == true }))) ?? []
         for task in finished {
-            ReminderCenter.cancel(taskID: task.uuid)
-            context.delete(task)
+            TaskActions.delete(task, in: context)
+        }
+        let finishedPriorities = (try? context.fetch(
+            FetchDescriptor<Priority>(predicate: #Predicate { $0.isCompleted == true }))) ?? []
+        for priority in finishedPriorities {
+            context.delete(priority)
         }
         Haptics.success()
     }
@@ -157,8 +163,11 @@ struct SettingsView: View {
 
         let allTasks = (try? context.fetch(FetchDescriptor<TaskItem>())) ?? []
         for task in allTasks {
-            ReminderCenter.cancel(taskID: task.uuid)
-            context.delete(task)
+            TaskActions.delete(task, in: context)
+        }
+        let allPriorities = (try? context.fetch(FetchDescriptor<Priority>())) ?? []
+        for priority in allPriorities {
+            context.delete(priority)
         }
         let allEntries = (try? context.fetch(FetchDescriptor<JournalEntry>())) ?? []
         for entry in allEntries {

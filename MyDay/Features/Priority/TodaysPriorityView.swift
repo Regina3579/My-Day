@@ -2,12 +2,12 @@ import SwiftUI
 import SwiftData
 
 /// "Today's Priority — Focus on what matters most".
-/// Priorities are starred to-dos, so they also appear in the to-do list.
-struct PriorityView: View {
+struct TodaysPriorityView: View {
     @Environment(\.modelContext) private var context
+    @Query private var priorities: [Priority]
     @Query private var tasks: [TaskItem]
     @State private var draft = ""
-    @State private var editing: TaskItem?
+    @State private var editing: Priority?
     @FocusState private var draftFocused: Bool
     private let day: Date
 
@@ -15,47 +15,70 @@ struct PriorityView: View {
         let start = day.startOfDay
         let end = start.nextDay
         self.day = start
+        _priorities = Query(
+            filter: #Predicate<Priority> { $0.date >= start && $0.date < end },
+            sort: [SortDescriptor(\Priority.order), SortDescriptor(\Priority.createdAt)]
+        )
         _tasks = Query(
-            filter: #Predicate<TaskItem> { $0.day >= start && $0.day < end },
-            sort: [SortDescriptor(\TaskItem.sortIndex), SortDescriptor(\TaskItem.createdAt)]
+            filter: #Predicate<TaskItem> { $0.date >= start && $0.date < end && $0.isCompleted == false },
+            sort: [SortDescriptor(\TaskItem.sortOrder)]
         )
     }
 
-    private var priorities: [TaskItem] { tasks.filter(\.isPriority) }
-    private var candidates: [TaskItem] { tasks.filter { !$0.isPriority && !$0.isDone } }
-    private var doneCount: Int { priorities.filter(\.isDone).count }
+    private var doneCount: Int { priorities.filter(\.isCompleted).count }
+
+    /// Open to-dos that are not already priorities, offered as suggestions.
+    private var suggestions: [TaskItem] {
+        let chosen = Set(priorities.map { $0.title.lowercased() })
+        return tasks.filter { !chosen.contains($0.title.lowercased()) }
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
+        List {
+            Section {
                 hero
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
+            Section {
                 if priorities.isEmpty {
                     EmptyStateCard(title: "What matters most today?",
                                    message: "Choose one to three things. Doing them makes the whole day feel great. ⭐")
-                } else {
-                    ForEach(Array(priorities.enumerated()), id: \.element.id) { index, task in
-                        PriorityCard(rank: index + 1, task: task,
-                                     onToggle: { toggle(task) },
-                                     onOpen: { editing = task },
-                                     onUnstar: { unstar(task) })
-                    }
+                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
                 }
+                ForEach(Array(priorities.enumerated()), id: \.element.persistentModelID) { index, priority in
+                    PriorityCard(rank: index + 1, priority: priority,
+                                 onToggle: { toggle(priority) },
+                                 onOpen: { editing = priority })
+                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                delete(priority)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                }
+                .onMove { move(from: $0, to: $1) }
 
                 addCard
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
 
                 if priorities.count > 3 {
                     Label("Tip: keep it to three — focus is a superpower ✨", systemImage: "lightbulb.fill")
                         .font(.rounded(.footnote, weight: .semibold))
                         .foregroundStyle(Palette.cocoa)
                         .cuteCard(tint: Palette.honey, padding: 14)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
                 }
 
-                if !candidates.isEmpty {
-                    pickCard
+                if !suggestions.isEmpty {
+                    suggestionsCard
+                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
                 }
 
-                Text(Quotes.focus(for: day))
+                Text(FocusQuotes.quote(for: day))
                     .font(.rounded(.callout, weight: .semibold))
                     .italic()
                     .foregroundStyle(Palette.cocoa.opacity(0.8))
@@ -63,16 +86,18 @@ struct PriorityView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .animation(.snappy, value: priorities.map(\.isDone))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        .contentMargins(.horizontal, 18, for: .scrollContent)
         .background(DreamyBackground(theme: .priority))
         .navigationTitle(day.isToday ? "Today's Priority" : "Priorities")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $editing) { task in
-            TaskEditorView(mode: .edit(task))
+        .sheet(item: $editing) { priority in
+            NewPrioritySheet(priority: priority)
         }
     }
 
@@ -84,20 +109,14 @@ struct PriorityView: View {
                 Circle()
                     .fill(RadialGradient(colors: [Color.white, Palette.butter.opacity(0)],
                                          center: .center, startRadius: 4, endRadius: 80))
-                    .frame(width: 160, height: 160)
+                    .frame(width: 150, height: 150)
                 Image(systemName: "star.fill")
-                    .font(.system(size: 76))
+                    .font(.system(size: 72))
                     .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFE066), Palette.honey],
                                                     startPoint: .top, endPoint: .bottom))
                     .shadow(color: Palette.honey.opacity(0.5), radius: 12, x: 0, y: 6)
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Palette.bubblegum)
-                    .offset(x: -70, y: -24)
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Palette.bubblegum)
-                    .offset(x: 72, y: 14)
+                ShinyHeart(size: 20).offset(x: -70, y: -24)
+                ShinyHeart(size: 14).offset(x: 72, y: 14)
                 Image(systemName: "sparkle")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Palette.honey)
@@ -136,8 +155,8 @@ struct PriorityView: View {
                 .font(.rounded(.body, weight: .medium))
                 .submitLabel(.done)
                 .focused($draftFocused)
-                .onSubmit { add() }
-            Button("Add", action: add)
+                .onSubmit { add(draft) }
+            Button("Add") { add(draft) }
                 .font(.rounded(.subheadline, weight: .bold))
                 .buttonStyle(.borderedProminent)
                 .tint(Palette.honey)
@@ -146,14 +165,14 @@ struct PriorityView: View {
         .cuteCard(tint: Palette.honey, padding: 14)
     }
 
-    private var pickCard: some View {
+    private var suggestionsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Pick from today's to-dos")
                 .font(.rounded(.headline, weight: .bold))
                 .foregroundStyle(Palette.cocoa)
-            ForEach(candidates) { task in
+            ForEach(suggestions.prefix(5)) { task in
                 Button {
-                    promote(task)
+                    add(task.title)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "star")
@@ -170,12 +189,8 @@ struct PriorityView: View {
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless)
                 .accessibilityLabel("Make \(task.title) a priority")
-
-                if task.id != candidates.last?.id {
-                    Divider()
-                }
             }
         }
         .cuteCard(tint: Palette.honey)
@@ -183,41 +198,44 @@ struct PriorityView: View {
 
     // MARK: Actions
 
-    private func add() {
-        let clean = draft.trimmed
+    private func add(_ text: String) {
+        let clean = text.trimmed
         guard !clean.isEmpty else { return }
+        let nextOrder = (priorities.map(\.order).max() ?? -1) + 1
         withAnimation(.snappy) {
-            context.insert(TaskItem(title: clean, day: day, isPriority: true))
+            context.insert(Priority(title: clean, date: day, order: nextOrder))
         }
-        draft = ""
+        if text == draft {
+            draft = ""
+            draftFocused = true
+        }
         Haptics.success()
-        draftFocused = true
     }
 
-    private func toggle(_ task: TaskItem) {
-        withAnimation(.snappy) { task.toggleDone() }
-        ReminderCenter.sync(task)
-        if task.isDone { Haptics.success() } else { Haptics.tap() }
+    private func toggle(_ priority: Priority) {
+        withAnimation(.snappy) { priority.toggleCompleted() }
+        if priority.isCompleted { Haptics.success() } else { Haptics.tap() }
     }
 
-    private func promote(_ task: TaskItem) {
-        withAnimation(.snappy) { task.isPriority = true }
-        Haptics.tap()
+    private func delete(_ priority: Priority) {
+        withAnimation(.snappy) { context.delete(priority) }
     }
 
-    private func unstar(_ task: TaskItem) {
-        withAnimation(.snappy) { task.isPriority = false }
-        Haptics.tap()
+    private func move(from source: IndexSet, to destination: Int) {
+        var reordered = priorities
+        reordered.move(fromOffsets: source, toOffset: destination)
+        for (index, priority) in reordered.enumerated() {
+            priority.order = index
+        }
     }
 }
 
 /// A numbered golden card for one priority.
 struct PriorityCard: View {
     let rank: Int
-    let task: TaskItem
+    let priority: Priority
     let onToggle: () -> Void
     let onOpen: () -> Void
-    let onUnstar: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -231,36 +249,21 @@ struct PriorityCard: View {
                 )
                 .shadow(color: Palette.honey.opacity(0.4), radius: 6, x: 0, y: 3)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
-                    .font(.rounded(.headline, weight: .bold))
-                    .strikethrough(task.isDone, color: Palette.honey)
-                    .foregroundStyle(task.isDone ? Color.secondary : Palette.cocoa)
-                if !task.notes.isEmpty {
-                    Text(task.notes)
-                        .font(.rounded(.caption))
-                        .foregroundStyle(Palette.cocoa.opacity(0.7))
-                        .lineLimit(2)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onOpen)
+            Text(priority.title)
+                .font(.rounded(.headline, weight: .bold))
+                .strikethrough(priority.isCompleted, color: Palette.honey)
+                .foregroundStyle(priority.isCompleted ? Color.secondary : Palette.cocoa)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onOpen)
+                .accessibilityAddTraits(.isButton)
 
             Button(action: onToggle) {
-                CheckBubble(isOn: task.isDone, tint: Palette.honey, size: 32)
+                CheckBubble(isOn: priority.isCompleted, tint: Palette.honey, size: 32)
             }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityLabel(task.isDone ? "Mark as not done" : "Mark as done")
+            .buttonStyle(.borderless)
+            .accessibilityLabel(priority.isCompleted ? "Mark as not done" : "Mark as done")
         }
         .cuteCard(tint: Palette.honey, padding: 16)
-        .contextMenu {
-            Button(action: onOpen) {
-                Label("Edit", systemImage: "pencil")
-            }
-            Button(action: onUnstar) {
-                Label("Remove from priorities", systemImage: "star.slash")
-            }
-        }
     }
 }

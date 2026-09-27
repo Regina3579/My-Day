@@ -2,8 +2,19 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 
-/// Write or edit a journal page: mood, title, text, prompts and a photo.
-struct JournalEditorView: View {
+/// Write a new journal page, or edit an existing one: mood, title, text, prompts and photos.
+struct NewJournalEntrySheet: View {
+    /// A photo shown in the editor: either already saved, or just picked.
+    private struct PhotoDraft: Identifiable {
+        let id = UUID()
+        let existing: JournalPhoto?
+        let imageData: Data
+        let thumbnailData: Data?
+        let preview: UIImage?
+    }
+
+    private static let maxPhotos = 6
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     private let entry: JournalEntry?
@@ -12,11 +23,9 @@ struct JournalEditorView: View {
     @State private var text: String
     @State private var mood: Mood
     @State private var isFavorite: Bool
-    @State private var photoData: Data?
-    @State private var thumbnailData: Data?
-    @State private var preview: UIImage?
-    @State private var pickerItem: PhotosPickerItem?
-    @State private var isLoadingPhoto = false
+    @State private var photos: [PhotoDraft]
+    @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var isLoadingPhotos = false
     @FocusState private var textFocused: Bool
 
     private let prompts = [
@@ -27,19 +36,32 @@ struct JournalEditorView: View {
         "Tomorrow I want to…"
     ]
 
-    init(entry: JournalEntry?, date: Date) {
-        self.entry = entry
-        _date = State(initialValue: entry?.date ?? date)
-        _title = State(initialValue: entry?.title ?? "")
-        _text = State(initialValue: entry?.body ?? "")
-        _mood = State(initialValue: entry?.mood ?? .happy)
-        _isFavorite = State(initialValue: entry?.isFavorite ?? false)
-        _photoData = State(initialValue: entry?.photoData)
-        _thumbnailData = State(initialValue: entry?.thumbnailData)
-        _preview = State(initialValue: entry?.photoData.flatMap(UIImage.init(data:)))
+    /// A new page dated `date`.
+    init(date: Date) {
+        entry = nil
+        _date = State(initialValue: date)
+        _title = State(initialValue: "")
+        _text = State(initialValue: "")
+        _mood = State(initialValue: .happy)
+        _isFavorite = State(initialValue: false)
+        _photos = State(initialValue: [])
     }
 
-    private var canSave: Bool { !title.trimmed.isEmpty || !text.trimmed.isEmpty }
+    /// Edit an existing page.
+    init(entry: JournalEntry) {
+        self.entry = entry
+        _date = State(initialValue: entry.date)
+        _title = State(initialValue: entry.title)
+        _text = State(initialValue: entry.body)
+        _mood = State(initialValue: entry.mood)
+        _isFavorite = State(initialValue: entry.isFavorite)
+        _photos = State(initialValue: entry.sortedPhotos.map { photo in
+            PhotoDraft(existing: photo, imageData: photo.imageData, thumbnailData: photo.thumbnailData,
+                       preview: photo.thumbnailData.flatMap(UIImage.init(data:)))
+        })
+    }
+
+    private var canSave: Bool { !title.trimmed.isEmpty || !text.trimmed.isEmpty || !photos.isEmpty }
 
     var body: some View {
         NavigationStack {
@@ -47,7 +69,7 @@ struct JournalEditorView: View {
                 VStack(spacing: 16) {
                     moodCard
                     writingCard
-                    photoCard
+                    photosCard
                 }
                 .padding(18)
             }
@@ -62,11 +84,11 @@ struct JournalEditorView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: save)
                         .fontWeight(.bold)
-                        .disabled(!canSave)
+                        .disabled(!canSave || isLoadingPhotos)
                 }
             }
-            .onChange(of: pickerItem) { _, item in
-                loadPhoto(item)
+            .onChange(of: pickerItems) { _, items in
+                loadPhotos(items)
             }
         }
         .presentationDragIndicator(.visible)
@@ -88,6 +110,8 @@ struct JournalEditorView: View {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .font(.title3)
                         .foregroundStyle(Palette.hotPink)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(PressScaleStyle())
                 .accessibilityLabel(isFavorite ? "Favorite page" : "Mark as favorite")
@@ -153,7 +177,7 @@ struct JournalEditorView: View {
                                 .font(.rounded(.caption, weight: .semibold))
                                 .foregroundStyle(Palette.berry)
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
+                                .padding(.vertical, 8)
                                 .background(Capsule().fill(Palette.blush))
                         }
                         .buttonStyle(PressScaleStyle())
@@ -181,55 +205,68 @@ struct JournalEditorView: View {
         .cuteCard(tint: Palette.hotPink)
     }
 
-    private var photoCard: some View {
+    private var photosCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("A photo of the moment")
-                .font(.rounded(.headline, weight: .bold))
-                .foregroundStyle(Palette.berry)
+            HStack {
+                Text("Photos of the moment")
+                    .font(.rounded(.headline, weight: .bold))
+                    .foregroundStyle(Palette.berry)
+                Spacer()
+                Text("\(photos.count)/\(Self.maxPhotos)")
+                    .font(.rounded(.caption, weight: .bold))
+                    .foregroundStyle(Palette.inkSoft)
+            }
 
-            if let preview {
-                Color.clear
-                    .frame(height: 210)
-                    .frame(maxWidth: .infinity)
-                    .overlay(Image(uiImage: preview).resizable().scaledToFill())
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(alignment: .topTrailing) {
-                        Button {
-                            withAnimation {
-                                self.preview = nil
-                                photoData = nil
-                                thumbnailData = nil
+            if !photos.isEmpty {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    ForEach(photos) { photo in
+                        Color.clear
+                            .aspectRatio(1, contentMode: .fit)
+                            .overlay {
+                                if let preview = photo.preview {
+                                    Image(uiImage: preview).resizable().scaledToFill()
+                                }
                             }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(Color.white, Color.black.opacity(0.45))
-                        }
-                        .padding(10)
-                        .accessibilityLabel("Remove photo")
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(alignment: .topTrailing) {
+                                Button {
+                                    withAnimation(.snappy) { photos.removeAll { $0.id == photo.id } }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.title3)
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(Color.white, Color.black.opacity(0.45))
+                                        .frame(width: 36, height: 36)
+                                        .contentShape(Rectangle())
+                                }
+                                .accessibilityLabel("Remove photo")
+                            }
                     }
+                }
             }
 
-            PhotosPicker(selection: $pickerItem, matching: .images) {
-                HStack(spacing: 8) {
-                    if isLoadingPhoto {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "photo.on.rectangle.angled")
+            if photos.count < Self.maxPhotos {
+                PhotosPicker(selection: $pickerItems, maxSelectionCount: Self.maxPhotos - photos.count,
+                             matching: .images) {
+                    HStack(spacing: 8) {
+                        if isLoadingPhotos {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "photo.on.rectangle.angled")
+                        }
+                        Text(photos.isEmpty ? "Add photos" : "Add more photos")
                     }
-                    Text(preview == nil ? "Add a photo" : "Change photo")
+                    .font(.rounded(.subheadline, weight: .bold))
+                    .foregroundStyle(Palette.hotPink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Palette.hotPink.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                    )
                 }
-                .font(.rounded(.subheadline, weight: .bold))
-                .foregroundStyle(Palette.hotPink)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Palette.hotPink.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                )
+                .disabled(isLoadingPhotos)
             }
-            .disabled(isLoadingPhoto)
         }
         .cuteCard(tint: Palette.hotPink)
     }
@@ -243,38 +280,55 @@ struct JournalEditorView: View {
         Haptics.tap()
     }
 
-    private func loadPhoto(_ item: PhotosPickerItem?) {
-        guard let item else { return }
-        isLoadingPhoto = true
+    private func loadPhotos(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
+        isLoadingPhotos = true
         Task {
-            let raw = try? await item.loadTransferable(type: Data.self)
-            let prepared = await Task.detached(priority: .userInitiated) {
-                raw.flatMap(PhotoProcessor.prepare)
-            }.value
-            if let prepared {
-                photoData = prepared.photo
-                thumbnailData = prepared.thumbnail
-                withAnimation { preview = UIImage(data: prepared.photo) }
+            for item in items {
+                let raw = try? await item.loadTransferable(type: Data.self)
+                let prepared = await Task.detached(priority: .userInitiated) {
+                    raw.flatMap(PhotoProcessor.prepare)
+                }.value
+                if let prepared, photos.count < Self.maxPhotos {
+                    let draft = PhotoDraft(existing: nil, imageData: prepared.photo,
+                                           thumbnailData: prepared.thumbnail,
+                                           preview: UIImage(data: prepared.thumbnail))
+                    withAnimation(.snappy) { photos.append(draft) }
+                }
             }
-            isLoadingPhoto = false
-            pickerItem = nil
+            isLoadingPhotos = false
+            pickerItems = []
         }
     }
 
     private func save() {
         guard canSave else { return }
         let page = entry ?? JournalEntry(date: date)
+        if entry == nil {
+            context.insert(page)
+        }
         page.date = date
         page.title = title.trimmed
         page.body = text.trimmed
         page.mood = mood
         page.isFavorite = isFavorite
-        page.photoData = photoData
-        page.thumbnailData = thumbnailData
         page.updatedAt = .now
-        if entry == nil {
-            context.insert(page)
+
+        // Remove photos that were taken out, keep the rest in the new order, add new ones.
+        let kept = Set(photos.compactMap { $0.existing?.persistentModelID })
+        for photo in page.sortedPhotos where !kept.contains(photo.persistentModelID) {
+            context.delete(photo)
         }
+        for (index, draft) in photos.enumerated() {
+            if let existing = draft.existing {
+                existing.order = index
+            } else {
+                let photo = JournalPhoto(imageData: draft.imageData, thumbnailData: draft.thumbnailData, order: index)
+                context.insert(photo)
+                photo.entry = page
+            }
+        }
+
         Haptics.success()
         dismiss()
     }

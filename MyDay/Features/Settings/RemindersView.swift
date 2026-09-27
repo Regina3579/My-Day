@@ -10,15 +10,16 @@ struct RemindersView: View {
     @AppStorage(Prefs.morningTime) private var morningTime = 8.0 * 3600
     @AppStorage(Prefs.eveningOn) private var eveningOn = false
     @AppStorage(Prefs.eveningTime) private var eveningTime = 21.0 * 3600
-    @Query(filter: #Predicate<TaskItem> { $0.isDone == false }) private var openTasks: [TaskItem]
+    @Query(filter: #Predicate<TaskItem> { $0.isCompleted == false && $0.reminderEnabled == true })
+    private var remindedTasks: [TaskItem]
     @State private var status: UNAuthorizationStatus = .notDetermined
     var showsDoneButton = false
 
     private var upcoming: [TaskItem] {
         let now = Date()
-        return openTasks
-            .filter { ($0.reminderAt ?? .distantPast) > now }
-            .sorted { ($0.reminderAt ?? .distantFuture) < ($1.reminderAt ?? .distantFuture) }
+        return remindedTasks
+            .filter { ($0.reminderDate ?? .distantPast) > now }
+            .sorted { ($0.reminderDate ?? .distantFuture) < ($1.reminderDate ?? .distantFuture) }
     }
 
     var body: some View {
@@ -76,25 +77,29 @@ struct RemindersView: View {
                         .foregroundStyle(Palette.inkSoft)
                 } else {
                     ForEach(upcoming) { task in
-                        HStack {
+                        HStack(spacing: 10) {
+                            Image(systemName: task.category.symbol)
+                                .foregroundStyle(task.category.color)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(task.title)
                                     .font(.rounded(.body, weight: .semibold))
                                     .foregroundStyle(Palette.ink)
-                                if let when = task.reminderAt {
+                                if let when = task.reminderDate {
                                     Text(when.formatted(.dateTime.weekday(.wide).hour().minute()))
                                         .font(.rounded(.caption, weight: .semibold))
                                         .foregroundStyle(Palette.hotPink)
                                 }
                             }
                             Spacer()
-                            if task.isPriority {
-                                Image(systemName: "star.fill").foregroundStyle(Palette.honey)
+                            if task.repeatOption != .never {
+                                Image(systemName: "repeat")
+                                    .foregroundStyle(Palette.inkSoft)
+                                    .accessibilityLabel(task.repeatOption.label)
                             }
                         }
                         .swipeActions {
                             Button("Remove", role: .destructive) {
-                                task.reminderAt = nil
+                                task.reminderEnabled = false
                                 ReminderCenter.sync(task)
                             }
                         }
@@ -116,9 +121,9 @@ struct RemindersView: View {
             }
         }
         .task { await refreshStatus() }
-        .onChange(of: morningOn) { _, _ in syncDaily() }
+        .onChange(of: morningOn) { _, isOn in reminderSwitched(isOn) }
+        .onChange(of: eveningOn) { _, isOn in reminderSwitched(isOn) }
         .onChange(of: morningTime) { _, _ in syncDaily() }
-        .onChange(of: eveningOn) { _, _ in syncDaily() }
         .onChange(of: eveningTime) { _, _ in syncDaily() }
     }
 
@@ -136,14 +141,22 @@ struct RemindersView: View {
         )
     }
 
+    /// Switching a reminder on is the moment we ask for notification permission.
+    private func reminderSwitched(_ isOn: Bool) {
+        guard isOn else {
+            syncDaily()
+            return
+        }
+        Task {
+            _ = await ReminderCenter.requestPermission()
+            await refreshStatus()
+            syncDaily()
+        }
+    }
+
     private func syncDaily() {
         ReminderCenter.scheduleDaily(.morning, enabled: morningOn, secondsFromMidnight: morningTime)
         ReminderCenter.scheduleDaily(.evening, enabled: eveningOn, secondsFromMidnight: eveningTime)
-        Task {
-            // Give the permission prompt a moment, then show the real state.
-            try? await Task.sleep(for: .seconds(1))
-            await refreshStatus()
-        }
     }
 
     private func refreshStatus() async {

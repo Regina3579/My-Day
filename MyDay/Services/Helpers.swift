@@ -12,6 +12,7 @@ extension Date {
 
     var isToday: Bool { Calendar.current.isDateInToday(self) }
 
+    /// Start of the day `days` days away.
     func adding(days: Int) -> Date {
         Calendar.current.date(byAdding: .day, value: days, to: startOfDay) ?? startOfDay
     }
@@ -29,6 +30,11 @@ extension Date {
         let calendar = Calendar.current
         let parts = calendar.dateComponents([.hour, .minute], from: time)
         return calendar.date(bySettingHour: parts.hour ?? 9, minute: parts.minute ?? 0, second: 0, of: self) ?? self
+    }
+
+    /// A stable number for the calendar day, used to rotate daily content.
+    var dayNumber: Int {
+        Calendar.current.ordinality(of: .day, in: .era, for: self) ?? 0
     }
 }
 
@@ -50,8 +56,26 @@ enum Greeting {
     }
 }
 
-enum Quotes {
-    private static let focusQuotes = [
+/// The three-line message on the home screen. It changes every day.
+enum DailyQuotes {
+    static let all: [[String]] = [
+        ["A new day", "A fresh start", "You got this! 💕"],
+        ["Small steps", "Big dreams", "Keep going! 🌸"],
+        ["Be kind", "Be brave", "Be you! 💖"],
+        ["Breathe in", "Smile wide", "Shine bright! ✨"],
+        ["Dream it", "Plan it", "Do it! ⭐"],
+        ["One step", "at a time", "You're doing great! 💕"],
+        ["Bloom where", "you are", "planted 🌷"]
+    ]
+
+    static func lines(for date: Date, offset: Int = 0) -> [String] {
+        let index = (date.dayNumber + offset) % all.count
+        return all[(index + all.count) % all.count]
+    }
+}
+
+enum FocusQuotes {
+    private static let quotes = [
         "Small steps every day add up to big dreams. 🌸",
         "You don't have to do everything — just the things that matter. ⭐",
         "Progress, not perfection. 💪",
@@ -60,9 +84,7 @@ enum Quotes {
         "One thing at a time. You've got this! 💖"
     ]
 
-    /// A quote that stays the same for the whole day.
-    static func focus(for day: Date) -> String {
-        let index = Calendar.current.ordinality(of: .day, in: .era, for: day) ?? 0
-        return focusQuotes[index % focusQuotes.count]
+    static func quote(for date: Date) -> String {
+        quotes[date.dayNumber % quotes.count]
     }
 }

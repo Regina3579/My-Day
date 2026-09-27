@@ -5,9 +5,14 @@ on:
     branches: [main, "claude/**"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish_screenshots:
+        description: "Commit small JPEG screenshots to docs/screenshots"
+        type: boolean
+        default: false
 
 concurrency:
-  group: ios-build-${{ github.ref }}
+  group: ios-build-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -49,6 +54,8 @@ jobs:
     needs: build
     runs-on: macos-latest
     timeout-minutes: 40
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -62,3 +69,24 @@ jobs:
           name: screenshots
           path: screenshots/
           if-no-files-found: warn
+
+      - name: Publish screenshots to docs/screenshots
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_screenshots
+        run: |
+          mkdir -p docs/screenshots
+          rm -f docs/screenshots/*.jpg
+          for file in screenshots/*.png; do
+            name="$(basename "${file%.png}")"
+            # Every screen on the main device; just the home screen on the others.
+            case "$name" in
+              iphone-17-pro-[0-9]*|*-01-home) ;;
+              *) continue ;;
+            esac
+            sips -Z 1100 -s format jpeg -s formatOptions 78 "$file" --out "docs/screenshots/$name.jpg" >/dev/null
+          done
+          ls -la docs/screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          git commit -m "Update app screenshots" || exit 0
+          git push

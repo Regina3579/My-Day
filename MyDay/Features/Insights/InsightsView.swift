@@ -6,10 +6,11 @@ import Charts
 struct InsightsView: View {
     @Environment(AppState.self) private var appState
     @Query private var tasks: [TaskItem]
+    @Query private var priorities: [Priority]
     @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
 
     var body: some View {
-        let stats = InsightStats(tasks: tasks, entries: entries, today: appState.today)
+        let stats = InsightStats(tasks: tasks, priorities: priorities, entries: entries, today: appState.today)
 
         ScrollView {
             VStack(spacing: 16) {
@@ -189,17 +190,17 @@ struct InsightStats {
     let totalDone: Int
     let prioritiesDoneThisWeek: Int
 
-    init(tasks: [TaskItem], entries: [JournalEntry], today: Date) {
+    init(tasks: [TaskItem], priorities: [Priority], entries: [JournalEntry], today: Date) {
         let start = today.startOfDay
         let weekStart = start.adding(days: -6)
 
-        let todays = tasks.filter { $0.day.isSameDay(as: start) }
+        let todays = tasks.filter { $0.date.isSameDay(as: start) }
         todayTotal = todays.count
-        todayDone = todays.filter(\.isDone).count
+        todayDone = todays.filter(\.isCompleted).count
 
         var doneByDay: [Date: Int] = [:]
-        for task in tasks where task.isDone {
-            doneByDay[(task.completedAt ?? task.day).startOfDay, default: 0] += 1
+        for task in tasks where task.isCompleted {
+            doneByDay[(task.completedAt ?? task.date).startOfDay, default: 0] += 1
         }
         let lastSevenDays = (0..<7).reversed().map { offset -> DayStat in
             let day = start.adding(days: -offset)
@@ -228,9 +229,9 @@ struct InsightStats {
             return MoodSlice(mood: mood, count: count)
         }
 
-        totalDone = tasks.filter(\.isDone).count
-        prioritiesDoneThisWeek = tasks.filter {
-            $0.isPriority && $0.isDone && ($0.completedAt ?? $0.day) >= weekStart
+        totalDone = tasks.filter(\.isCompleted).count
+        prioritiesDoneThisWeek = priorities.filter {
+            $0.isCompleted && ($0.completedAt ?? $0.date) >= weekStart
         }.count
     }
 

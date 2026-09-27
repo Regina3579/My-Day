@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// "My Journal — Capture your thoughts and beautiful moments".
-struct JournalListView: View {
+struct JournalView: View {
     @Environment(AppState.self) private var appState
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
@@ -22,7 +22,7 @@ struct JournalListView: View {
         .navigationTitle("My Journal")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isComposing) {
-            JournalEditorView(entry: nil, date: .now)
+            NewJournalEntrySheet(date: .now)
         }
     }
 
@@ -145,6 +145,7 @@ struct JournalEntryCard: View {
     let entry: JournalEntry
 
     var body: some View {
+        let photos = entry.sortedPhotos
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 0) {
                 Text(entry.date.formatted(.dateTime.day()))
@@ -183,12 +184,23 @@ struct JournalEntryCard: View {
                     .foregroundStyle(Color.secondary)
             }
 
-            if let data = entry.thumbnailData, let image = UIImage(data: data) {
+            if let first = photos.first, let data = first.thumbnailData, let image = UIImage(data: data) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 64, height: 64)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(alignment: .bottomTrailing) {
+                        if photos.count > 1 {
+                            Text("+\(photos.count - 1)")
+                                .font(.rounded(.caption2, weight: .heavy))
+                                .foregroundStyle(Color.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.black.opacity(0.45)))
+                                .padding(4)
+                        }
+                    }
             }
         }
         .cuteCard(tint: Palette.hotPink, padding: 14)

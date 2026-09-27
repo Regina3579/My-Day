@@ -10,6 +10,7 @@ enum DebugLaunchRoute {
         guard let index = arguments.firstIndex(of: "-screenshotRoute"), index + 1 < arguments.count else { return }
 
         switch arguments[index + 1] {
+        case "quickadd": router.isQuickAddOpen = true
         case "menu": router.isMenuOpen = true
         case "todos": router.open(.todos(today))
         case "priority": router.open(.priority(today))
@@ -17,7 +18,8 @@ enum DebugLaunchRoute {
         case "calendar": router.tab = .calendar
         case "insights": router.tab = .insights
         case "settings": router.tab = .settings
-        case "quickadd": router.sheet = .quickCapture
+        case "newtask": router.sheet = .newTask(today)
+        case "newjournal": router.sheet = .newJournal(.now)
         default: break
         }
     }

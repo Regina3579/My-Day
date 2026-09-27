@@ -9,15 +9,26 @@ and keeping a private journal. It is built with **SwiftUI** and **SwiftData**.
 
 | Screen | What you can do |
 | --- | --- |
-| **My Day** (home) | The illustrated home screen from the design. Tap a card to open it. Badges show what is left for today. The ☰ menu, a live date badge, the 🔔 reminders button, the *Add Task / Add Priority / Add Journal* chips and the pink **+** quick-add button all work. |
-| **Today's To-Dos** | Add to-dos inline, tick them off, reorder by dragging, swipe to star or delete, and see a progress ring. Each to-do can have a note, a day and a reminder. |
-| **Today's Priority** | Your starred to-dos as numbered golden cards. Add priorities directly or pick them from today's to-dos. A gentle tip appears when you go over three. |
-| **My Journal** | Pages with a mood, title, text, writing prompts and an optional photo. Search, favourites, a "week in moods" strip, and an optional **Face ID lock**. |
+| **My Day** (home) | The illustrated home screen from the design. The girl, pets and garden are an image; everything else is native SwiftUI: the ☰ menu, the "My Day" title, today's real date, the 🔔 reminders button, a daily message (it changes every day; tap it for another), the three feature cards with live badges, the pink **+** Quick Add menu and the floating tab bar. |
+| **Today's To-Dos** | Add to-dos inline or in detail (category, date, time, repeat, reminder, note). Tick them off, drag to reorder, swipe to delete, filter by category, and watch the progress ring. Finishing a repeating to-do creates the next one. |
+| **Today's Priority** | Numbered golden cards for the few things that matter most. Add, edit, reorder and complete them, or pick one from today's to-dos. |
+| **My Journal** | Pages with a mood, title, text, writing prompts and up to 6 photos. Search, favourites, a "week in moods" strip, and an optional **Face ID lock**. |
 | **Calendar** | Month grid with markers for to-dos, priorities and journal pages, plus the selected day's agenda. |
 | **Insights** | Done today, day streak, a weekly bar chart and a 30-day mood chart (Swift Charts). |
-| **Settings** | Your name, a morning and an evening reminder, carrying unfinished to-dos over to today, haptics, the journal lock, and data clean-up. |
+| **Settings** | Your name, morning and evening reminders, carrying unfinished items over to today, haptics, the journal lock, and data clean-up. |
 
-Everything is stored on the device. The app makes no network calls.
+Everything is stored on the device with SwiftData, so data stays between launches.
+The app makes no network calls. It asks for notification permission only when
+you first switch on a reminder.
+
+## Data model
+
+| Model | Fields |
+| --- | --- |
+| `TaskItem` (the spec's *Task*; `Task` is Swift's concurrency type) | id, title, category, date, time, reminderEnabled, reminderDate, repeatOption, isCompleted, createdAt (+ notes, completedAt, seriesID, sortOrder) |
+| `Priority` | id, title, date, order, isCompleted (+ completedAt, createdAt) |
+| `JournalEntry` | id, date, title, body, mood, photos (`[JournalPhoto]`), createdAt, updatedAt (+ isFavorite) |
+| `JournalPhoto` | id, imageData (stored outside the database), thumbnailData, order |
 
 ## Requirements
 
@@ -36,30 +47,32 @@ Everything is stored on the device. The app makes no network calls.
 ```
 MyDay/
 ├── App/            App entry, navigation (Router), UIKit appearance
-├── Models/         SwiftData models: TaskItem, JournalEntry (+ Mood)
+├── Models/         SwiftData models: TaskItem, Priority, JournalEntry, JournalPhoto
 ├── Services/       Reminders, Face ID lock, haptics, day rollover, helpers
 ├── Theme/          Colours from the artwork, fonts, shared components
 ├── Features/
-│   ├── Root/       Tab container, floating tab bar, side menu
-│   ├── Home/       Illustrated home screen and its overlays
-│   ├── Todos/      To-do list and editor
-│   ├── Priority/   Today's Priority
-│   ├── Journal/    Journal list, page, editor, lock screen
-│   ├── Calendar/   Month grid and day agenda
-│   ├── Insights/   Stats and charts
-│   ├── Settings/   Settings and reminders
-│   └── QuickAdd/   The + button's quick capture sheet
-└── Assets.xcassets App icon, home artwork, colours
+│   ├── Root/       RootView, BottomTabBar, side menu
+│   ├── Home/       HomeView, HomeHeader, DailyQuoteView, HomeFeatureCard,
+│   │               QuickAddButton / QuickAddMenu, card illustrations
+│   ├── Todos/      TodayToDosView, NewTaskSheet
+│   ├── Priority/   TodaysPriorityView, NewPrioritySheet
+│   ├── Journal/    JournalView, JournalDetailView, NewJournalEntrySheet, lock screen
+│   ├── Calendar/   CalendarView
+│   ├── Insights/   InsightsView
+│   └── Settings/   SettingsView, RemindersView
+└── Assets.xcassets App icon, home scene illustration, colours
 ```
 
-## How the home screen matches the design
+## How the home screen is built
 
-The home artwork (`HomeArt`) is the original design. The status bar, bell, date
-badge and tab bar were painted out so real controls can take their place.
-`ArtSpace` maps the artwork's 853 × 1844 pixel grid onto the screen, and every
-native control (buttons, badges, chips, **+**) is placed with those coordinates.
-Because of this, the controls line up on every iPhone size. On shorter screens,
-such as iPhone SE, the home screen scrolls.
+Only the scenery is an image: `HomeScene` is the sky, castle and garden with
+the girl, the puppy and the kitten. The old title, message and cards were
+painted out of it. Everything on top is native SwiftUI: `HomeHeader`,
+`DailyQuoteView`, three `HomeFeatureCard`s drawn with vector shapes, and
+`QuickAddButton` + `QuickAddMenu`, with `BottomTabBar` from the root view.
+Sizes follow the screen width, so the layout keeps the design's proportions
+on every iPhone, and the screen scrolls when it does not fit (for example on
+iPhone SE).
 
 ## Continuous integration
 

@@ -7,9 +7,11 @@ struct MyDayApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var router = Router()
     @State private var appState = AppState()
+    private let container: ModelContainer
 
     init() {
         Appearance.configure()
+        container = Self.makeContainer()
     }
 
     var body: some Scene {
@@ -20,7 +22,18 @@ struct MyDayApp: App {
                 .tint(Palette.hotPink)
                 .preferredColorScheme(.light)
         }
-        .modelContainer(for: [TaskItem.self, JournalEntry.self])
+        .modelContainer(container)
+    }
+
+    /// On-device store for to-dos, priorities and journal pages.
+    private static func makeContainer() -> ModelContainer {
+        let schema = Schema([TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self])
+        let configuration = ModelConfiguration("MyDay", schema: schema)
+        do {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Could not open the My Day store: \(error)")
+        }
     }
 }
 

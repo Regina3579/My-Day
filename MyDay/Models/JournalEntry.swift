@@ -4,21 +4,19 @@ import SwiftData
 /// One page of the journal.
 @Model
 final class JournalEntry {
-    var uuid: UUID = UUID()
+    var id: UUID = UUID()
     var date: Date = Date()
     var title: String = ""
     var body: String = ""
     var moodRaw: String = "happy"
     var isFavorite: Bool = false
-    /// Full-size photo (max 1600 px), stored outside the database file.
-    @Attribute(.externalStorage) var photoData: Data?
-    /// Small JPEG used in lists.
-    var thumbnailData: Data?
+    @Relationship(deleteRule: .cascade, inverse: \JournalPhoto.entry)
+    var photos: [JournalPhoto]? = []
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
     init(date: Date = Date(), title: String = "", body: String = "", mood: Mood = .happy) {
-        self.uuid = UUID()
+        self.id = UUID()
         self.date = date
         self.title = title
         self.body = body
@@ -32,12 +30,37 @@ final class JournalEntry {
         set { moodRaw = newValue.rawValue }
     }
 
+    var sortedPhotos: [JournalPhoto] {
+        (photos ?? []).sorted { $0.order < $1.order }
+    }
+
     /// The title, or the first line of the text when no title was given.
     var displayTitle: String {
-        let trimmedTitle = title.trimmed
-        if !trimmedTitle.isEmpty { return trimmedTitle }
+        let cleanTitle = title.trimmed
+        if !cleanTitle.isEmpty { return cleanTitle }
         let firstLine = body.trimmed.components(separatedBy: .newlines).first ?? ""
         return firstLine.isEmpty ? "A page of my day" : firstLine
+    }
+}
+
+/// A photo attached to a journal page.
+@Model
+final class JournalPhoto {
+    var id: UUID = UUID()
+    /// Full-size JPEG (max 1600 px), stored outside the database file.
+    @Attribute(.externalStorage) var imageData: Data = Data()
+    /// Small JPEG used in lists.
+    var thumbnailData: Data?
+    var order: Int = 0
+    var createdAt: Date = Date()
+    var entry: JournalEntry?
+
+    init(imageData: Data, thumbnailData: Data?, order: Int) {
+        self.id = UUID()
+        self.imageData = imageData
+        self.thumbnailData = thumbnailData
+        self.order = order
+        self.createdAt = Date()
     }
 }
 

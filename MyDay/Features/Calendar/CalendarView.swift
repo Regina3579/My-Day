@@ -1,13 +1,15 @@
 import SwiftUI
 import SwiftData
 
-/// Month view with little markers for to-dos, priorities and journal pages,
+/// Month view with markers for to-dos, priorities and journal pages,
 /// plus the agenda of the selected day.
-struct CalendarScreen: View {
+struct CalendarView: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var context
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
-    @Query(sort: \TaskItem.sortIndex) private var tasks: [TaskItem]
+    @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
+    @Query(sort: \Priority.order) private var priorities: [Priority]
     @Query(sort: \JournalEntry.date) private var entries: [JournalEntry]
     @State private var month = Date.now.startOfMonth
     @State private var selected = Date.now.startOfDay
@@ -43,10 +45,12 @@ struct CalendarScreen: View {
     private var markers: [Date: DayMarker] {
         var result: [Date: DayMarker] = [:]
         for task in tasks {
-            let key = task.day.startOfDay
+            let key = task.date.startOfDay
             result[key, default: DayMarker()].tasks += 1
-            if task.isDone { result[key, default: DayMarker()].done += 1 }
-            if task.isPriority { result[key, default: DayMarker()].hasPriority = true }
+            if task.isCompleted { result[key, default: DayMarker()].done += 1 }
+        }
+        for priority in priorities {
+            result[priority.date.startOfDay, default: DayMarker()].priorities += 1
         }
         for entry in entries {
             result[entry.date.startOfDay, default: DayMarker()].journal += 1
@@ -59,7 +63,8 @@ struct CalendarScreen: View {
     // MARK: Agenda
 
     private var agenda: some View {
-        let dayTasks = tasks.filter { $0.day.isSameDay(as: selected) }
+        let dayTasks = tasks.filter { $0.date.isSameDay(as: selected) }
+        let dayPriorities = priorities.filter { $0.date.isSameDay(as: selected) }
         let dayEntries = entries.filter { $0.date.isSameDay(as: selected) }
 
         return VStack(alignment: .leading, spacing: 14) {
@@ -78,16 +83,32 @@ struct CalendarScreen: View {
                 }
             }
 
+            agendaHeader("Priorities", icon: "star.fill", tint: Palette.honey) {
+                router.sheet = .newPriority(selected)
+            }
+            if dayPriorities.isEmpty {
+                emptyLine("No priorities for this day.")
+            } else {
+                ForEach(dayPriorities) { priority in
+                    CompactCheckRow(title: priority.title, isDone: priority.isCompleted, tint: Palette.honey) {
+                        withAnimation(.snappy) { priority.toggleCompleted() }
+                        Haptics.tap()
+                    }
+                }
+            }
+
+            Divider()
+
             agendaHeader("To-Dos", icon: "checklist", tint: Palette.grape) {
-                router.sheet = .newTask(day: selected, priority: false)
+                router.sheet = .newTask(selected)
             }
             if dayTasks.isEmpty {
-                Text("No to-dos for this day yet.")
-                    .font(.rounded(.subheadline))
-                    .foregroundStyle(Color.secondary)
+                emptyLine("No to-dos for this day yet.")
             } else {
                 ForEach(dayTasks) { task in
-                    CompactTaskRow(task: task) { toggle(task) }
+                    CompactCheckRow(title: task.title, isDone: task.isCompleted, tint: task.category.color) {
+                        withAnimation(.snappy) { TaskActions.toggle(task, in: context) }
+                    }
                 }
                 NavigationLink(value: AppRoute.todos(selected)) {
                     Label("Open this day", systemImage: "arrow.right.circle.fill")
@@ -108,9 +129,7 @@ struct CalendarScreen: View {
                         .foregroundStyle(Palette.berry)
                 }
             } else if dayEntries.isEmpty {
-                Text("No journal pages for this day.")
-                    .font(.rounded(.subheadline))
-                    .foregroundStyle(Color.secondary)
+                emptyLine("No journal pages for this day.")
             } else {
                 ForEach(dayEntries) { entry in
                     NavigationLink(value: entry) {
@@ -149,48 +168,50 @@ struct CalendarScreen: View {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
                     .foregroundStyle(tint)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("Add to \(title)")
         }
     }
 
-    private func toggle(_ task: TaskItem) {
-        withAnimation(.snappy) { task.toggleDone() }
-        ReminderCenter.sync(task)
-        if task.isDone { Haptics.success() } else { Haptics.tap() }
+    private func emptyLine(_ text: String) -> some View {
+        Text(text)
+            .font(.rounded(.subheadline))
+            .foregroundStyle(Color.secondary)
     }
 }
 
 struct DayMarker {
     var tasks = 0
     var done = 0
+    var priorities = 0
     var journal = 0
-    var hasPriority = false
 }
 
-/// A compact to-do line used in the calendar agenda.
-struct CompactTaskRow: View {
-    let task: TaskItem
+/// A compact line with a checkbox, used in the calendar agenda.
+struct CompactCheckRow: View {
+    let title: String
+    let isDone: Bool
+    let tint: Color
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            Button(action: onToggle) {
-                CheckBubble(isOn: task.isDone, tint: Palette.grape, size: 24)
+        Button(action: onToggle) {
+            HStack(spacing: 10) {
+                CheckBubble(isOn: isDone, tint: tint, size: 24)
+                Text(title)
+                    .font(.rounded(.subheadline, weight: .semibold))
+                    .strikethrough(isDone, color: tint)
+                    .foregroundStyle(isDone ? Color.secondary : Palette.ink)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
             }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityLabel(task.isDone ? "Mark \(task.title) as not done" : "Mark \(task.title) as done")
-            Text(task.title)
-                .font(.rounded(.subheadline, weight: .semibold))
-                .strikethrough(task.isDone, color: Palette.grape)
-                .foregroundStyle(task.isDone ? Color.secondary : Palette.ink)
-            Spacer(minLength: 0)
-            if task.isPriority {
-                Image(systemName: "star.fill")
-                    .font(.caption)
-                    .foregroundStyle(Palette.honey)
-            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isDone ? "\(title), done" : title)
+        .accessibilityHint(isDone ? "Mark as not done" : "Mark as done")
     }
 }
 
@@ -229,16 +250,17 @@ struct MonthGrid: View {
             HStack {
                 Button { shift(-1) } label: {
                     Image(systemName: "chevron.left.circle.fill")
+                        .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Previous month")
                 Spacer()
                 Text(month.formatted(.dateTime.month(.wide).year()))
                     .font(.rounded(.title3, weight: .heavy))
                     .foregroundStyle(Palette.ink)
-                    .contentTransition(.numericText())
                 Spacer()
                 Button { shift(1) } label: {
                     Image(systemName: "chevron.right.circle.fill")
+                        .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Next month")
             }
@@ -250,6 +272,7 @@ struct MonthGrid: View {
                     Text(weekdaySymbols[index])
                         .font(.rounded(.caption, weight: .bold))
                         .foregroundStyle(Palette.inkSoft)
+                        .accessibilityHidden(true)
                 }
                 ForEach(Array(days.enumerated()), id: \.offset) { _, day in
                     if let day {
@@ -310,7 +333,7 @@ struct DayCell: View {
                             .fill(marker.done == marker.tasks ? Palette.mint : Palette.grape)
                             .frame(width: 5, height: 5)
                     }
-                    if marker.hasPriority {
+                    if marker.priorities > 0 {
                         Image(systemName: "star.fill")
                             .font(.system(size: 6))
                             .foregroundStyle(Palette.honey)
@@ -335,6 +358,7 @@ struct DayCell: View {
         var parts = [date.formatted(date: .complete, time: .omitted)]
         if let marker {
             if marker.tasks > 0 { parts.append("\(marker.done) of \(marker.tasks) to-dos done") }
+            if marker.priorities > 0 { parts.append("\(marker.priorities) priorities") }
             if marker.journal > 0 { parts.append("\(marker.journal) journal pages") }
         }
         return parts.joined(separator: ", ")

@@ -95,3 +95,17 @@ extension Mood {
         }
     }
 }
+
+extension TaskCategory {
+    var color: Color {
+        switch self {
+        case .personal: Palette.hotPink
+        case .work: Color(hex: 0x6C63D9)
+        case .study: Color(hex: 0x3E9BD6)
+        case .home: Color(hex: 0xE58A2B)
+        case .health: Color(hex: 0x2DAA6A)
+        case .shopping: Color(hex: 0xC357D6)
+        case .other: Color(hex: 0x8A86A8)
+        }
+    }
+}
