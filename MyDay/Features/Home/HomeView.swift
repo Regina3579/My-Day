@@ -129,7 +129,8 @@ struct HomeLayout {
     static let cardsTop: CGFloat = 470.0 / 853.0
     /// Card rows below `cardsTop`: notebook and star card, then the journal (which overlaps them slightly).
     static let cardRows: CGFloat = (650.0 - 35.0 + 570.0) / 853.0
-    static let bottomMargin: CGFloat = 10.0 / 853.0
+    /// Brick strip between the journal and the tab bar, as in the design.
+    static let bottomMargin: CGFloat = 44.0 / 853.0
     /// The cards may shrink to this much of their height before the screen scrolls instead.
     static let minimumSqueeze: CGFloat = 0.82
 
