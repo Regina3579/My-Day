@@ -67,8 +67,6 @@ jobs:
 
       - name: Run the app and capture every screen
         run: ./scripts/screenshots.sh screenshots
-        env:
-          SAMPLE_ROUTES: todos-add
 
       - name: Upload screenshots
         if: always()
@@ -81,8 +79,8 @@ jobs:
       - name: Publish screenshots to docs/screenshots
         if: github.event_name == 'workflow_dispatch' && inputs.publish_screenshots
         run: |
-          mkdir -p docs/screenshots
-          rm -f docs/screenshots/*.jpg
+          shots="$RUNNER_TEMP/shots"
+          mkdir -p "$shots"
           for file in screenshots/*.png; do
             name="$(basename "${file%.png}")"
             # Every screen on the main device; just the home screen on the others.
@@ -90,11 +88,22 @@ jobs:
               iphone-17-pro-[0-9]*|*-01-home) ;;
               *) continue ;;
             esac
-            sips -Z 1100 -s format jpeg -s formatOptions 78 "$file" --out "docs/screenshots/$name.jpg" >/dev/null
+            sips -Z 1100 -s format jpeg -s formatOptions 78 "$file" --out "$shots/$name.jpg" >/dev/null
           done
-          ls -la docs/screenshots
+          ls -la "$shots"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/screenshots
-          git commit -m "Update app screenshots" || exit 0
-          git push
+          branch="${GITHUB_REF_NAME}"
+          # Commit on top of the newest branch, which may have moved on during the run.
+          for attempt in 1 2 3; do
+            git fetch --depth=1 origin "$branch"
+            git checkout -q -B "$branch" FETCH_HEAD
+            mkdir -p docs/screenshots
+            rm -f docs/screenshots/*.jpg
+            cp "$shots"/*.jpg docs/screenshots/
+            git add -A docs/screenshots
+            git commit -q -m "Update app screenshots" || exit 0
+            git push origin "HEAD:$branch" && exit 0
+            sleep 5
+          done
+          exit 1

@@ -74,6 +74,9 @@ for i in "${!UDIDS[@]}"; do
   for route in "${ROUTES[@]}"; do
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
     xcrun simctl launch "$udid" "$BUNDLE_ID" -screenshotRoute "$route" >/dev/null
+    # The first screen that shows the keyboard also starts the simulator's
+    # keyboard services, which takes several seconds.
+    [ "$route" = "todos-add" ] && wait_seconds=16
     sleep "$wait_seconds"
     wait_seconds=8
     xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}.png" >/dev/null
