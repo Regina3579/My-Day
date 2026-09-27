@@ -109,6 +109,7 @@ struct RemindersView: View {
         }
         .font(.rounded(.body))
         .scrollContentBackground(.hidden)
+        .tabBarSafeArea()
         .background(DreamyBackground(theme: .garden))
         .navigationTitle("Reminders")
         .navigationBarTitleDisplayMode(.inline)

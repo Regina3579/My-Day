@@ -36,6 +36,7 @@ struct InsightsView: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
         }
+        .tabBarSafeArea()
         .background(DreamyBackground(theme: .garden))
         .navigationTitle("Insights")
         .navigationBarTitleDisplayMode(.inline)

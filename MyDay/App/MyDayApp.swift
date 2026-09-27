@@ -25,9 +25,9 @@ struct MyDayApp: App {
         .modelContainer(container)
     }
 
-    /// On-device store for to-dos, priorities and journal pages.
+    /// On-device store for to-dos, priorities, journal pages and saved templates.
     private static func makeContainer() -> ModelContainer {
-        let schema = Schema([TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self])
+        let schema = Schema([TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, TaskTemplate.self])
         let configuration = ModelConfiguration("MyDay", schema: schema)
         do {
             return try ModelContainer(for: schema, configurations: [configuration])

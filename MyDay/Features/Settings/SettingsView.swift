@@ -95,6 +95,7 @@ struct SettingsView: View {
         }
         .font(.rounded(.body))
         .scrollContentBackground(.hidden)
+        .tabBarSafeArea()
         .background(DreamyBackground(theme: .garden))
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)

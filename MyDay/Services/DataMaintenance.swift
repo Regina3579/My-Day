@@ -23,6 +23,26 @@ enum TaskActions {
         context.delete(task)
     }
 
+    /// Turns a to-do into one of the day's priorities (added at the end of the list).
+    static func moveToPriority(_ task: TaskItem, in context: ModelContext) {
+        let start = task.date.startOfDay
+        let end = start.nextDay
+        let sameDay = FetchDescriptor<Priority>(predicate: #Predicate { $0.date >= start && $0.date < end })
+        let nextOrder = (((try? context.fetch(sameDay)) ?? []).map(\.order).max() ?? -1) + 1
+        context.insert(Priority(title: task.title, date: start, order: nextOrder))
+        delete(task, in: context)
+    }
+
+    /// Adds one to-do per title to `day`, after the ones already there.
+    static func add(titles: [String], category: TaskCategory, to day: Date, in context: ModelContext) {
+        let base = Date().timeIntervalSinceReferenceDate
+        for (index, title) in titles.enumerated() {
+            let task = TaskItem(title: title, category: category, date: day)
+            task.sortOrder = base + Double(index)
+            context.insert(task)
+        }
+    }
+
     private static func scheduleNextOccurrence(of task: TaskItem, in context: ModelContext) {
         let rule = task.repeatOption
         guard let nextDay = rule.nextDate(after: task.date) else { return }
@@ -113,6 +133,7 @@ enum WelcomeContent {
         context.insert(TaskItem(title: "Drink 8 glasses of water 💧", category: .health, date: today,
                                 repeatOption: .daily))
         context.insert(TaskItem(title: "Write my first journal page 📔", category: .personal, date: today))
+        context.insert(TaskItem(title: "Buy fresh flowers 🌷", category: .shopping, date: today))
         context.insert(Priority(title: "Do the one thing that matters most ⭐", date: today, order: 0))
         context.insert(JournalEntry(
             date: today,

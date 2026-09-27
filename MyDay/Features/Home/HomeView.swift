@@ -5,6 +5,7 @@ import SwiftData
 /// message and the three feature cards.
 struct HomeView: View {
     @Environment(Router.self) private var router
+    @Environment(\.tabBarClearance) private var tabBarClearance
     @Query private var tasks: [TaskItem]
     @Query private var priorities: [Priority]
     @Query private var entries: [JournalEntry]
@@ -24,7 +25,8 @@ struct HomeView: View {
             let layout = HomeLayout(
                 width: proxy.size.width,
                 safeTop: proxy.safeAreaInsets.top,
-                availableHeight: proxy.size.height + proxy.safeAreaInsets.top
+                // From the top of the screen down to just above the floating tab bar.
+                availableHeight: proxy.size.height + proxy.safeAreaInsets.top - tabBarClearance
             )
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
@@ -33,6 +35,7 @@ struct HomeView: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
+            .tabBarSafeArea()
             .ignoresSafeArea(edges: .top)
         }
         .background(HomeBackdrop())
@@ -129,8 +132,9 @@ struct HomeLayout {
     static let cardsTop: CGFloat = 470.0 / 853.0
     /// Card rows below `cardsTop`: notebook and star card, then the journal (which overlaps them slightly).
     static let cardRows: CGFloat = (650.0 - 35.0 + 570.0) / 853.0
-    /// Brick strip between the journal and the tab bar, as in the design.
-    static let bottomMargin: CGFloat = 44.0 / 853.0
+    /// Brick strip between the journal and the tab bar, as in the design
+    /// (about 44 px there; the tab bar clearance already adds 8 points).
+    static let bottomMargin: CGFloat = 27.0 / 853.0
     /// The cards may shrink to this much of their height before the screen scrolls instead.
     static let minimumSqueeze: CGFloat = 0.82
 

@@ -82,25 +82,26 @@ struct RootView: View {
                 HomeView(today: appState.today)
                     .appDestinations()
             }
-            .tabLayer(visible: router.tab == .home, reserved: reserved)
+            .tabLayer(visible: router.tab == .home)
 
             NavigationStack(path: calendarPathBinding) {
                 CalendarView()
                     .appDestinations()
             }
-            .tabLayer(visible: router.tab == .calendar, reserved: reserved)
+            .tabLayer(visible: router.tab == .calendar)
 
             NavigationStack {
                 InsightsView()
             }
-            .tabLayer(visible: router.tab == .insights, reserved: reserved)
+            .tabLayer(visible: router.tab == .insights)
 
             NavigationStack {
                 SettingsView()
                     .appDestinations()
             }
-            .tabLayer(visible: router.tab == .settings, reserved: reserved)
+            .tabLayer(visible: router.tab == .settings)
         }
+        .environment(\.tabBarClearance, reserved)
     }
 
     // MARK: Quick Add
@@ -208,11 +209,9 @@ struct RootView: View {
 
 private extension View {
     /// Keeps every tab alive (so each keeps its navigation state) and shows one at a time.
-    func tabLayer(visible: Bool, reserved: CGFloat) -> some View {
+    /// Screens keep clear of the tab bar with `tabBarSafeArea()`.
+    func tabLayer(visible: Bool) -> some View {
         self
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: reserved)
-            }
             .opacity(visible ? 1 : 0)
             .allowsHitTesting(visible)
             .accessibilityHidden(!visible)
@@ -223,5 +222,6 @@ private extension View {
     RootView()
         .environment(Router())
         .environment(AppState())
-        .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self], inMemory: true)
+        .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, TaskTemplate.self],
+                        inMemory: true)
 }

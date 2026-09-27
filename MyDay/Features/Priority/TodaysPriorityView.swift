@@ -93,6 +93,7 @@ struct TodaysPriorityView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .contentMargins(.horizontal, 18, for: .scrollContent)
+        .tabBarSafeArea()
         .background(DreamyBackground(theme: .priority))
         .navigationTitle(day.isToday ? "Today's Priority" : "Priorities")
         .navigationBarTitleDisplayMode(.inline)

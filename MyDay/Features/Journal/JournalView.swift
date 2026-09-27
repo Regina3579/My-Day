@@ -18,6 +18,7 @@ struct JournalView: View {
                 journal
             }
         }
+        .tabBarSafeArea()
         .background(DreamyBackground(theme: .journal))
         .navigationTitle("My Journal")
         .navigationBarTitleDisplayMode(.inline)

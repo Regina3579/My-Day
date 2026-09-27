@@ -1,12 +1,21 @@
-import SwiftUI
+import PhotosUI
 import SwiftData
+import SwiftUI
 
-/// Create a new to-do, or edit an existing one.
+/// Which part of the task sheet opens first.
+enum TaskSheetFocus: String {
+    case title, when, reminder, repeatRule, photo, note
+}
+
+/// The pastel bottom sheet for adding a to-do, or seeing and changing one.
+/// Only the title is required; category, date, time, reminder, repeat, photo and note are optional.
 struct NewTaskSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
     private let task: TaskItem?
+    private let focus: TaskSheetFocus?
+    private let onSaved: ((TaskItem) -> Void)?
 
     @State private var title: String
     @State private var notes: String
@@ -17,38 +26,72 @@ struct NewTaskSheet: View {
     @State private var reminderEnabled: Bool
     @State private var reminderDate: Date
     @State private var repeatOption: RepeatOption
-    @State private var showPermissionAlert = false
-    @State private var confirmDelete = false
-    @FocusState private var titleFocused: Bool
+    /// Small preview of the photo (the saved one, or a newly picked one).
+    @State private var thumbnail: Data?
+    /// Full-size photo picked in this sheet.
+    @State private var newPhoto: Data?
+    @State private var photoChanged: Bool
+    @State private var expanded: TaskSheetFocus?
+    @State private var detent: PresentationDetent
 
-    /// A new to-do on `date`.
-    init(date: Date, category: TaskCategory = .personal) {
-        task = nil
-        let nextHour = Self.nextHour(on: date)
-        _title = State(initialValue: "")
-        _notes = State(initialValue: "")
-        _category = State(initialValue: category)
-        _date = State(initialValue: date.startOfDay)
-        _hasTime = State(initialValue: false)
-        _time = State(initialValue: nextHour)
-        _reminderEnabled = State(initialValue: false)
-        _reminderDate = State(initialValue: nextHour)
-        _repeatOption = State(initialValue: .never)
+    @State private var showsTitleHint = false
+    @State private var showsNotificationAlert = false
+    @State private var showsCameraAlert = false
+    @State private var showsPhotoError = false
+    @State private var confirmDelete = false
+    @State private var pickerItem: PhotosPickerItem?
+    @State private var showsLibrary = false
+    @State private var showsCamera = false
+    @State private var showsViewer = false
+    @State private var isLoadingPhoto = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case title, note
     }
 
-    /// Edit an existing to-do.
-    init(task: TaskItem) {
-        self.task = task
-        let nextHour = Self.nextHour(on: task.date)
-        _title = State(initialValue: task.title)
-        _notes = State(initialValue: task.notes)
-        _category = State(initialValue: task.category)
-        _date = State(initialValue: task.date)
-        _hasTime = State(initialValue: task.time != nil)
-        _time = State(initialValue: task.time ?? nextHour)
-        _reminderEnabled = State(initialValue: task.reminderEnabled)
-        _reminderDate = State(initialValue: task.reminderDate ?? task.time ?? nextHour)
-        _repeatOption = State(initialValue: task.repeatOption)
+    /// A new to-do on `date`.
+    init(date: Date, category: TaskCategory = .personal, focus: TaskSheetFocus? = nil,
+         onSaved: ((TaskItem) -> Void)? = nil) {
+        self.init(existing: nil, draft: TaskDraft(day: date, category: category), focus: focus, onSaved: onSaved)
+    }
+
+    /// A new to-do filled in from Voice Add (or anything else), for the person to check.
+    init(draft: TaskDraft, focus: TaskSheetFocus? = nil, onSaved: ((TaskItem) -> Void)? = nil) {
+        self.init(existing: nil, draft: draft, focus: focus, onSaved: onSaved)
+    }
+
+    /// An existing to-do.
+    init(task: TaskItem, focus: TaskSheetFocus? = nil) {
+        var draft = TaskDraft(day: task.date, category: task.category)
+        draft.title = task.title
+        draft.notes = task.notes
+        draft.time = task.time
+        draft.reminderEnabled = task.reminderEnabled
+        draft.reminderDate = task.reminderDate
+        draft.repeatOption = task.repeatOption
+        self.init(existing: task, draft: draft, focus: focus, onSaved: nil)
+    }
+
+    private init(existing: TaskItem?, draft: TaskDraft, focus: TaskSheetFocus?, onSaved: ((TaskItem) -> Void)?) {
+        task = existing
+        self.focus = focus
+        self.onSaved = onSaved
+        let nextHour = Self.nextHour(on: draft.day)
+        _title = State(initialValue: draft.title)
+        _notes = State(initialValue: draft.notes)
+        _category = State(initialValue: draft.category)
+        _date = State(initialValue: draft.day)
+        _hasTime = State(initialValue: draft.time != nil)
+        _time = State(initialValue: draft.time ?? nextHour)
+        _reminderEnabled = State(initialValue: draft.reminderEnabled)
+        _reminderDate = State(initialValue: draft.reminderDate ?? draft.time ?? nextHour)
+        _repeatOption = State(initialValue: draft.repeatOption)
+        _thumbnail = State(initialValue: existing?.photoThumbnail ?? draft.photo?.thumbnail)
+        _newPhoto = State(initialValue: draft.photo?.photo)
+        _photoChanged = State(initialValue: draft.photo != nil)
+        _expanded = State(initialValue: focus == .title ? nil : focus)
+        _detent = State(initialValue: existing != nil && focus == nil ? .medium : .large)
     }
 
     /// The next full hour on `day` (or today's next hour when `day` is today).
@@ -59,103 +102,362 @@ struct NewTaskSheet: View {
                                          matchingPolicy: .nextTime) ?? base
     }
 
+    /// In photo mode (the Photo button) the photo comes first.
+    private var photoFirst: Bool { task == nil && focus == .photo }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("What would you like to do?", text: $title, axis: .vertical)
-                        .font(.rounded(.title3, weight: .semibold))
-                        .focused($titleFocused)
-                    TextField("Add a little note…", text: $notes, axis: .vertical)
-                        .font(.rounded(.body))
-                        .lineLimit(2...6)
-                }
-
-                Section("Category") {
-                    CategoryPicker(selection: $category)
-                        .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
-                }
-
-                Section("When") {
-                    DatePicker(selection: $date, displayedComponents: .date) {
-                        Label("Date", systemImage: "calendar")
+        ScrollViewReader { scroller in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    header
+                    if photoFirst {
+                        photoSection
                     }
-                    Toggle(isOn: $hasTime.animation()) {
-                        Label("Time", systemImage: "clock.fill")
-                    }
-                    if hasTime {
-                        DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
-                    }
-                    Picker(selection: $repeatOption) {
-                        ForEach(RepeatOption.allCases) { option in
-                            Text(option.label).tag(option)
-                        }
-                    } label: {
-                        Label("Repeat", systemImage: "repeat")
+                    titleField
+                    categorySection
+                    options
+                    if task != nil {
+                        deleteButton
                     }
                 }
-
-                Section {
-                    Toggle(isOn: $reminderEnabled.animation()) {
-                        Label("Remind me", systemImage: "bell.fill")
-                    }
-                    if reminderEnabled {
-                        DatePicker("Alert", selection: $reminderDate, in: Date()...)
-                    }
-                } header: {
-                    Text("Reminder")
-                } footer: {
-                    Text("My Day sends a gentle notification at the chosen time.")
-                }
-
-                if task != nil {
-                    Section {
-                        Button(role: .destructive) {
-                            confirmDelete = true
-                        } label: {
-                            Label("Delete To-Do", systemImage: "trash")
-                        }
-                    }
-                }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 12)
             }
-            .font(.rounded(.body))
-            .scrollContentBackground(.hidden)
-            .background(DreamyBackground(theme: .todos))
-            .navigationTitle(task == nil ? "New To-Do" : "Edit To-Do")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", action: save)
-                        .fontWeight(.bold)
-                        .disabled(title.trimmed.isEmpty)
-                }
-            }
-            .onChange(of: reminderEnabled) { _, isOn in
-                if isOn { askForNotifications() }
-            }
-            .onChange(of: time) { _, newTime in
-                // Keep the reminder in step with the task time until the person changes it.
-                if !reminderEnabled { reminderDate = date.atTime(of: newTime) }
-            }
-            .alert("Notifications are off", isPresented: $showPermissionAlert) {
-                Button("Open Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                }
-                Button("Not Now", role: .cancel) {}
-            } message: {
-                Text("Allow notifications for My Day in Settings to get reminders.")
-            }
-            .confirmationDialog("Delete this to-do?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive, action: deleteTask)
+            .scrollDismissesKeyboard(.interactively)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                saveBar
             }
             .task {
-                if task == nil { titleFocused = true }
+                if let focus, focus != .title, focus != .photo {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    withAnimation { scroller.scrollTo(focus, anchor: .center) }
+                }
             }
         }
+        .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
+        .presentationCornerRadius(32)
+        .presentationBackground(
+            LinearGradient(colors: [Color(hex: 0xFFF5FA), Color(hex: 0xF7F0FF)], startPoint: .top, endPoint: .bottom)
+        )
+        .onChange(of: reminderEnabled) { _, isOn in
+            if isOn { askForNotifications() }
+        }
+        .onChange(of: time) { _, newTime in
+            // Keep the reminder in step with the task time until the person turns it on.
+            if !reminderEnabled { reminderDate = date.startOfDay.atTime(of: newTime) }
+        }
+        .onChange(of: title) { _, newTitle in
+            if showsTitleHint, !newTitle.trimmed.isEmpty {
+                withAnimation { showsTitleHint = false }
+            }
+        }
+        .onChange(of: pickerItem) { _, item in
+            loadPicked(item)
+        }
+        .photosPicker(isPresented: $showsLibrary, selection: $pickerItem, matching: .images)
+        .fullScreenCover(isPresented: $showsCamera) {
+            CameraPicker { image in usePhoto(image) }
+                .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $showsViewer) {
+            PhotoViewer(image: viewerImage)
+        }
+        .alert("Notifications are off", isPresented: $showsNotificationAlert) {
+            settingsButtons
+        } message: {
+            Text("Allow notifications for My Day in Settings to get reminders.")
+        }
+        .alert("Camera access is off", isPresented: $showsCameraAlert) {
+            settingsButtons
+        } message: {
+            Text("Allow camera access for My Day in Settings, or choose a photo from your library.")
+        }
+        .alert("That photo couldn't be added", isPresented: $showsPhotoError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please try another photo.")
+        }
+        .confirmationDialog("Delete this to-do?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive, action: deleteTask)
+        }
+        .task {
+            if (task == nil && !photoFirst && focus == nil) || focus == .title {
+                focusedField = .title
+            }
+        }
+    }
+
+    // MARK: Sections
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(task == nil ? "New Task ✨" : "Task Details")
+                    .font(.rounded(.title2, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(task == nil ? "What would you like to do?" : "Change anything you like 💕")
+                    .font(.rounded(.subheadline, weight: .medium))
+                    .foregroundStyle(Palette.inkSoft)
+            }
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.white))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressScaleStyle())
+            .accessibilityLabel("Close")
+        }
+    }
+
+    private var titleField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SheetLabel(text: "Task")
+            TextField("e.g. Call the doctor", text: $title)
+                .font(.rounded(.title3, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .submitLabel(.done)
+                .focused($focusedField, equals: .title)
+                .onSubmit { focusedField = nil }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 54)
+                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(titleBorder, lineWidth: 1.5)
+                )
+                .accessibilityLabel("Task name")
+            if showsTitleHint {
+                Text("Please give your task a name 💕")
+                    .font(.rounded(.caption, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0xD7263D))
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    private var titleBorder: Color {
+        if showsTitleHint { return Color(hex: 0xD7263D) }
+        return focusedField == .title ? Palette.hotPink.opacity(0.6) : Palette.bubblegum.opacity(0.25)
+    }
+
+    private var categorySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SheetLabel(text: "Category")
+            CategoryPicker(selection: $category)
+        }
+    }
+
+    private var options: some View {
+        VStack(spacing: 10) {
+            OptionRow(emoji: "📅", title: "Date & Time", value: whenSummary, isExpanded: expanded == .when) {
+                toggle(.when)
+            } panel: {
+                whenPanel
+            }
+            .id(TaskSheetFocus.when)
+
+            OptionRow(emoji: "🔔", title: "Reminder", value: reminderSummary, isExpanded: expanded == .reminder) {
+                toggle(.reminder)
+            } panel: {
+                reminderPanel
+            }
+            .id(TaskSheetFocus.reminder)
+
+            OptionRow(emoji: "🔁", title: "Repeat", value: repeatOption.label, isExpanded: expanded == .repeatRule) {
+                toggle(.repeatRule)
+            } panel: {
+                repeatPanel
+            }
+            .id(TaskSheetFocus.repeatRule)
+
+            if !photoFirst {
+                OptionRow(emoji: "📷", title: "Photo", value: thumbnail == nil ? "None" : "Added",
+                          thumbnail: thumbnailImage, isExpanded: expanded == .photo) {
+                    toggle(.photo)
+                } panel: {
+                    photoPanel
+                }
+                .id(TaskSheetFocus.photo)
+            }
+
+            OptionRow(emoji: "📝", title: "Note", value: notes.trimmed.isEmpty ? "None" : notes.trimmed,
+                      isExpanded: expanded == .note) {
+                toggle(.note)
+            } panel: {
+                TextField("Add a little note…", text: $notes, axis: .vertical)
+                    .font(.rounded(.body))
+                    .lineLimit(2...6)
+                    .focused($focusedField, equals: .note)
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+            }
+            .id(TaskSheetFocus.note)
+        }
+    }
+
+    private var photoSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SheetLabel(text: "Photo")
+            photoPanel
+        }
+    }
+
+    private var photoPanel: some View {
+        TaskPhotoPanel(
+            image: thumbnailImage,
+            isLoading: isLoadingPhoto,
+            onTake: { takePhoto() },
+            onChoose: { showsLibrary = true },
+            onView: { showsViewer = true },
+            onRemove: { removePhoto() }
+        )
+    }
+
+    private var deleteButton: some View {
+        Button(role: .destructive) {
+            confirmDelete = true
+        } label: {
+            Label("Delete Task", systemImage: "trash")
+                .font(.rounded(.subheadline, weight: .bold))
+                .foregroundStyle(Color(hex: 0xD7263D))
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(Capsule().fill(Color.white.opacity(0.7)))
+        }
+        .buttonStyle(PressScaleStyle())
+        .padding(.top, 4)
+    }
+
+    private var saveBar: some View {
+        Button(action: save) {
+            Text(task == nil ? "Add Task ✨" : "Save Changes ✨")
+        }
+        .buttonStyle(PillButtonStyle())
+        .opacity(title.trimmed.isEmpty ? 0.6 : 1)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(
+            LinearGradient(colors: [Color(hex: 0xF7F0FF).opacity(0), Color(hex: 0xF7F0FF)],
+                           startPoint: .top, endPoint: .center)
+        )
+    }
+
+    // MARK: Panels
+
+    private var whenPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                DayChip(title: "Today", isOn: date.isToday) { date = Date().startOfDay }
+                DayChip(title: "Tomorrow", isOn: date.isSameDay(as: Date().adding(days: 1))) {
+                    date = Date().adding(days: 1)
+                }
+                Spacer(minLength: 0)
+                DatePicker("Date", selection: $date, displayedComponents: .date)
+                    .labelsHidden()
+            }
+            Toggle(isOn: $hasTime.animation()) {
+                Label("Add a time", systemImage: "clock.fill")
+                    .font(.rounded(.subheadline, weight: .semibold))
+            }
+            .tint(Palette.hotPink)
+            if hasTime {
+                DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
+                    .font(.rounded(.subheadline, weight: .semibold))
+            }
+        }
+    }
+
+    private var reminderPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $reminderEnabled.animation()) {
+                Label("Remind me", systemImage: "bell.fill")
+                    .font(.rounded(.subheadline, weight: .semibold))
+            }
+            .tint(Palette.hotPink)
+            if reminderEnabled {
+                DatePicker("Alert", selection: $reminderDate, in: Date()...)
+                    .font(.rounded(.subheadline, weight: .semibold))
+                if hasTime, reminderDate != date.startOfDay.atTime(of: time) {
+                    Button("Use the task time") {
+                        reminderDate = date.startOfDay.atTime(of: time)
+                    }
+                    .font(.rounded(.caption, weight: .bold))
+                }
+            }
+            Text("My Day sends a gentle notification at this time.")
+                .font(.rounded(.caption))
+                .foregroundStyle(Palette.inkSoft)
+        }
+    }
+
+    private var repeatPanel: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
+            ForEach(RepeatOption.allCases) { option in
+                DayChip(title: option.label, isOn: repeatOption == option) {
+                    repeatOption = option
+                }
+            }
+        }
+    }
+
+    // MARK: Summaries
+
+    private var whenSummary: String {
+        let day: String
+        if date.isToday {
+            day = "Today"
+        } else if date.isSameDay(as: Date().adding(days: 1)) {
+            day = "Tomorrow"
+        } else {
+            day = date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        }
+        guard hasTime else { return day }
+        return day + " · " + time.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var reminderSummary: String {
+        guard reminderEnabled else { return "Off" }
+        if reminderDate.isSameDay(as: date) {
+            return reminderDate.formatted(date: .omitted, time: .shortened)
+        }
+        return reminderDate.formatted(.dateTime.day().month(.abbreviated).hour().minute())
+    }
+
+    private var thumbnailImage: UIImage? {
+        thumbnail.flatMap(UIImage.init(data:))
+    }
+
+    private var viewerImage: UIImage? {
+        let full = newPhoto ?? (photoChanged ? nil : task?.photoData)
+        return (full ?? thumbnail).flatMap(UIImage.init(data:))
+    }
+
+    // MARK: Actions
+
+    private func toggle(_ section: TaskSheetFocus) {
+        Haptics.tap()
+        focusedField = nil
+        withAnimation(.snappy) {
+            expanded = expanded == section ? nil : section
+        }
+    }
+
+    @ViewBuilder
+    private var settingsButtons: some View {
+        Button("Open Settings") {
+            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+        }
+        Button("Not Now", role: .cancel) {}
     }
 
     /// Asks for notification permission the first time a reminder is switched on.
@@ -163,14 +465,75 @@ struct NewTaskSheet: View {
         Task {
             if !(await ReminderCenter.requestPermission()) {
                 reminderEnabled = false
-                showPermissionAlert = true
+                showsNotificationAlert = true
             }
+        }
+    }
+
+    private func takePhoto() {
+        Task {
+            if await CameraAccess.request() {
+                showsCamera = true
+            } else {
+                showsCameraAlert = true
+            }
+        }
+    }
+
+    private func loadPicked(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        isLoadingPhoto = true
+        Task {
+            let raw = try? await item.loadTransferable(type: Data.self)
+            let prepared = await Task.detached(priority: .userInitiated) {
+                raw.flatMap(PhotoProcessor.prepare)
+            }.value
+            finishPhoto(prepared)
+            pickerItem = nil
+        }
+    }
+
+    private func usePhoto(_ image: UIImage) {
+        isLoadingPhoto = true
+        let raw = image.jpegData(compressionQuality: 0.92)
+        Task {
+            let prepared = await Task.detached(priority: .userInitiated) {
+                raw.flatMap(PhotoProcessor.prepare)
+            }.value
+            finishPhoto(prepared)
+        }
+    }
+
+    private func finishPhoto(_ prepared: PhotoProcessor.Output?) {
+        isLoadingPhoto = false
+        guard let prepared else {
+            showsPhotoError = true
+            return
+        }
+        withAnimation(.snappy) {
+            thumbnail = prepared.thumbnail
+            newPhoto = prepared.photo
+            photoChanged = true
+        }
+        Haptics.tap()
+    }
+
+    private func removePhoto() {
+        withAnimation(.snappy) {
+            thumbnail = nil
+            newPhoto = nil
+            photoChanged = true
         }
     }
 
     private func save() {
         let cleanTitle = title.trimmed
-        guard !cleanTitle.isEmpty else { return }
+        guard !cleanTitle.isEmpty else {
+            withAnimation { showsTitleHint = true }
+            focusedField = .title
+            Haptics.tap()
+            return
+        }
         let day = date.startOfDay
         let taskTime = hasTime ? day.atTime(of: time) : nil
 
@@ -191,8 +554,20 @@ struct NewTaskSheet: View {
                              repeatOption: repeatOption)
             context.insert(saved)
         }
+        if photoChanged {
+            saved.photoData = newPhoto
+            saved.photoThumbnail = thumbnail
+        }
+
         ReminderCenter.sync(saved)
+        if saved.activeReminder != nil {
+            // A reminder that came from Voice Add has not asked for permission yet.
+            Task {
+                if await ReminderCenter.requestPermission() { ReminderCenter.sync(saved) }
+            }
+        }
         Haptics.success()
+        onSaved?(saved)
         dismiss()
     }
 
@@ -206,29 +581,151 @@ struct NewTaskSheet: View {
     }
 }
 
-/// Colourful category chips.
+// MARK: - Pieces
+
+/// Small caps label above a section of the sheet.
+private struct SheetLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.rounded(.footnote, weight: .heavy))
+            .foregroundStyle(Palette.berry.opacity(0.8))
+            .textCase(.uppercase)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// A row that opens a small panel: "📅 Date & Time · Today ⌄".
+private struct OptionRow<Panel: View>: View {
+    let emoji: String
+    let title: String
+    let value: String
+    var thumbnail: UIImage?
+    let isExpanded: Bool
+    let toggle: () -> Void
+    @ViewBuilder let panel: () -> Panel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: toggle) {
+                HStack(spacing: 12) {
+                    Text(emoji)
+                        .font(.system(size: 19))
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.white))
+                        .accessibilityHidden(true)
+                    Text(title)
+                        .font(.rounded(.subheadline, weight: .bold))
+                        .foregroundStyle(Palette.ink)
+                    Spacer(minLength: 8)
+                    if let thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 34, height: 34)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .accessibilityHidden(true)
+                    } else {
+                        Text(value)
+                            .font(.rounded(.subheadline, weight: .medium))
+                            .foregroundStyle(Palette.inkSoft)
+                            .lineLimit(1)
+                    }
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                        .accessibilityHidden(true)
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 56)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(title)
+            .accessibilityValue(value)
+            .accessibilityHint(isExpanded ? "Hides the options" : "Shows the options")
+            .accessibilityAddTraits(.isButton)
+
+            if isExpanded {
+                panel()
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
+                    .transition(.opacity)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.white, lineWidth: 1.2)
+        )
+    }
+}
+
+/// Small pill for quick choices (Today, Tomorrow, repeat options).
+private struct DayChip: View {
+    let title: String
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            withAnimation(.snappy) { action() }
+        } label: {
+            Text(title)
+                .font(.rounded(.subheadline, weight: .bold))
+                .foregroundStyle(isOn ? Color.white : Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 38)
+                .frame(maxWidth: .infinity)
+                .background(Capsule().fill(isOn ? AnyShapeStyle(Palette.hotPink.gradient)
+                                               : AnyShapeStyle(Color(hex: 0xFFF1F7))))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(PressScaleStyle())
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
+    }
+}
+
+/// Personal · Work · Health · Learning · Shopping.
 struct CategoryPicker: View {
     @Binding var selection: TaskCategory
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
             ForEach(TaskCategory.allCases) { category in
                 let isOn = selection == category
                 Button {
                     withAnimation(.snappy) { selection = category }
                     Haptics.tap()
                 } label: {
-                    Label(category.label, systemImage: category.symbol)
-                        .font(.rounded(.caption, weight: .bold))
-                        .foregroundStyle(isOn ? Color.white : category.color)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(
-                            Capsule().fill(isOn ? AnyShapeStyle(category.color.gradient)
-                                                : AnyShapeStyle(category.color.opacity(0.12)))
-                        )
+                    HStack(spacing: 5) {
+                        Text(category.emoji)
+                        Text(category.label)
+                            .foregroundStyle(isOn ? Color.white : Palette.ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .font(.rounded(.subheadline, weight: .bold))
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .background(
+                        Capsule().fill(isOn ? AnyShapeStyle(category.color.gradient)
+                                            : AnyShapeStyle(Color.white.opacity(0.85)))
+                    )
+                    .overlay(Capsule().strokeBorder(category.color.opacity(isOn ? 0 : 0.25), lineWidth: 1))
+                    .contentShape(Capsule())
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel(category.label)
                 .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
             }
         }

@@ -8,7 +8,7 @@ set -euo pipefail
 
 BUNDLE_ID="com.regina3579.myday"
 OUT="${1:-screenshots}"
-ROUTES=(home quickadd menu todos priority journal calendar insights settings newtask newjournal)
+ROUTES=(home quickadd menu todos todos-add todos-photo todos-quick todos-voice todos-templates priority journal calendar insights settings newtask newjournal)
 IFS='|' read -r -a DEVICES <<< "${SCREENSHOT_DEVICES:-iPhone 17 Pro|iPhone 17 Pro Max|iPhone SE (3rd generation)}"
 mkdir -p "$OUT"
 

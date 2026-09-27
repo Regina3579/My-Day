@@ -9,16 +9,21 @@ and keeping a private journal. It is built with **SwiftUI** and **SwiftData**.
 
 Captured automatically in the iPhone 17 Pro simulator by CI.
 
-| Home | Quick Add | Today's Priority | My Journal | Calendar |
+| Home | Today's To-Dos | Add a Task | Voice Add | Templates |
 | --- | --- | --- | --- | --- |
-| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-02-quickadd.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-priority.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-06-journal.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-07-calendar.jpg" width="170"> |
+| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-04-todos.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-todos-add.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-08-todos-voice.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-09-todos-templates.jpg" width="170"> |
+
+| Quick Add menu | Today's Priority | My Journal | Calendar | Insights |
+| --- | --- | --- | --- | --- |
+| <img src="docs/screenshots/iphone-17-pro-02-quickadd.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-10-priority.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-11-journal.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-12-calendar.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-13-insights.jpg" width="170"> |
 
 ## Features
 
 | Screen | What you can do |
 | --- | --- |
 | **My Day** (home) | The illustrated home screen from the design. The girl, pets and garden are an image; everything else is native SwiftUI: the ☰ menu, the "My Day" title, today's real date, the 🔔 reminders button, a daily message (it changes every day; tap it for another), the three feature cards with live badges, the pink **+** Quick Add menu and the floating tab bar. |
-| **Today's To-Dos** | Add to-dos inline or in detail (category, date, time, repeat, reminder, note). Tick them off, drag to reorder, swipe to delete, filter by category, and watch the progress ring. Finishing a repeating to-do creates the next one. |
+| **Today's To-Dos** | The illustrated header, today's date with a daily quote, category chips (All, Personal, Work, Health, Learning, Shopping) and soft pastel rows such as "Health · 5:00 PM 🔔". The box on the left ticks a to-do off; the little ✏️ on the right opens a menu: Edit, Change date/time, Add reminder, Repeat, Move to Priority and Delete. Tap a to-do for its details; drag one onto another to reorder. **Today's Progress** shows "3 of 8 completed" with a heart for every to-do. Finishing a repeating to-do creates the next one. |
+| **Five ways to add** | ➕ **Add a New Task**: a pastel sheet where only the title is needed; category, date & time, reminder, repeat, photo and note are optional. ⚡ **Quick Add**: type in "What needs doing?" and press Add or Return; it goes on today with no reminder or repeat, and the sheet stays open for the next one. 🎤 **Voice**: Apple's Speech framework (on the device when supported) turns what you say into text; My Day spots words like *today*, *tomorrow*, *at 5 PM*, *every day* and category words, then shows a preview (Task, Category, Date, Time, Reminder) with Cancel, Edit and Add Task. Nothing is saved without your tap, and guesses are pointed out. 📷 **Photo**: take or choose a photo, add the title and details, and save; view it full size, replace it or remove it later. ▦ **Templates**: Morning Routine, Grocery Shopping, Travel Checklist, Workout Routine, Home Cleaning and Study Session; untick what you don't need and tap "Add to My Day". "Save as Template" keeps your own lists on the device. |
 | **Today's Priority** | Numbered golden cards for the few things that matter most. Add, edit, reorder and complete them, or pick one from today's to-dos. |
 | **My Journal** | Pages with a mood, title, text, writing prompts and up to 6 photos. Search, favourites, a "week in moods" strip, and an optional **Face ID lock**. |
 | **Calendar** | Month grid with markers for to-dos, priorities and journal pages, plus the selected day's agenda. |
@@ -26,14 +31,18 @@ Captured automatically in the iPhone 17 Pro simulator by CI.
 | **Settings** | Your name, morning and evening reminders, carrying unfinished items over to today, haptics, the journal lock, and data clean-up. |
 
 Everything is stored on the device with SwiftData, so data stays between launches.
-The app makes no network calls. It asks for notification permission only when
-you first switch on a reminder.
+The app itself makes no network calls. Permissions are asked for only when a
+feature needs them: notifications when you first switch on a reminder, the
+microphone and speech recognition when you first use Voice Add, and the camera
+when you first take a photo. If one is turned off, My Day explains how to turn
+it on in Settings and offers another way (for example, typing instead of speaking).
 
 ## Data model
 
 | Model | Fields |
 | --- | --- |
-| `TaskItem` (the spec's *Task*; `Task` is Swift's concurrency type) | id, title, category, date, time, reminderEnabled, reminderDate, repeatOption, isCompleted, createdAt (+ notes, completedAt, seriesID, sortOrder) |
+| `TaskItem` (the spec's *Task*; `Task` is Swift's concurrency type) | id, title, category (Personal, Work, Health, Learning, Shopping), date, time, reminderEnabled, reminderDate, repeatOption, isCompleted, createdAt (+ notes, completedAt, seriesID, sortOrder, photoData stored outside the database, photoThumbnail) |
+| `TaskTemplate` | id, name, emoji, category, items, createdAt — the templates you save yourself |
 | `Priority` | id, title, date, order, isCompleted (+ completedAt, createdAt) |
 | `JournalEntry` | id, date, title, body, mood, photos (`[JournalPhoto]`), createdAt, updatedAt (+ isFavorite) |
 | `JournalPhoto` | id, imageData (stored outside the database), thumbnailData, order |
@@ -55,20 +64,24 @@ you first switch on a reminder.
 ```
 MyDay/
 ├── App/            App entry, navigation (Router), UIKit appearance
-├── Models/         SwiftData models: TaskItem, Priority, JournalEntry, JournalPhoto
-├── Services/       Reminders, Face ID lock, haptics, day rollover, helpers
+├── Models/         SwiftData models: TaskItem, TaskTemplate, Priority, JournalEntry,
+│                   JournalPhoto; TaskDraft (an unsaved to-do)
+├── Services/       Reminders, speech (SpeechTranscriber, VoiceTaskParser),
+│                   Face ID lock, haptics, day rollover, helpers
 ├── Theme/          Colours from the artwork, fonts, shared components
 ├── Features/
 │   ├── Root/       RootView, BottomTabBar, side menu
 │   ├── Home/       HomeView, HomeHeader, DailyQuoteView, HomeFeatureCard,
 │   │               QuickAddButton / QuickAddMenu, card illustrations
-│   ├── Todos/      TodayToDosView, NewTaskSheet
+│   ├── Todos/      TodayToDosView, TodoComponents (rows, ✏️ menu, progress),
+│   │               NewTaskSheet, QuickAddTaskSheet, VoiceTaskSheet,
+│   │               TemplatePickerSheet, TaskPhotoViews
 │   ├── Priority/   TodaysPriorityView, NewPrioritySheet
 │   ├── Journal/    JournalView, JournalDetailView, NewJournalEntrySheet, lock screen
 │   ├── Calendar/   CalendarView
 │   ├── Insights/   InsightsView
 │   └── Settings/   SettingsView, RemindersView
-└── Assets.xcassets App icon, home scene illustration, colours
+└── Assets.xcassets App icon, home and to-dos scene illustrations, kitten, colours
 ```
 
 ## How the home screen is built
@@ -81,6 +94,14 @@ painted out of it. Everything on top is native SwiftUI: `HomeHeader`,
 Sizes follow the screen width, so the layout keeps the design's proportions
 on every iPhone, and the screen scrolls when it does not fit (for example on
 iPhone SE).
+
+The To-Dos screen works the same way: only `TodosScene` (the sign, the girl and
+her puppy) and `ProgressKitten` are images. The date card, chips, rows, buttons,
+hearts and the "You're Doing Great!" badge are SwiftUI views.
+
+The tab bar floats over the screens, so `RootView` publishes the height it
+covers (`tabBarClearance`) and every screen keeps its content clear of it with
+`tabBarSafeArea()`.
 
 ## Continuous integration
 

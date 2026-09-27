@@ -4,6 +4,15 @@ import Foundation
 /// Debug builds only: `-screenshotRoute <name>` opens a screen at launch,
 /// so `scripts/screenshots.sh` can capture every screen in the simulator.
 enum DebugLaunchRoute {
+    /// A To-Dos sheet to open once the screen appears ("todos-add" → "add").
+    @MainActor private static var todosSheet: String?
+
+    @MainActor
+    static func takeTodosSheet() -> String? {
+        defer { todosSheet = nil }
+        return todosSheet
+    }
+
     @MainActor
     static func apply(to router: Router, today: Date) {
         let arguments = ProcessInfo.processInfo.arguments
@@ -20,6 +29,9 @@ enum DebugLaunchRoute {
         case "settings": router.tab = .settings
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)
+        case let route where route.hasPrefix("todos-"):
+            todosSheet = String(route.dropFirst("todos-".count))
+            router.open(.todos(today))
         default: break
         }
     }

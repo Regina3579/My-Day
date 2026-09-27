@@ -101,11 +101,29 @@ extension TaskCategory {
         switch self {
         case .personal: Palette.hotPink
         case .work: Color(hex: 0x6C63D9)
-        case .study: Color(hex: 0x3E9BD6)
-        case .home: Color(hex: 0xE58A2B)
         case .health: Color(hex: 0x2DAA6A)
-        case .shopping: Color(hex: 0xC357D6)
-        case .other: Color(hex: 0x8A86A8)
+        case .learning: Color(hex: 0x4C7CF0)
+        case .shopping: Color(hex: 0xF07A2E)
         }
+    }
+}
+
+/// The soft colours the to-do rows take in turn, as in the design.
+struct RowTint {
+    let fill: Color
+    let edge: Color
+    let accent: Color
+
+    static let cycle: [RowTint] = [
+        RowTint(fill: Color(hex: 0xFDE6F1), edge: Color(hex: 0xF9C4DD), accent: Color(hex: 0xEE2F86)),
+        RowTint(fill: Color(hex: 0xEEE8FD), edge: Color(hex: 0xD6CAF8), accent: Color(hex: 0x7A4FE0)),
+        RowTint(fill: Color(hex: 0xFFF3DB), edge: Color(hex: 0xF9DEA6), accent: Color(hex: 0xEE9A12)),
+        RowTint(fill: Color(hex: 0xE4EEFD), edge: Color(hex: 0xBFD3F8), accent: Color(hex: 0x3F63DC)),
+        RowTint(fill: Color(hex: 0xE5F6E6), edge: Color(hex: 0xBFE6C2), accent: Color(hex: 0x33A447)),
+        RowTint(fill: Color(hex: 0xFFEADD), edge: Color(hex: 0xF9CDAF), accent: Color(hex: 0xEB7426))
+    ]
+
+    static func at(_ index: Int) -> RowTint {
+        cycle[((index % cycle.count) + cycle.count) % cycle.count]
     }
 }

@@ -10,6 +10,31 @@ enum TabBarLayout {
     }
 }
 
+extension EnvironmentValues {
+    /// Height the floating tab bar covers at the bottom of each tab's screens.
+    @Entry var tabBarClearance: CGFloat = 0
+}
+
+extension View {
+    /// Keeps a tab screen's content clear of the floating tab bar.
+    ///
+    /// Each screen applies this itself: a bottom inset set on the navigation
+    /// stack does not reach the screens inside it.
+    func tabBarSafeArea() -> some View {
+        modifier(TabBarSafeArea())
+    }
+}
+
+private struct TabBarSafeArea: ViewModifier {
+    @Environment(\.tabBarClearance) private var clearance
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: clearance)
+        }
+    }
+}
+
 /// The translucent, rounded, floating tab bar: My Day · Calendar · Insights · Settings.
 struct BottomTabBar: View {
     @Binding var selection: AppTab

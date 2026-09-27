@@ -1,16 +1,19 @@
-import SwiftUI
 import SwiftData
+import SwiftUI
 
-/// "Today's To-Dos — Plan • Do • Achieve". Also used for any other day from the calendar.
+/// "Today's To-Dos": the illustrated header, the day's list in soft pastel rows,
+/// five ways to add a to-do and the day's progress. Also used for other days from the calendar.
 struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.tabBarClearance) private var tabBarClearance
     @AppStorage(Prefs.showCompleted) private var showCompleted = true
     @Query private var tasks: [TaskItem]
-    @State private var draft = ""
     @State private var filter: TaskCategory?
-    @State private var editing: TaskItem?
-    @State private var isComposing = false
-    @FocusState private var draftFocused: Bool
+    @State private var sheet: TodoSheet?
+    @State private var pendingDelete: TaskItem?
+    @State private var toast: String?
+    @State private var toastTask: Task<Void, Never>?
+    @State private var heroIsVisible = true
     private let day: Date
 
     init(day: Date) {
@@ -23,305 +26,300 @@ struct TodayToDosView: View {
         )
     }
 
-    private var visible: [TaskItem] {
-        guard let filter else { return tasks }
-        return tasks.filter { $0.category == filter }
-    }
-
-    private var openTasks: [TaskItem] { visible.filter { !$0.isCompleted } }
-
-    private var doneTasks: [TaskItem] {
-        visible.filter(\.isCompleted)
-            .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
-    }
-
-    private var progress: Double {
-        tasks.isEmpty ? 0 : Double(tasks.filter(\.isCompleted).count) / Double(tasks.count)
-    }
-
     private var title: String {
         day.isToday ? "Today's To-Dos" : day.formatted(.dateTime.weekday(.wide).month().day())
     }
 
-    private var cheer: String {
-        switch progress {
-        case 0 where tasks.isEmpty: "Plan • Do • Achieve"
-        case 0: "Let's make it a wonderful day ✨"
-        case ..<0.5: "Great start, keep going! 🌸"
-        case ..<1: "Almost there — you've got this! 💪"
-        default: "All done — you're a star! ⭐"
-        }
+    /// Open to-dos in the person's order, then finished ones (unless hidden in Settings).
+    private var visible: [TaskItem] {
+        let pool = filter.map { category in tasks.filter { $0.category == category } } ?? tasks
+        let open = pool.filter { !$0.isCompleted }
+        guard showCompleted else { return open }
+        let done = pool.filter(\.isCompleted)
+            .sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
+        return open + done
     }
 
-    private var usedCategories: [TaskCategory] {
-        let used = Set(tasks.map(\.category))
-        return TaskCategory.allCases.filter { used.contains($0) }
-    }
+    private var doneCount: Int { tasks.filter(\.isCompleted).count }
 
     var body: some View {
-        List {
-            Section {
-                SectionHeader(title: title, subtitle: cheer, symbol: "checklist", theme: .todos) {
-                    ProgressRing(progress: progress, tint: Palette.grape)
-                        .frame(width: 62, height: 62)
-                }
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-
-            Section {
-                addRow
-                if usedCategories.count > 1 {
-                    categoryFilter
-                }
-            }
-            .listRowBackground(Color.white.opacity(0.85))
-
-            if tasks.isEmpty {
-                Section {
-                    EmptyStateCard(title: "Nothing planned yet",
-                                   message: "Add your first to-do above and make today amazing! 💖")
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-            } else {
-                Section {
-                    if openTasks.isEmpty {
-                        celebration
-                    }
-                    ForEach(openTasks) { task in
-                        row(task)
-                    }
-                    .onMove { move(from: $0, to: $1) }
-                } header: {
-                    ListHeader(title: "To Do", count: openTasks.count, tint: Palette.grape)
-                }
-                .listRowBackground(Color.white.opacity(0.85))
-
-                if showCompleted && !doneTasks.isEmpty {
-                    Section {
-                        ForEach(doneTasks) { task in
-                            row(task)
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    TodosHero(width: proxy.size.width, safeTop: proxy.safeAreaInsets.top)
+                        .onGeometryChange(for: Bool.self) { geometry in
+                            geometry.frame(in: .global).maxY > 150
+                        } action: { isVisible in
+                            heroIsVisible = isVisible
                         }
-                    } header: {
-                        ListHeader(title: "Done", count: doneTasks.count, tint: Palette.mint)
-                    }
-                    .listRowBackground(Color.white.opacity(0.7))
+
+                    content
+                        .padding(.horizontal, 16)
+                        .padding(.top, 14)
+                        .padding(.bottom, 20)
+                        .frame(maxWidth: .infinity)
+                        .background(alignment: .top) {
+                            UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+                                .fill(LinearGradient(colors: [Color(hex: 0xFFF7FA), TodosBackdrop.base],
+                                                     startPoint: .top, endPoint: .bottom))
+                                .shadow(color: Palette.hotPink.opacity(0.12), radius: 10, x: 0, y: -4)
+                        }
+                        .padding(.top, -24)
                 }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .tabBarSafeArea()
+            .ignoresSafeArea(edges: .top)
+        }
+        .background(TodosBackdrop())
+        .overlay(alignment: .bottom) {
+            if let toast {
+                TodoToast(text: toast)
+                    .padding(.bottom, tabBarClearance + 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .allowsHitTesting(false)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .background(DreamyBackground(theme: .todos))
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isComposing = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                }
-                .accessibilityLabel("New to-do")
-            }
-        }
-        .sheet(item: $editing) { task in
-            NewTaskSheet(task: task)
-        }
-        .sheet(isPresented: $isComposing) {
-            NewTaskSheet(date: day, category: filter ?? .personal)
-        }
-    }
-
-    // MARK: Rows
-
-    private var addRow: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "plus.circle.fill")
-                .font(.title2)
-                .foregroundStyle(Palette.grape.gradient)
-            TextField("Add a new to-do…", text: $draft)
-                .font(.rounded(.body, weight: .medium))
-                .submitLabel(.done)
-                .focused($draftFocused)
-                .onSubmit { addDraft() }
-            Button {
-                isComposing = true
-            } label: {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Palette.grape)
-            }
-            .buttonStyle(.borderless)
-            .accessibilityLabel("More options")
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var categoryFilter: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                FilterChip(title: "All", symbol: "square.grid.2x2.fill", tint: Palette.grape, isOn: filter == nil) {
-                    filter = nil
-                }
-                ForEach(usedCategories) { category in
-                    FilterChip(title: category.label, symbol: category.symbol, tint: category.color,
-                               isOn: filter == category) {
-                        filter = filter == category ? nil : category
-                    }
-                }
-            }
-            .padding(.vertical, 2)
-        }
-    }
-
-    private var celebration: some View {
-        HStack(spacing: 12) {
-            Text("🎉").font(.largeTitle)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("All done — you're a star!")
+            ToolbarItem(placement: .principal) {
+                Text(title)
                     .font(.rounded(.headline, weight: .bold))
                     .foregroundStyle(Palette.ink)
-                Text("Enjoy the rest of your beautiful day 💖")
-                    .font(.rounded(.caption, weight: .medium))
-                    .foregroundStyle(Palette.inkSoft)
+                    .opacity(heroIsVisible ? 0 : 1)
+                    .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
+                    .accessibilityHidden(heroIsVisible)
             }
         }
-        .padding(.vertical, 6)
+        .sheet(item: $sheet) { sheet in
+            sheetContent(sheet)
+        }
+        .confirmationDialog("Delete this to-do?", isPresented: deleteBinding, titleVisibility: .visible,
+                            presenting: pendingDelete) { task in
+            Button("Delete “\(task.title)”", role: .destructive) { delete(task) }
+        } message: { _ in
+            Text("This can't be undone.")
+        }
+        #if DEBUG
+        .task {
+            if let route = DebugLaunchRoute.takeTodosSheet() {
+                sheet = TodoSheet(debugRoute: route)
+            }
+        }
+        #endif
     }
 
-    private func row(_ task: TaskItem) -> some View {
-        TaskRow(task: task, onToggle: { toggle(task) }, onOpen: { editing = task })
-            .swipeActions(edge: .trailing) {
-                Button(role: .destructive) {
-                    withAnimation(.snappy) { TaskActions.delete(task, in: context) }
-                } label: {
-                    Label("Delete", systemImage: "trash")
+    // MARK: Content
+
+    private var content: some View {
+        VStack(spacing: 14) {
+            TodayHeaderCard(day: day)
+            CategoryChipBar(selection: $filter)
+                .padding(.bottom, -8)
+            list
+            TodosActionBar(
+                onAdd: { sheet = .compose(filter, nil) },
+                onQuickAdd: { sheet = .quickAdd },
+                onVoice: { sheet = .voice(sample: nil) },
+                onPhoto: { sheet = .compose(filter, .photo) },
+                onTemplate: { sheet = .templates }
+            )
+            .padding(.top, 4)
+            TodosProgressCard(done: doneCount, total: tasks.count)
+                .padding(.top, 10)
+        }
+    }
+
+    @ViewBuilder
+    private var list: some View {
+        let rows = visible
+        if rows.isEmpty {
+            if tasks.isEmpty {
+                TodosEmptyCard(title: "Nothing planned yet",
+                               message: "Add your first to-do and make this day wonderful 💖",
+                               actionTitle: "Add a New Task ✨") { sheet = .compose(filter, nil) }
+            } else if let filter {
+                TodosEmptyCard(title: "No \(filter.label) to-dos",
+                               message: "Nothing in \(filter.label) \(day.isToday ? "today" : "on this day") yet.",
+                               actionTitle: "Add a \(filter.label) Task") { sheet = .compose(filter, nil) }
+            } else {
+                TodosEmptyCard(title: "All done — you're a star! ⭐",
+                               message: "Finished to-dos are hidden. You can show them again in Settings.",
+                               actionTitle: "Add a New Task ✨") { sheet = .compose(nil, nil) }
+            }
+        } else {
+            VStack(spacing: 10) {
+                ForEach(Array(rows.enumerated()), id: \.element.persistentModelID) { index, task in
+                    TodoRow(
+                        task: task,
+                        tint: RowTint.at(index),
+                        onToggle: { toggle(task) },
+                        onOpen: { sheet = .edit(task, nil) },
+                        onAction: { action in handle(action, for: task) }
+                    )
+                    .draggable(task.id.uuidString) {
+                        Text(task.title)
+                            .font(.rounded(.body, weight: .semibold))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Capsule().fill(Color.white))
+                    }
+                    .dropDestination(for: String.self) { items, _ in
+                        move(items.first, onto: task)
+                    }
+                    .transition(.asymmetric(insertion: .scale(scale: 0.92).combined(with: .opacity),
+                                            removal: .opacity))
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: TodoSheet) -> some View {
+        switch sheet {
+        case .compose(let category, let focus):
+            NewTaskSheet(date: day, category: category ?? .personal, focus: focus) { saved in
+                show("Added “\(saved.title)” ✨")
+            }
+        case .edit(let task, let focus):
+            NewTaskSheet(task: task, focus: focus)
+        case .draft(let draft):
+            NewTaskSheet(draft: draft) { saved in
+                show("Added “\(saved.title)” ✨")
+            }
+        case .quickAdd:
+            QuickAddTaskSheet(day: day)
+        case .voice(let sample):
+            VoiceTaskSheet(
+                day: day,
+                onEdit: { draft in self.sheet = .draft(draft) },
+                onAdded: { title in show("Added “\(title)” ✨") },
+                sample: sample
+            )
+        case .templates:
+            TemplatePickerSheet(day: day, currentTitles: tasks.map(\.title)) { count in
+                show(count == 1 ? "Added 1 to-do ✨" : "Added \(count) to-dos ✨")
+            }
+        }
     }
 
     // MARK: Actions
 
-    private func addDraft() {
-        let clean = draft.trimmed
-        guard !clean.isEmpty else { return }
-        withAnimation(.snappy) {
-            context.insert(TaskItem(title: clean, category: filter ?? .personal, date: day))
-        }
-        draft = ""
-        Haptics.tap()
-        draftFocused = true
-    }
-
     private func toggle(_ task: TaskItem) {
-        withAnimation(.snappy) { TaskActions.toggle(task, in: context) }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            TaskActions.toggle(task, in: context)
+        }
+        if task.isCompleted, !tasks.isEmpty, tasks.allSatisfy(\.isCompleted) {
+            show("All done — you're a star! ⭐")
+        }
     }
 
-    private func move(from source: IndexSet, to destination: Int) {
-        var reordered = openTasks
-        reordered.move(fromOffsets: source, toOffset: destination)
-        for (index, task) in reordered.enumerated() {
-            task.sortOrder = Double(index)
+    private func handle(_ action: TaskMenuAction, for task: TaskItem) {
+        switch action {
+        case .edit: sheet = .edit(task, .title)
+        case .changeDate: sheet = .edit(task, .when)
+        case .reminder: sheet = .edit(task, .reminder)
+        case .repeatRule: sheet = .edit(task, .repeatRule)
+        case .moveToPriority:
+            withAnimation(.snappy) { TaskActions.moveToPriority(task, in: context) }
+            Haptics.success()
+            show("Moved to Today's Priority ⭐")
+        case .delete:
+            pendingDelete = task
+        }
+    }
+
+    private func delete(_ task: TaskItem) {
+        withAnimation(.snappy) { TaskActions.delete(task, in: context) }
+        show("To-do deleted")
+    }
+
+    /// Drag a to-do onto another to put it there.
+    private func move(_ id: String?, onto target: TaskItem) -> Bool {
+        guard let id, let moving = tasks.first(where: { $0.id.uuidString == id }),
+              moving.persistentModelID != target.persistentModelID,
+              !moving.isCompleted, !target.isCompleted
+        else { return false }
+        var open = tasks.filter { !$0.isCompleted }
+        guard let from = open.firstIndex(where: { $0.persistentModelID == moving.persistentModelID }),
+              let to = open.firstIndex(where: { $0.persistentModelID == target.persistentModelID })
+        else { return false }
+        open.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        withAnimation(.snappy) {
+            for (index, task) in open.enumerated() {
+                task.sortOrder = Double(index)
+            }
+        }
+        Haptics.tap()
+        return true
+    }
+
+    private func show(_ message: String) {
+        toastTask?.cancel()
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { toast = message }
+        AccessibilityNotification.Announcement(message).post()
+        toastTask = Task {
+            try? await Task.sleep(for: .seconds(2.2))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.25)) { toast = nil }
+        }
+    }
+
+    private var deleteBinding: Binding<Bool> {
+        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
+    }
+}
+
+/// The sheets the To-Dos screen can show.
+enum TodoSheet: Identifiable {
+    /// A new to-do, optionally in a category and opened at a section (e.g. the photo).
+    case compose(TaskCategory?, TaskSheetFocus?)
+    case edit(TaskItem, TaskSheetFocus?)
+    /// A new to-do filled in by Voice Add, to check and finish.
+    case draft(TaskDraft)
+    case quickAdd
+    case voice(sample: String?)
+    case templates
+
+    var id: String {
+        switch self {
+        case .compose(let category, let focus): "compose-\(category?.rawValue ?? "")-\(focus?.rawValue ?? "")"
+        case .edit(let task, let focus): "edit-\(task.id.uuidString)-\(focus?.rawValue ?? "")"
+        case .draft: "draft"
+        case .quickAdd: "quick"
+        case .voice: "voice"
+        case .templates: "templates"
         }
     }
 }
 
-/// A single to-do: checkbox, title, category, time, reminder and repeat.
-struct TaskRow: View {
-    let task: TaskItem
-    let onToggle: () -> Void
-    let onOpen: () -> Void
+/// Soft blush behind the list (seen when the content is short or overscrolled).
+private struct TodosBackdrop: View {
+    static let base = Color(hex: 0xFFF0F6)
 
     var body: some View {
-        HStack(spacing: 12) {
-            Button(action: onToggle) {
-                CheckBubble(isOn: task.isCompleted, tint: task.category.color)
-            }
-            .buttonStyle(.borderless)
-            .accessibilityLabel(task.isCompleted ? "Mark \(task.title) as not done" : "Mark \(task.title) as done")
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(task.title)
-                    .font(.rounded(.body, weight: .semibold))
-                    .strikethrough(task.isCompleted, color: task.category.color)
-                    .foregroundStyle(task.isCompleted ? Color.secondary : Palette.ink)
-                if !task.notes.isEmpty {
-                    Text(task.notes)
-                        .font(.rounded(.caption))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(2)
-                }
-                TaskMetaLine(task: task)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onOpen)
-            .accessibilityAddTraits(.isButton)
+        ZStack {
+            Self.base
+            SparkleField(tint: Palette.hotPink)
+                .opacity(0.6)
         }
-        .padding(.vertical, 4)
+        .ignoresSafeArea()
     }
 }
 
-/// Category, time, reminder and repeat, shown in small type under a to-do.
-struct TaskMetaLine: View {
-    let task: TaskItem
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Label(task.category.label, systemImage: task.category.symbol)
-                .foregroundStyle(task.category.color)
-            if let time = task.time {
-                Label(time.formatted(date: .omitted, time: .shortened), systemImage: "clock")
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            if let reminder = task.activeReminder, !task.isCompleted {
-                Label(reminder.formatted(date: .omitted, time: .shortened), systemImage: "bell.fill")
-                    .foregroundStyle(Palette.hotPink)
-            }
-            if task.repeatOption != .never {
-                Image(systemName: "repeat")
-                    .foregroundStyle(Palette.inkSoft)
-                    .accessibilityLabel(task.repeatOption.label)
-            }
-        }
-        .font(.rounded(.caption2, weight: .bold))
-        .labelStyle(CompactLabelStyle())
-        .lineLimit(1)
-    }
-}
-
-private struct CompactLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 3) {
-            configuration.icon
-            configuration.title
+#if DEBUG
+extension TodoSheet {
+    /// Sheets that `-screenshotRoute todos-<name>` can open.
+    init?(debugRoute: String) {
+        switch debugRoute {
+        case "add": self = .compose(nil, nil)
+        case "photo": self = .compose(nil, .photo)
+        case "quick": self = .quickAdd
+        case "voice": self = .voice(sample: "Remind me to call the doctor tomorrow at 5 PM")
+        case "templates": self = .templates
+        default: return nil
         }
     }
 }
-
-struct FilterChip: View {
-    let title: String
-    let symbol: String
-    let tint: Color
-    let isOn: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            Haptics.tap()
-            withAnimation(.snappy) { action() }
-        } label: {
-            Label(title, systemImage: symbol)
-                .font(.rounded(.caption, weight: .bold))
-                .foregroundStyle(isOn ? Color.white : tint)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(isOn ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(tint.opacity(0.12))))
-        }
-        .buttonStyle(.borderless)
-        .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
-    }
-}
+#endif

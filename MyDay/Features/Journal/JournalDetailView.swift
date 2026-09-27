@@ -20,6 +20,7 @@ struct JournalDetailView: View {
                 page
             }
         }
+        .tabBarSafeArea()
         .background(DreamyBackground(theme: .journal))
         .navigationTitle(entry.date.formatted(.dateTime.month(.abbreviated).day().year()))
         .navigationBarTitleDisplayMode(.inline)

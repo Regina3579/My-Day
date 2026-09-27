@@ -20,6 +20,9 @@ final class TaskItem {
     /// Shared by every occurrence of a repeating task.
     var seriesID: UUID = UUID()
     var sortOrder: Double = 0
+    /// Optional photo the task is about (max 1600 px), stored outside the database file.
+    @Attribute(.externalStorage) var photoData: Data?
+    var photoThumbnail: Data?
     var createdAt: Date = Date()
 
     init(
@@ -33,8 +36,7 @@ final class TaskItem {
         repeatOption: RepeatOption = .never,
         seriesID: UUID = UUID()
     ) {
-        let id = UUID()
-        self.id = id
+        self.id = UUID()
         self.title = title
         self.notes = notes
         self.categoryRaw = category.rawValue
@@ -49,7 +51,7 @@ final class TaskItem {
     }
 
     var category: TaskCategory {
-        get { TaskCategory(rawValue: categoryRaw) ?? .personal }
+        get { TaskCategory(storedValue: categoryRaw) }
         set { categoryRaw = newValue.rawValue }
     }
 
@@ -63,20 +65,37 @@ final class TaskItem {
 }
 
 enum TaskCategory: String, CaseIterable, Identifiable, Codable {
-    case personal, work, study, home, health, shopping, other
+    case personal, work, health, learning, shopping
+
+    /// Reads a stored value, including the names used by earlier versions.
+    init(storedValue: String) {
+        switch storedValue {
+        case "study": self = .learning
+        case "home", "other": self = .personal
+        default: self = TaskCategory(rawValue: storedValue) ?? .personal
+        }
+    }
 
     var id: String { rawValue }
     var label: String { rawValue.capitalized }
 
+    var emoji: String {
+        switch self {
+        case .personal: "🌸"
+        case .work: "💻"
+        case .health: "🌿"
+        case .learning: "📖"
+        case .shopping: "🛒"
+        }
+    }
+
     var symbol: String {
         switch self {
         case .personal: "heart.fill"
-        case .work: "briefcase.fill"
-        case .study: "book.fill"
-        case .home: "house.fill"
+        case .work: "laptopcomputer"
         case .health: "leaf.fill"
-        case .shopping: "bag.fill"
-        case .other: "sparkles"
+        case .learning: "book.fill"
+        case .shopping: "cart.fill"
         }
     }
 }

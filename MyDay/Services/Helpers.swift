@@ -88,3 +88,20 @@ enum FocusQuotes {
         quotes[date.dayNumber % quotes.count]
     }
 }
+
+/// The gentle line in the To-Dos header. It changes every day.
+enum TodoQuotes {
+    private static let quotes = [
+        "Small steps still move you forward.",
+        "Little by little, a little becomes a lot.",
+        "Done is better than perfect.",
+        "One task at a time — you've got this.",
+        "Start where you are. Do what you can.",
+        "Progress, not perfection.",
+        "Your future self will thank you."
+    ]
+
+    static func quote(for date: Date) -> String {
+        quotes[date.dayNumber % quotes.count]
+    }
+}
