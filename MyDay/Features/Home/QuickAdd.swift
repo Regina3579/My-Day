@@ -17,11 +17,11 @@ struct QuickAddButton: View {
                 Circle()
                     .strokeBorder(Color.white.opacity(0.95), lineWidth: 3)
                 Image(systemName: "plus")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 25, weight: .bold))
                     .foregroundStyle(Color.white)
                     .rotationEffect(.degrees(isOpen ? 45 : 0))
             }
-            .frame(width: 62, height: 62)
+            .frame(width: 58, height: 58)
             .shadow(color: Palette.hotPink.opacity(0.55), radius: 12, x: 0, y: 4)
             .contentShape(Circle())
         }
@@ -38,7 +38,7 @@ struct QuickAddMenu: View {
     let onJournal: () -> Void
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 10) {
+        VStack(alignment: .trailing, spacing: 8) {
             QuickAddChip(kind: .task, action: onTask)
             QuickAddChip(kind: .priority, action: onPriority)
             QuickAddChip(kind: .journal, action: onJournal)
@@ -48,7 +48,7 @@ struct QuickAddMenu: View {
             ChipTail()
                 .fill(Color.white)
                 .frame(width: 16, height: 9)
-                .offset(x: -23, y: 8)
+                .offset(x: -21, y: 8)
                 .accessibilityHidden(true)
         }
     }
@@ -76,14 +76,14 @@ struct QuickAddChip: View {
             action()
         } label: {
             HStack(spacing: 12) {
-                icon.frame(width: 28, height: 28)
+                icon.frame(width: 26, height: 26)
                 Text(kind.title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(Palette.ink)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
-            .frame(width: 176, height: 50)
+            .padding(.horizontal, 12)
+            .frame(width: 162, height: 46)
             .background(Capsule().fill(Color.white))
             .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
             .contentShape(Capsule())

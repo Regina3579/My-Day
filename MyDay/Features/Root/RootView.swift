@@ -28,7 +28,7 @@ struct RootView: View {
                 .ignoresSafeArea(edges: .bottom)
 
                 if showsQuickAdd {
-                    quickAddLayer(aboveBottom: barBottom + TabBarLayout.height + 16)
+                    quickAddLayer(aboveBottom: barBottom + TabBarLayout.height + 40)
                         .transition(.opacity)
                 }
 
@@ -135,7 +135,7 @@ struct RootView: View {
                     setQuickAdd(open: !router.isQuickAddOpen)
                 }
             }
-            .padding(.trailing, 18)
+            .padding(.trailing, 12)
             .padding(.bottom, aboveBottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)

@@ -60,10 +60,10 @@ struct HeaderButton<Content: View>: View {
 
 /// "My Day" with the "To-Do & Journal" subtitle, glowing softly so it stays readable.
 struct HomeTitle: View {
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 44
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 42
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: -3) {
             HStack(alignment: .top, spacing: 1) {
                 Text("My Day")
                     .font(.system(size: min(titleSize, 54), weight: .black, design: .rounded))
@@ -79,7 +79,7 @@ struct HomeTitle: View {
 
             HStack(spacing: 4) {
                 Text("To-Do & Journal")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(Palette.ink)
                 Image(systemName: "heart.fill")
                     .font(.system(size: 12))
@@ -88,7 +88,8 @@ struct HomeTitle: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
 
-            Swoosh().frame(width: 128, height: 6)
+            Swoosh().frame(width: 124, height: 6)
+                .padding(.top, 2)
         }
         .shadow(color: Color.white, radius: 0.5)
         .shadow(color: Color.white.opacity(0.9), radius: 6)

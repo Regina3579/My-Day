@@ -11,18 +11,18 @@ struct DailyQuoteView: View {
             withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { offset += 1 }
             Haptics.tap()
         } label: {
-            VStack(alignment: .leading, spacing: -4) {
+            VStack(alignment: .leading, spacing: -5) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { line in
                     Text(line.element)
                 }
             }
-            .font(.custom("Noteworthy-Bold", size: 16, relativeTo: .headline))
+            .font(.custom("Noteworthy-Bold", size: 15, relativeTo: .headline))
             .foregroundStyle(Palette.berry)
             .shadow(color: Color.white, radius: 0.5)
             .shadow(color: Color.white.opacity(0.9), radius: 5)
-            .padding(6)
+            .padding(4)
             .background(SoftGlow().padding(-10))
-            .rotationEffect(.degrees(-8))
+            .rotationEffect(.degrees(-10))
             .id(lines.joined())
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
         }
