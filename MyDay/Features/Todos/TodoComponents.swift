@@ -432,7 +432,7 @@ struct TodosActionBar: View {
                 HStack(alignment: .top, spacing: 8) { bubbles }
             }
         } else {
-            HStack(alignment: .center, spacing: 6) {
+            HStack(alignment: .center, spacing: 5) {
                 addCard
                 bubbles
             }
@@ -444,16 +444,16 @@ struct TodosActionBar: View {
             Haptics.tap()
             onAdd()
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(RadialGradient(colors: [Color(hex: 0xFF62A5), Palette.hotPink],
-                                             center: UnitPoint(x: 0.35, y: 0.3), startRadius: 0, endRadius: 28))
+                                             center: UnitPoint(x: 0.35, y: 0.3), startRadius: 0, endRadius: 26))
                     Image(systemName: "plus")
-                        .font(.system(size: 19, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color.white)
                 }
-                .frame(width: 40, height: 40)
+                .frame(width: 36, height: 36)
                 .shadow(color: Palette.hotPink.opacity(0.4), radius: 6, x: 0, y: 3)
 
                 Text("Add a New Task ✨")
@@ -461,10 +461,10 @@ struct TodosActionBar: View {
                     .foregroundStyle(Palette.berry)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, minHeight: 68)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -519,7 +519,7 @@ private struct ActionBubble: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
-            .frame(width: 52)
+            .frame(width: 48)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle(scale: 0.9))

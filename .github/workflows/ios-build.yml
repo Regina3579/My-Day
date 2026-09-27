@@ -61,6 +61,8 @@ jobs:
 
       - name: Run the app and capture every screen
         run: ./scripts/screenshots.sh screenshots
+        env:
+          SAMPLE_ROUTES: todos-add
 
       - name: Upload screenshots
         if: always()

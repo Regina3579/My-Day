@@ -129,7 +129,7 @@ enum WelcomeContent {
         guard existing == 0 else { return }
 
         let today = Date()
-        context.insert(TaskItem(title: "Tap the circle to finish a to-do ✓", category: .personal, date: today))
+        context.insert(TaskItem(title: "Tick the box to finish a to-do ✓", category: .personal, date: today))
         context.insert(TaskItem(title: "Drink 8 glasses of water 💧", category: .health, date: today,
                                 repeatOption: .daily))
         context.insert(TaskItem(title: "Write my first journal page 📔", category: .personal, date: today))

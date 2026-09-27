@@ -4,6 +4,9 @@
 #
 #   ./scripts/screenshots.sh
 #   SCREENSHOT_DEVICES="iPhone 17 Pro" ./scripts/screenshots.sh out
+#
+# SAMPLE_ROUTES="todos-add" also prints where the app's main thread is busy
+# when that screen is captured (useful when a screen does not appear).
 set -euo pipefail
 
 BUNDLE_ID="com.regina3579.myday"
@@ -74,9 +77,25 @@ for i in "${!UDIDS[@]}"; do
     sleep "$wait_seconds"
     wait_seconds=8
     xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}.png" >/dev/null
+    pid="$(pgrep -f "/MyDay.app/MyDay" | head -1 || true)"
+    [ -z "$pid" ] && echo "  $route: MyDay is not running"
+    if [ -n "$pid" ] && [[ " ${SAMPLE_ROUTES:-} " == *" $route "* ]]; then
+      report="$OUT/sample-${slug}-${route}.txt"
+      sample "$pid" 2 -file "$report" >/dev/null 2>&1 || true
+      echo "---- $route: busiest code on the main thread ----"
+      sed -n '/Sort by top of stack/,/Binary Images/p' "$report" | head -40 || true
+      echo "---- $route: main thread call graph ----"
+      sed -n '/Call graph:/,/Total number in stack/p' "$report" | grep -v "^ *$" | head -220 | cut -c1-220 || true
+    fi
     n=$((n + 1))
   done
   xcrun simctl shutdown "$udid" || true
 done
 
 ls -1 "$OUT"
+
+crashes="$(ls -t ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i myday | head -3 || true)"
+for report in $crashes; do
+  echo "---- crash report: $report ----"
+  head -120 ~/Library/Logs/DiagnosticReports/"$report" || true
+done
