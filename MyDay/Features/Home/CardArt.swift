@@ -31,12 +31,7 @@ struct NotebookArt: View {
             cover.fill(Color(hex: 0xEDE4FD))
                 .placed(x: w * 0.515, y: h * 0.52, width: w * 0.94, height: h * 0.93)
 
-            cover
-                .fill(LinearGradient(colors: [Color(hex: 0xF7F2FF), Color(hex: 0xDCCBFB)],
-                                     startPoint: .top, endPoint: .bottom))
-                .overlay(cover.strokeBorder(Color(hex: 0xBBA2F0), lineWidth: max(1, w * 0.008)))
-                .overlay(cover.inset(by: w * 0.028).strokeBorder(Color.white.opacity(0.85), lineWidth: max(1, w * 0.01)))
-                .overlay(GlossHighlight(cornerRadius: w * 0.09))
+            coverFace(cover, width: w)
                 .placed(x: w * 0.505, y: h * 0.51, width: w * 0.94, height: h * 0.93)
 
             // Spiral binding on the left edge.
@@ -104,6 +99,21 @@ struct NotebookArt: View {
                 .position(x: w * 0.585, y: h * 0.83)
         }
         .frame(width: w, height: h)
+    }
+
+    private static let coverFill = LinearGradient(colors: [Color(hex: 0xF7F2FF), Color(hex: 0xDCCBFB)],
+                                                  startPoint: .top, endPoint: .bottom)
+
+    /// The lilac cover with its outline, inner line and shine.
+    private func coverFace(_ cover: RoundedRectangle, width w: CGFloat) -> some View {
+        let outline: CGFloat = max(1, w * 0.008)
+        let innerLine: CGFloat = max(1, w * 0.01)
+        let inset: CGFloat = w * 0.028
+        return cover
+            .fill(Self.coverFill)
+            .overlay(cover.strokeBorder(Color(hex: 0xBBA2F0), lineWidth: outline))
+            .overlay(cover.inset(by: inset).strokeBorder(Color.white.opacity(0.85), lineWidth: innerLine))
+            .overlay(GlossHighlight(cornerRadius: w * 0.09))
     }
 }
 
@@ -452,27 +462,46 @@ struct Daisy: View {
     var petal: Color = .white
     var petals = 8
 
+    private static let petalEdge = Color(hex: 0xF4A7C6).opacity(0.45)
+    private static let centreColors = [Color(hex: 0xFFE680), Color(hex: 0xFBB829), Color(hex: 0xE8960F)]
+
     var body: some View {
         GeometryReader { proxy in
-            let s = min(proxy.size.width, proxy.size.height)
+            let s: CGFloat = min(proxy.size.width, proxy.size.height)
             ZStack {
                 ForEach(0..<petals, id: \.self) { index in
-                    Ellipse()
-                        .fill(petal)
-                        .overlay(Ellipse().stroke(Color(hex: 0xF4A7C6).opacity(0.45), lineWidth: max(0.4, s * 0.02)))
-                        .frame(width: s * 0.3, height: s * 0.5)
-                        .offset(y: -s * 0.24)
-                        .rotationEffect(.degrees(Double(index) / Double(petals) * 360))
+                    petalShape(index: index, size: s)
                 }
-                Circle()
-                    .fill(RadialGradient(colors: [Color(hex: 0xFFE680), Color(hex: 0xFBB829), Color(hex: 0xE8960F)],
-                                         center: .center, startRadius: 0, endRadius: s * 0.17))
-                    .frame(width: s * 0.32, height: s * 0.32)
+                centre(size: s)
             }
             .frame(width: s, height: s)
             .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
         .accessibilityHidden(true)
+    }
+
+    // Sizes are worked out with explicit types first: mixing CGFloat and Double
+    // literals in one long expression is very slow to type-check.
+    private func petalShape(index: Int, size s: CGFloat) -> some View {
+        let edge: CGFloat = max(0.4, s * 0.02)
+        let width: CGFloat = s * 0.3
+        let height: CGFloat = s * 0.5
+        let lift: CGFloat = -s * 0.24
+        let angle: Double = Double(index) / Double(petals) * 360
+        return Ellipse()
+            .fill(petal)
+            .overlay(Ellipse().stroke(Self.petalEdge, lineWidth: edge))
+            .frame(width: width, height: height)
+            .offset(y: lift)
+            .rotationEffect(.degrees(angle))
+    }
+
+    private func centre(size s: CGFloat) -> some View {
+        let radius: CGFloat = s * 0.17
+        let side: CGFloat = s * 0.32
+        return Circle()
+            .fill(RadialGradient(colors: Self.centreColors, center: .center, startRadius: 0, endRadius: radius))
+            .frame(width: side, height: side)
     }
 }
 
