@@ -190,47 +190,32 @@ extension ConfettiPiece {
 
 // MARK: - One to-do done: two little hearts
 
-/// Two little hearts, one a bit bigger and one very small, that pop out of a tick box when
-/// a to-do (pink) or a priority (purple) is ticked, float up and fade (in under a second).
+/// Two little pink hearts, one a bit bigger and one very small, that pop out of a tick box
+/// when a to-do or a priority is ticked, float up and fade (in under a second).
 struct TickPop: View {
-    enum Tint {
-        case pink, purple
-    }
-
-    var tint: Tint = .pink
-
     @State private var isOut = false
     @State private var isSmallOut = false
     @State private var isRisen = false
     @State private var isFaded = false
 
-    private static let pinkBig = LinearGradient(colors: [Color(hex: 0xFF8CC6), Palette.hotPink],
+    private static let bigFill = LinearGradient(colors: [Color(hex: 0xFF8CC6), Palette.hotPink],
                                                 startPoint: .top, endPoint: .bottom)
-    private static let pinkSmall = LinearGradient(colors: [Color(hex: 0xFFC2E0), Palette.bubblegum],
+    private static let smallFill = LinearGradient(colors: [Color(hex: 0xFFC2E0), Palette.bubblegum],
                                                   startPoint: .top, endPoint: .bottom)
-    private static let purpleBig = LinearGradient(colors: [Color(hex: 0xC99BFF), Color(hex: 0x8A45E6)],
-                                                  startPoint: .top, endPoint: .bottom)
-    private static let purpleSmall = LinearGradient(colors: [Color(hex: 0xE6D2FF), Color(hex: 0xAD72F2)],
-                                                    startPoint: .top, endPoint: .bottom)
-
-    private var bigFill: LinearGradient { tint == .pink ? Self.pinkBig : Self.purpleBig }
-    private var smallFill: LinearGradient { tint == .pink ? Self.pinkSmall : Self.purpleSmall }
-    private var glow: Color { tint == .pink ? Palette.hotPink : Palette.grape }
-    private var ring: Color { tint == .pink ? Palette.bubblegum : Palette.lavender }
 
     var body: some View {
         ZStack {
-            // A soft ring that pops with them.
+            // A soft pink ring that pops with them.
             Circle()
-                .strokeBorder(ring.opacity(0.55), lineWidth: 1.5)
+                .strokeBorder(Palette.bubblegum.opacity(0.55), lineWidth: 1.5)
                 .frame(width: 26, height: 26)
                 .scaleEffect(isOut ? 1.3 : 0.4)
                 .opacity(isOut ? 0 : 0.9)
-            heart(size: 15, fill: bigFill)
+            heart(size: 15, fill: Self.bigFill)
                 .scaleEffect(isOut ? 1 : 0.2)
                 .rotationEffect(.degrees(isOut ? -12 : 10))
                 .offset(x: isOut ? -5 : 0, y: isOut ? -20 : 0)
-            heart(size: 9, fill: smallFill)
+            heart(size: 9, fill: Self.smallFill)
                 .scaleEffect(isSmallOut ? 1 : 0.2)
                 .rotationEffect(.degrees(isSmallOut ? 16 : -10))
                 .offset(x: isSmallOut ? 12 : 0, y: isSmallOut ? -12 : 0)
@@ -258,7 +243,7 @@ struct TickPop: View {
                     .font(.system(size: size, weight: .semibold))
                     .foregroundStyle(Color.white)
             )
-            .shadow(color: glow.opacity(0.5), radius: 4, x: 0, y: 1)
+            .shadow(color: Palette.hotPink.opacity(0.5), radius: 4, x: 0, y: 1)
     }
 
     /// Seconds before they fade (longer in a screenshot run, so they can be captured).

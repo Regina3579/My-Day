@@ -532,7 +532,7 @@ enum PriorityMoreSymbol {
     }()
 }
 
-/// A numbered golden card for one priority. Ticking it pops two little purple hearts.
+/// A numbered golden card for one priority. Ticking it pops two little pink hearts.
 struct PriorityCard: View {
     let rank: Int
     let priority: Priority
@@ -574,7 +574,7 @@ struct PriorityCard: View {
         .overlay(alignment: .trailing) {
             // Over the tick (the card's padding is 16).
             if tickPops > 0 {
-                TickPop(tint: .purple)
+                TickPop()
                     .id(tickPops)
                     .frame(width: 32, height: 32)
                     .padding(.trailing, 16)
