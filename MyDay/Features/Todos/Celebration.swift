@@ -191,10 +191,10 @@ extension ConfettiPiece {
 // MARK: - One to-do done: two little hearts
 
 /// Two little hearts, one a bit bigger and one very small, that pop out of a tick box when
-/// a to-do (pink) or a priority (yellow) is ticked, float up and fade (in under a second).
+/// a to-do (pink) or a priority (purple) is ticked, float up and fade (in under a second).
 struct TickPop: View {
     enum Tint {
-        case pink, yellow
+        case pink, purple
     }
 
     var tint: Tint = .pink
@@ -208,15 +208,15 @@ struct TickPop: View {
                                                 startPoint: .top, endPoint: .bottom)
     private static let pinkSmall = LinearGradient(colors: [Color(hex: 0xFFC2E0), Palette.bubblegum],
                                                   startPoint: .top, endPoint: .bottom)
-    private static let yellowBig = LinearGradient(colors: [Color(hex: 0xFFE680), Color(hex: 0xFFB800)],
+    private static let purpleBig = LinearGradient(colors: [Color(hex: 0xC99BFF), Color(hex: 0x8A45E6)],
                                                   startPoint: .top, endPoint: .bottom)
-    private static let yellowSmall = LinearGradient(colors: [Color(hex: 0xFFF3B0), Color(hex: 0xFFCC33)],
+    private static let purpleSmall = LinearGradient(colors: [Color(hex: 0xE6D2FF), Color(hex: 0xAD72F2)],
                                                     startPoint: .top, endPoint: .bottom)
 
-    private var bigFill: LinearGradient { tint == .pink ? Self.pinkBig : Self.yellowBig }
-    private var smallFill: LinearGradient { tint == .pink ? Self.pinkSmall : Self.yellowSmall }
-    private var glow: Color { tint == .pink ? Palette.hotPink : Color(hex: 0xFFA000) }
-    private var ring: Color { tint == .pink ? Palette.bubblegum : Palette.honey }
+    private var bigFill: LinearGradient { tint == .pink ? Self.pinkBig : Self.purpleBig }
+    private var smallFill: LinearGradient { tint == .pink ? Self.pinkSmall : Self.purpleSmall }
+    private var glow: Color { tint == .pink ? Palette.hotPink : Palette.grape }
+    private var ring: Color { tint == .pink ? Palette.bubblegum : Palette.lavender }
 
     var body: some View {
         ZStack {
