@@ -69,7 +69,7 @@ enum DebugLaunchRoute {
     }
 
     @MainActor
-    static func apply(to router: Router, today: Date) {
+    static func apply(to router: Router, today: Date, context: ModelContext) {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-screenshotRoute"), index + 1 < arguments.count else { return }
         defer { markReady() }
@@ -79,6 +79,16 @@ enum DebugLaunchRoute {
         case "menu": router.isMenuOpen = true
         case "todos": router.open(.todos(today))
         case "priority": router.open(.priority(today))
+        case "priority-empty":
+            // The last route: clears the day's demo priority to show the empty page.
+            let start = today.startOfDay
+            let end = start.nextDay
+            let priorities = (try? context.fetch(FetchDescriptor<Priority>(
+                predicate: #Predicate { $0.date >= start && $0.date < end }))) ?? []
+            for priority in priorities {
+                context.delete(priority)
+            }
+            router.open(.priority(today))
         case "journal": router.open(.journal)
         case "journal-page":
             journalPage = true

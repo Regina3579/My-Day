@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import Combine
 
-/// Hosts the four tabs, the floating tab bar, the Quick Add menu, the side menu
-/// and the app-wide sheets.
+/// Hosts the four tabs, the floating tab bar (hidden under full-screen pages), the Quick Add
+/// menu, the side menu and the app-wide sheets.
 struct RootView: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
@@ -19,13 +19,16 @@ struct RootView: View {
             ZStack(alignment: .bottom) {
                 tabs(reserved: reserved)
 
-                BottomTabBar(selection: tabBinding) { tab in
-                    router.popToRoot(tab)
+                if router.showsTabBar {
+                    BottomTabBar(selection: tabBinding) { tab in
+                        router.popToRoot(tab)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, barBottom)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .ignoresSafeArea(edges: .bottom)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(.horizontal, 12)
-                .padding(.bottom, barBottom)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .ignoresSafeArea(edges: .bottom)
 
                 if showsQuickAdd {
                     quickAddLayer(aboveBottom: barBottom + TabBarLayout.height + 40)
@@ -48,6 +51,7 @@ struct RootView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
+            .animation(.easeInOut(duration: 0.25), value: router.showsTabBar)
         }
         .sheet(item: sheetBinding) { sheet in
             sheetContent(sheet)
@@ -72,7 +76,7 @@ struct RootView: View {
             #endif
             refreshDay()
             #if DEBUG
-            DebugLaunchRoute.apply(to: router, today: appState.today)
+            DebugLaunchRoute.apply(to: router, today: appState.today, context: modelContext)
             #endif
         }
     }
@@ -85,23 +89,27 @@ struct RootView: View {
                 HomeView(today: appState.today)
                     .appDestinations()
             }
+            .environment(\.hostTab, .home)
             .tabLayer(visible: router.tab == .home)
 
             NavigationStack(path: calendarPathBinding) {
                 CalendarView()
                     .appDestinations()
             }
+            .environment(\.hostTab, .calendar)
             .tabLayer(visible: router.tab == .calendar)
 
             NavigationStack {
                 InsightsView()
             }
+            .environment(\.hostTab, .insights)
             .tabLayer(visible: router.tab == .insights)
 
             NavigationStack {
                 SettingsView()
                     .appDestinations()
             }
+            .environment(\.hostTab, .settings)
             .tabLayer(visible: router.tab == .settings)
         }
         .environment(\.tabBarClearance, reserved)

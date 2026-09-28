@@ -11,8 +11,9 @@ set -euo pipefail
 
 BUNDLE_ID="com.regina3579.myday"
 OUT="${1:-screenshots}"
-# todos-star and todos-heart tick a to-do and todos-alldone ticks all of them, so they come last.
-ROUTES=(home quickadd menu todos todos-add todos-photo todos-voice todos-templates priority journal journal-page calendar insights settings newtask newjournal todos-star todos-heart todos-alldone todos-confetti)
+# todos-star and todos-heart tick a to-do, todos-alldone ticks all of them and priority-empty
+# deletes the day's priority, so they come last.
+ROUTES=(home quickadd menu todos todos-add todos-photo todos-voice todos-templates priority journal journal-page calendar insights settings newtask newjournal todos-star todos-heart todos-alldone todos-confetti priority-empty)
 IFS='|' read -r -a DEVICES <<< "${SCREENSHOT_DEVICES:-iPhone 17 Pro|iPhone 17 Pro Max|iPhone SE (3rd generation)}"
 mkdir -p "$OUT"
 

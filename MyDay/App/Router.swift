@@ -57,6 +57,17 @@ final class Router {
     var sheet: AppSheet?
     var isMenuOpen = false
     var isQuickAddOpen = false
+    /// How many full-screen pages (Today's Priority) each tab is showing: the tab bar hides
+    /// while the current tab shows one. A count, not a flag, so a page that replaces another
+    /// one of its kind (its `onAppear` can run before the old page's `onDisappear`) keeps it hidden.
+    private var fullScreenPages: [AppTab: Int] = [:]
+
+    var showsTabBar: Bool { fullScreenPages[tab, default: 0] == 0 }
+
+    /// Called by a full-screen page when it appears (`true`) and disappears (`false`).
+    func setFullScreen(_ isOn: Bool, in tab: AppTab) {
+        fullScreenPages[tab] = max(0, fullScreenPages[tab, default: 0] + (isOn ? 1 : -1))
+    }
 
     /// Jumps to the My Day tab and shows `route` on top of the home screen.
     func open(_ route: AppRoute) {

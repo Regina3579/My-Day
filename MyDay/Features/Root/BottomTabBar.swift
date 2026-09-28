@@ -13,6 +13,8 @@ enum TabBarLayout {
 extension EnvironmentValues {
     /// Height the floating tab bar covers at the bottom of each tab's screens.
     @Entry var tabBarClearance: CGFloat = 0
+    /// The tab whose navigation stack shows a screen.
+    @Entry var hostTab: AppTab = .home
 }
 
 extension View {

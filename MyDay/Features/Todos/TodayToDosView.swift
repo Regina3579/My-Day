@@ -532,16 +532,6 @@ enum TodoSheet: Identifiable {
     }
 }
 
-private extension View {
-    /// A List row that shows only its own content: no background, separator or default padding.
-    func plainListRow(_ insets: EdgeInsets = EdgeInsets()) -> some View {
-        listRowInsets(insets)
-            .listRowSeparator(.hidden)
-            .listSectionSeparator(.hidden)
-            .listRowBackground(Color.clear)
-    }
-}
-
 /// Soft blush behind the list (seen when the content is short or overscrolled).
 private struct TodosBackdrop: View {
     static let base = Color(hex: 0xFFF0F6)
