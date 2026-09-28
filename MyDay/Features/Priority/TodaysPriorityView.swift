@@ -4,7 +4,7 @@ import UIKit
 
 /// "Today's Priority": the illustrated scene fills the top of the screen and a soft pink panel
 /// holds "Add today's priority…" and the day's priorities (a little star until there is one).
-/// The page is full screen: the tab bar hides while it is open.
+/// The page is full screen: the status bar and the tab bar hide while it is open.
 struct TodaysPriorityView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
@@ -62,6 +62,9 @@ struct TodaysPriorityView: View {
         .sheet(item: $editing) { priority in
             NewPrioritySheet(priority: priority)
         }
+        // Full screen, as in the design: no clock or battery over the picture (only while
+        // this page's tab is showing).
+        .statusBarHidden(router.tab == hostTab)
         .onAppear { router.setFullScreen(true, in: hostTab) }
         .onDisappear { router.setFullScreen(false, in: hostTab) }
         #if DEBUG
