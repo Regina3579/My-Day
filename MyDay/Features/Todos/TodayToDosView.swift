@@ -2,11 +2,12 @@ import SwiftData
 import SwiftUI
 
 /// "Today's To-Dos": the illustrated header, the day's list in soft pastel rows,
-/// five ways to add a to-do and the day's progress. Also used for other days from the calendar.
+/// four ways to add a to-do and the day's progress. Also used for other days from the calendar.
 struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.tabBarClearance) private var tabBarClearance
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Prefs.showCompleted) private var showCompleted = true
     @Query private var tasks: [TaskItem]
     @State private var filter: TaskCategory?
@@ -17,8 +18,12 @@ struct TodayToDosView: View {
     @State private var heroIsVisible = true
     /// Height of the pinned add buttons, so the toast can float above them.
     @State private var dockHeight: CGFloat = 0
-    /// Goes up each time the last to-do of the day is ticked (plays the sparkle burst).
+    /// Goes up each time the last to-do of the day is ticked; each change plays the confetti.
     @State private var celebration = 0
+    @State private var showsConfetti = false
+    /// Just-ticked to-dos stay in place for a moment (so their star can pop) before they
+    /// move down to the finished ones.
+    @State private var settling: Set<PersistentIdentifier> = []
     private let day: Date
 
     init(day: Date) {
@@ -36,11 +41,12 @@ struct TodayToDosView: View {
     }
 
     /// Open to-dos in the person's order, then finished ones (unless hidden in Settings).
+    /// A to-do ticked a moment ago still sits among the open ones.
     private var visible: [TaskItem] {
         let pool = filter.map { category in tasks.filter { $0.category == category } } ?? tasks
-        let open = pool.filter { !$0.isCompleted }
+        let open = pool.filter { !$0.isCompleted || settling.contains($0.persistentModelID) }
         guard showCompleted else { return open }
-        let done = pool.filter(\.isCompleted)
+        let done = pool.filter { $0.isCompleted && !settling.contains($0.persistentModelID) }
             .sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
         return open + done
     }
@@ -71,6 +77,13 @@ struct TodayToDosView: View {
             scrollingPage(width: proxy.size.width, safeTop: proxy.safeAreaInsets.top)
         }
         .background(TodosBackdrop())
+        .overlay {
+            if showsConfetti {
+                ConfettiCelebration()
+                    .id(celebration)
+                    .ignoresSafeArea()
+            }
+        }
         .overlay(alignment: .bottom) {
             toastView
         }
@@ -182,15 +195,26 @@ struct TodayToDosView: View {
     }
 
     #if DEBUG
-    /// `todos-<name>` opens a sheet; `todos-alldone` ticks every to-do to show the celebration.
+    /// `todos-<name>` opens a sheet. `todos-alldone` ticks every to-do; `todos-star` ticks one
+    /// and `todos-confetti` plays the confetti, both timed so the screenshot (taken about
+    /// 11 seconds after launch) catches them in the air.
     private func openDebugRoute() async {
         guard let route = DebugLaunchRoute.takeTodosSheet() else { return }
-        if route == "alldone" {
+        switch route {
+        case "alldone":
             try? await Task.sleep(for: .seconds(1))
             for task in tasks where !task.isCompleted {
                 toggle(task)
             }
-        } else {
+        case "star":
+            try? await Task.sleep(for: .seconds(9.9))
+            if let first = visible.first(where: { !$0.isCompleted }) {
+                toggle(first)
+            }
+        case "confetti":
+            try? await Task.sleep(for: .seconds(9.4))
+            celebrate()
+        default:
             sheet = TodoSheet(debugRoute: route)
         }
     }
@@ -245,7 +269,7 @@ struct TodayToDosView: View {
     @ViewBuilder
     private var progressLine: some View {
         if !tasks.isEmpty {
-            DailyProgressLine(day: day, done: doneCount, total: tasks.count, celebration: celebration)
+            DailyProgressLine(day: day, done: doneCount, total: tasks.count)
                 .plainListRow(EdgeInsets(top: 0, leading: 16, bottom: 6, trailing: 16))
         }
     }
@@ -333,12 +357,42 @@ struct TodayToDosView: View {
     // MARK: Actions
 
     private func toggle(_ task: TaskItem) {
+        let id = task.persistentModelID
+        let isFinishing = !task.isCompleted
+        if isFinishing {
+            settling.insert(id)
+        } else {
+            settling.remove(id)
+        }
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             TaskActions.toggle(task, in: context)
         }
+        if isFinishing {
+            // Let the tick and its star show, then move it down to the finished ones.
+            Task {
+                try? await Task.sleep(for: .seconds(0.9))
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                    _ = settling.remove(id)
+                }
+            }
+        }
         if task.isCompleted, !tasks.isEmpty, tasks.allSatisfy(\.isCompleted) {
-            celebration += 1
-            AccessibilityNotification.Announcement("All done for \(day.isToday ? "today" : "the day")!").post()
+            celebrate()
+        }
+    }
+
+    /// Everything is done: "All done for today!" and the big confetti.
+    private func celebrate() {
+        celebration += 1
+        AccessibilityNotification.Announcement("All done for \(day.isToday ? "today" : "the day")!").post()
+        guard !reduceMotion else { return }
+        showsConfetti = true
+        let run = celebration
+        Task {
+            try? await Task.sleep(for: .seconds(ConfettiCelebration.duration + 0.2))
+            if celebration == run {
+                showsConfetti = false
+            }
         }
     }
 

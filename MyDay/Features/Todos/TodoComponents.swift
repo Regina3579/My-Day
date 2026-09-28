@@ -245,6 +245,9 @@ struct TodoRow: View {
 
     @State private var showsMenu = false
     @State private var chosen: TaskMenuAction?
+    /// Goes up each time the to-do is ticked; every change pops one star.
+    @State private var starPops = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 4) {
@@ -312,6 +315,20 @@ struct TodoRow: View {
         )
         .shadow(color: tint.edge.opacity(0.45), radius: 6, x: 0, y: 3)
         .opacity(task.isCompleted ? 0.8 : 1)
+        .overlay(alignment: .leading) {
+            // Over the tick box (after the fade above, so the star stays bright).
+            if starPops > 0 {
+                StarPop()
+                    .id(starPops)
+                    .frame(width: 44, height: 44)
+                    .padding(.leading, 4)
+            }
+        }
+        .onChange(of: task.isCompleted) { wasDone, isDone in
+            if isDone && !wasDone && !reduceMotion {
+                starPops += 1
+            }
+        }
         .onChange(of: showsMenu) { _, isShowing in
             guard !isShowing, let action = chosen else { return }
             chosen = nil
@@ -671,15 +688,12 @@ private struct SoftActionButton: View {
 // MARK: - Progress
 
 /// Daily Progress at the top of the list: "Today ✨ 3 of 5 completed ● ● ● ○ ○".
-/// When every to-do is done it says "✨ All done for today!", and each time the last one is
-/// ticked it plays a tiny sparkle burst.
+/// When every to-do is done it says "✨ All done for today!" (the To-Dos screen then plays
+/// the big confetti, `ConfettiCelebration`).
 struct DailyProgressLine: View {
     let day: Date
     let done: Int
     let total: Int
-    /// Goes up each time the last to-do is ticked; every change plays the burst once.
-    let celebration: Int
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var allDone: Bool { total > 0 && done == total }
 
@@ -701,12 +715,6 @@ struct DailyProgressLine: View {
         .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
         .background(Capsule().fill(Color.white.opacity(0.72)))
         .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.14), lineWidth: 1))
-        .overlay {
-            if celebration > 0 && allDone && !reduceMotion {
-                SparkleBurst()
-                    .id(celebration)
-            }
-        }
         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: allDone)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: done)
         .accessibilityElement(children: .ignore)
@@ -770,59 +778,6 @@ struct ProgressDots: View {
 
     private static let onFill = LinearGradient(colors: [Color(hex: 0xFF7EB6), Palette.hotPink],
                                                startPoint: .top, endPoint: .bottom)
-}
-
-/// A tiny burst of sparkles, hearts, stars and confetti that plays once when it appears.
-struct SparkleBurst: View {
-    @State private var isOut = false
-    @State private var isFaded = false
-
-    private struct Piece {
-        let symbol: String
-        let color: Color
-        let size: CGFloat
-        /// Where the piece ends up, from the centre: wide and low, so it stays around the line.
-        let x: CGFloat
-        let y: CGFloat
-        let spin: Double
-    }
-
-    private static let colors = [Palette.hotPink, Palette.butter, Palette.grape, Palette.bubblegum,
-                                 Palette.mint, Palette.honey, Palette.lavender]
-    private static let symbols = ["sparkle", "heart.fill", "star.fill", "circle.fill"]
-
-    /// Fourteen pieces around an ellipse, each a little different.
-    private static let pieces: [Piece] = (0..<14).map { index in
-        let angle: Double = Double(index) / 14 * 2 * Double.pi + 0.2
-        let reach: Double = index.isMultiple(of: 2) ? 1.0 : 0.72
-        let symbol: String = symbols[index % symbols.count]
-        let size: CGFloat = symbol == "circle.fill" ? 5 : (index.isMultiple(of: 3) ? 11 : 9)
-        let x: CGFloat = CGFloat(cos(angle) * 120 * reach)
-        let y: CGFloat = CGFloat(sin(angle) * 26 * reach) - 6
-        let spin: Double = index.isMultiple(of: 2) ? 140 : -110
-        return Piece(symbol: symbol, color: colors[index % colors.count], size: size, x: x, y: y, spin: spin)
-    }
-
-    var body: some View {
-        ZStack {
-            ForEach(Self.pieces.indices, id: \.self) { index in
-                let piece = Self.pieces[index]
-                Image(systemName: piece.symbol)
-                    .font(.system(size: piece.size, weight: .bold))
-                    .foregroundStyle(piece.color)
-                    .scaleEffect(isOut ? 1 : 0.3)
-                    .rotationEffect(.degrees(isOut ? piece.spin : 0))
-                    .offset(x: isOut ? piece.x : 0, y: isOut ? piece.y : 0)
-            }
-        }
-        .opacity(isFaded ? 0 : 1)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-        .onAppear {
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.72)) { isOut = true }
-            withAnimation(.easeIn(duration: 0.45).delay(0.6)) { isFaded = true }
-        }
-    }
 }
 
 /// The slim "Today's Progress" pinned under the add buttons: the counts, a heart for every
