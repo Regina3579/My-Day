@@ -14,6 +14,8 @@ struct TodayToDosView: View {
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
     @State private var heroIsVisible = true
+    /// Goes up each time the last to-do of the day is ticked (plays the sparkle burst).
+    @State private var celebration = 0
     private let day: Date
 
     init(day: Date) {
@@ -53,7 +55,7 @@ struct TodayToDosView: View {
                 }
             }
             #if DEBUG
-            .task { openDebugSheet() }
+            .task { await openDebugRoute() }
             #endif
     }
 
@@ -75,6 +77,7 @@ struct TodayToDosView: View {
                 .plainListRow()
             CategoryChipBar(selection: $filter)
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
+            progressLine
             taskRows
             actionBar
                 .plainListRow(EdgeInsets(top: 12, leading: 16, bottom: 4, trailing: 16))
@@ -158,8 +161,15 @@ struct TodayToDosView: View {
     }
 
     #if DEBUG
-    private func openDebugSheet() {
-        if let route = DebugLaunchRoute.takeTodosSheet() {
+    /// `todos-<name>` opens a sheet; `todos-alldone` ticks every to-do to show the celebration.
+    private func openDebugRoute() async {
+        guard let route = DebugLaunchRoute.takeTodosSheet() else { return }
+        if route == "alldone" {
+            try? await Task.sleep(for: .seconds(1))
+            for task in tasks where !task.isCompleted {
+                toggle(task)
+            }
+        } else {
             sheet = TodoSheet(debugRoute: route)
         }
     }
@@ -175,6 +185,15 @@ struct TodayToDosView: View {
             onPhoto: { sheet = .compose(filter, .photo) },
             onTemplate: { sheet = .templates }
         )
+    }
+
+    /// Daily Progress: how many of the day's to-dos are done (hidden while the day is empty).
+    @ViewBuilder
+    private var progressLine: some View {
+        if !tasks.isEmpty {
+            DailyProgressLine(day: day, done: doneCount, total: tasks.count, celebration: celebration)
+                .plainListRow(EdgeInsets(top: 0, leading: 16, bottom: 7, trailing: 16))
+        }
     }
 
     @ViewBuilder
@@ -266,7 +285,8 @@ struct TodayToDosView: View {
             TaskActions.toggle(task, in: context)
         }
         if task.isCompleted, !tasks.isEmpty, tasks.allSatisfy(\.isCompleted) {
-            show("All done — you're a star! ⭐")
+            celebration += 1
+            AccessibilityNotification.Announcement("All done for \(day.isToday ? "today" : "the day")!").post()
         }
     }
 

@@ -4,10 +4,13 @@ import SwiftData
 /// "My Journal — Capture your thoughts and beautiful moments".
 struct JournalView: View {
     @Environment(AppState.self) private var appState
+    #if DEBUG
+    @Environment(Router.self) private var router
+    #endif
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
     @State private var search = ""
-    @State private var favoritesOnly = false
+    @State private var shelf: JournalShelf = .all
     @State private var isComposing = false
 
     var body: some View {
@@ -25,6 +28,13 @@ struct JournalView: View {
         .sheet(isPresented: $isComposing) {
             NewJournalEntrySheet(date: .now)
         }
+        #if DEBUG
+        .task {
+            if DebugLaunchRoute.takeJournalPage(), let newest = entries.first {
+                router.homePath.append(newest)
+            }
+        }
+        #endif
     }
 
     // MARK: Content
@@ -32,12 +42,11 @@ struct JournalView: View {
     private var filtered: [JournalEntry] {
         let query = search.trimmed
         return entries.filter { entry in
-            (!favoritesOnly || entry.isFavorite)
-                && (query.isEmpty
-                    || entry.title.localizedCaseInsensitiveContains(query)
-                    || entry.body.localizedCaseInsensitiveContains(query))
+            shelf.includes(entry) && (query.isEmpty || entry.matches(query))
         }
     }
+
+    private var winCount: Int { entries.filter(\.hasLittleWin).count }
 
     private var months: [JournalMonth] {
         let groups = Dictionary(grouping: filtered) { $0.date.startOfMonth }
@@ -59,19 +68,19 @@ struct JournalView: View {
 
                 MoodWeek(entries: entries, today: appState.today)
 
-                Picker("Show", selection: $favoritesOnly) {
-                    Text("All pages").tag(false)
-                    Text("Favorites 💖").tag(true)
+                Picker("Show", selection: $shelf) {
+                    ForEach(JournalShelf.allCases, id: \.self) { shelf in
+                        Text(shelf.label).tag(shelf)
+                    }
                 }
                 .pickerStyle(.segmented)
 
+                if shelf == .wins && winCount > 0 {
+                    LittleWinsSummary(count: winCount)
+                }
+
                 if filtered.isEmpty {
-                    EmptyStateCard(
-                        title: search.isEmpty ? "Your journal is waiting" : "No pages found",
-                        message: search.isEmpty
-                            ? "Write about your day, a happy moment or something you're grateful for. 🌸"
-                            : "Try another word."
-                    )
+                    emptyState
                 }
 
                 ForEach(months) { month in
@@ -101,6 +110,107 @@ struct JournalView: View {
                 .accessibilityLabel("New page")
             }
         }
+    }
+}
+
+extension JournalView {
+    @ViewBuilder
+    private var emptyState: some View {
+        if !search.isEmpty {
+            EmptyStateCard(title: "No pages found", message: "Try another word.")
+        } else if shelf == .wins {
+            EmptyStateCard(title: "No little wins yet",
+                           message: "Add one line to any page: “🌟 My little win today…” 🏆")
+        } else if shelf == .favorites {
+            EmptyStateCard(title: "No favorites yet",
+                           message: "Tap the heart on a page to keep it here. 💖")
+        } else {
+            EmptyStateCard(title: "Your journal is waiting",
+                           message: "Write about your day, a happy moment or something you're grateful for. 🌸")
+        }
+    }
+}
+
+/// Which pages the journal list shows.
+enum JournalShelf: CaseIterable {
+    case all, favorites, wins
+
+    var label: String {
+        switch self {
+        case .all: "All pages"
+        case .favorites: "Favorites 💖"
+        case .wins: "Little Wins 🏆"
+        }
+    }
+
+    func includes(_ entry: JournalEntry) -> Bool {
+        switch self {
+        case .all: true
+        case .favorites: entry.isFavorite
+        case .wins: entry.hasLittleWin
+        }
+    }
+}
+
+private extension JournalEntry {
+    /// Search looks in the title, the text and the little win.
+    func matches(_ query: String) -> Bool {
+        title.localizedCaseInsensitiveContains(query)
+            || body.localizedCaseInsensitiveContains(query)
+            || littleWin.localizedCaseInsensitiveContains(query)
+    }
+}
+
+/// Shown above the Little Wins: how many there are so far.
+struct LittleWinsSummary: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("🏆")
+                .font(.system(size: 30))
+                .frame(width: 54, height: 54)
+                .background(Circle().fill(Palette.cream))
+                .overlay(Circle().strokeBorder(Palette.butter, lineWidth: 1.5))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(count == 1 ? "1 little win" : "\(count) little wins")
+                    .font(.rounded(.headline, weight: .heavy))
+                    .foregroundStyle(Palette.cocoa)
+                    .contentTransition(.numericText(value: Double(count)))
+                Text("Look how far you've come! 🌟")
+                    .font(.rounded(.subheadline, weight: .medium))
+                    .foregroundStyle(Palette.inkSoft)
+            }
+            Spacer(minLength: 0)
+        }
+        .cuteCard(tint: Palette.honey, padding: 14)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// "🏆 Finished my workout." on a soft butter ribbon.
+struct LittleWinLine: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("🏆")
+                .accessibilityHidden(true)
+            Text(text)
+                .foregroundStyle(Palette.cocoa)
+                .multilineTextAlignment(.leading)
+        }
+        .font(.rounded(.subheadline, weight: .semibold))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.cream))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Palette.butter.opacity(0.7), lineWidth: 1)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Little win: \(text)")
     }
 }
 
@@ -179,6 +289,10 @@ struct JournalEntryCard: View {
                         .foregroundStyle(Palette.inkSoft)
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
+                }
+                if entry.hasLittleWin {
+                    LittleWinLine(text: entry.littleWin)
+                        .lineLimit(2)
                 }
                 Text(entry.date.formatted(date: .omitted, time: .shortened))
                     .font(.rounded(.caption2, weight: .semibold))

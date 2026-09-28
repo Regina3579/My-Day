@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 
-/// Write a new journal page, or edit an existing one: mood, title, text, prompts and photos.
+/// Write a new journal page, or edit an existing one: mood, little win, title, text, prompts and photos.
 struct NewJournalEntrySheet: View {
     /// A photo shown in the editor: either already saved, or just picked.
     private struct PhotoDraft: Identifiable {
@@ -23,6 +23,7 @@ struct NewJournalEntrySheet: View {
     @State private var text: String
     @State private var mood: Mood
     @State private var isFavorite: Bool
+    @State private var littleWin: String
     @State private var photos: [PhotoDraft]
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var isLoadingPhotos = false
@@ -44,6 +45,7 @@ struct NewJournalEntrySheet: View {
         _text = State(initialValue: "")
         _mood = State(initialValue: .happy)
         _isFavorite = State(initialValue: false)
+        _littleWin = State(initialValue: "")
         _photos = State(initialValue: [])
     }
 
@@ -55,19 +57,23 @@ struct NewJournalEntrySheet: View {
         _text = State(initialValue: entry.body)
         _mood = State(initialValue: entry.mood)
         _isFavorite = State(initialValue: entry.isFavorite)
+        _littleWin = State(initialValue: entry.littleWin)
         _photos = State(initialValue: entry.sortedPhotos.map { photo in
             PhotoDraft(existing: photo, imageData: photo.imageData, thumbnailData: photo.thumbnailData,
                        preview: photo.thumbnailData.flatMap(UIImage.init(data:)))
         })
     }
 
-    private var canSave: Bool { !title.trimmed.isEmpty || !text.trimmed.isEmpty || !photos.isEmpty }
+    private var canSave: Bool {
+        !title.trimmed.isEmpty || !text.trimmed.isEmpty || !littleWin.trimmed.isEmpty || !photos.isEmpty
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     moodCard
+                    littleWinCard
                     writingCard
                     photosCard
                 }
@@ -151,6 +157,37 @@ struct NewJournalEntrySheet: View {
             }
         }
         .cuteCard(tint: Palette.hotPink)
+    }
+
+    private var winPrompt: String { "🌟 My little win \(date.isToday ? "today" : "that day")…" }
+
+    /// Today's Little Win: one optional line, like "Finished my workout." or "Called my mom."
+    private var littleWinCard: some View {
+        HStack(spacing: 12) {
+            Text("🏆")
+                .font(.system(size: 24))
+                .frame(width: 46, height: 46)
+                .background(Circle().fill(Palette.cream))
+                .overlay(Circle().strokeBorder(Palette.butter, lineWidth: 1.5))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(date.isToday ? "Today's Little Win" : "My Little Win")
+                        .font(.rounded(.subheadline, weight: .bold))
+                        .foregroundStyle(Palette.cocoa)
+                    Spacer(minLength: 8)
+                    Text("Optional")
+                        .font(.rounded(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
+                }
+                TextField(winPrompt, text: $littleWin)
+                    .font(.rounded(.body, weight: .medium))
+                    .foregroundStyle(Palette.ink)
+                    .submitLabel(.done)
+            }
+        }
+        .cuteCard(tint: Palette.honey, padding: 14)
     }
 
     private var writingCard: some View {
@@ -312,6 +349,7 @@ struct NewJournalEntrySheet: View {
         page.body = text.trimmed
         page.mood = mood
         page.isFavorite = isFavorite
+        page.littleWin = littleWin.trimmed
         page.updatedAt = .now
 
         // Remove photos that were taken out, keep the rest in the new order, add new ones.

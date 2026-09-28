@@ -99,11 +99,17 @@ struct JournalDetailView: View {
 
                 HeartUnderline(width: 90)
 
-                Text(entry.body)
-                    .font(.rounded(.body))
-                    .foregroundStyle(Palette.ink)
-                    .lineSpacing(5)
-                    .textSelection(.enabled)
+                if entry.hasLittleWin {
+                    LittleWinBanner(text: entry.littleWin, isToday: entry.date.isToday)
+                }
+
+                if !entry.body.isEmpty {
+                    Text(entry.body)
+                        .font(.rounded(.body))
+                        .foregroundStyle(Palette.ink)
+                        .lineSpacing(5)
+                        .textSelection(.enabled)
+                }
             }
             .cuteCard(tint: Palette.hotPink, padding: 20)
             .padding(18)
@@ -120,5 +126,38 @@ struct JournalDetailView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             context.delete(entry)
         }
+    }
+}
+
+/// The page's little win, like a gold sticker: "🏆 Today's Little Win · Called my mom."
+private struct LittleWinBanner: View {
+    let text: String
+    let isToday: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("🏆")
+                .font(.system(size: 24))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Color.white.opacity(0.85)))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isToday ? "Today's Little Win" : "My Little Win")
+                    .font(.rounded(.caption, weight: .bold))
+                    .foregroundStyle(Palette.cocoa.opacity(0.75))
+                Text(text)
+                    .font(.rounded(.headline, weight: .bold))
+                    .foregroundStyle(Palette.cocoa)
+                    .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Palette.cream))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Palette.butter, lineWidth: 1.5)
+        )
+        .accessibilityElement(children: .combine)
     }
 }

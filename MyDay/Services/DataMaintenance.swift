@@ -139,7 +139,8 @@ enum WelcomeContent {
             date: today,
             title: "Welcome to My Day 💖",
             body: "This is my little place for plans, priorities and beautiful moments.\n\nA new day, a fresh start — I've got this!",
-            mood: .happy
+            mood: .happy,
+            littleWin: "Started my own little journal."
         ))
     }
 }

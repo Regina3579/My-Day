@@ -10,17 +10,21 @@ final class JournalEntry {
     var body: String = ""
     var moodRaw: String = "happy"
     var isFavorite: Bool = false
+    /// Today's Little Win: one optional line, like "Finished my workout." ("" when none).
+    var littleWin: String = ""
     @Relationship(deleteRule: .cascade, inverse: \JournalPhoto.entry)
     var photos: [JournalPhoto]? = []
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
-    init(date: Date = Date(), title: String = "", body: String = "", mood: Mood = .happy) {
+    init(date: Date = Date(), title: String = "", body: String = "", mood: Mood = .happy,
+         littleWin: String = "") {
         self.id = UUID()
         self.date = date
         self.title = title
         self.body = body
         self.moodRaw = mood.rawValue
+        self.littleWin = littleWin
         self.createdAt = Date()
         self.updatedAt = Date()
     }
@@ -33,6 +37,8 @@ final class JournalEntry {
     var sortedPhotos: [JournalPhoto] {
         (photos ?? []).sorted { $0.order < $1.order }
     }
+
+    var hasLittleWin: Bool { !littleWin.trimmed.isEmpty }
 
     /// The title, or the first line of the text when no title was given.
     var displayTitle: String {

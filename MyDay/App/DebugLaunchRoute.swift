@@ -6,11 +6,19 @@ import Foundation
 enum DebugLaunchRoute {
     /// A To-Dos sheet to open once the screen appears ("todos-add" → "add").
     @MainActor private static var todosSheet: String?
+    /// Open the newest journal page once the journal appears ("journal-page").
+    @MainActor private static var journalPage = false
 
     @MainActor
     static func takeTodosSheet() -> String? {
         defer { todosSheet = nil }
         return todosSheet
+    }
+
+    @MainActor
+    static func takeJournalPage() -> Bool {
+        defer { journalPage = false }
+        return journalPage
     }
 
     @MainActor
@@ -24,6 +32,9 @@ enum DebugLaunchRoute {
         case "todos": router.open(.todos(today))
         case "priority": router.open(.priority(today))
         case "journal": router.open(.journal)
+        case "journal-page":
+            journalPage = true
+            router.open(.journal)
         case "calendar": router.tab = .calendar
         case "insights": router.tab = .insights
         case "settings": router.tab = .settings
