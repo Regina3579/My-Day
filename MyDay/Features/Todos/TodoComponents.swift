@@ -414,7 +414,12 @@ struct TodoMetaLine: View {
 
 // MARK: - Actions
 
-/// "Add a New Task ✨" with Quick Add, Voice, Photo and Template.
+/// The ways to add a to-do. The three fastest are big, bright and glowing: ＋ Add Task,
+/// ⚡ Quick Add and the 🎙 microphone ("Speak a Task"). Photo and Template are smaller
+/// and softer, underneath:
+///
+///     [ ＋ Add Task ]  [ ⚡ Quick Add ]  ( 🎙 )
+///     [ 📷 Photo    ]  [ ▦ Template   ]  Speak a Task
 struct TodosActionBar: View {
     let onAdd: () -> Void
     let onQuickAdd: () -> Void
@@ -424,78 +429,196 @@ struct TodosActionBar: View {
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    /// Width of the microphone column, so the rows line up.
+    private static let micColumn: CGFloat = 86
+
     var body: some View {
         if typeSize.isAccessibilitySize {
             VStack(spacing: 12) {
-                addCard
-                HStack(alignment: .top, spacing: 8) { bubbles }
+                addButton
+                quickAddButton
+                HStack(spacing: 12) {
+                    VoiceMicButton(action: onVoice)
+                    micLabel
+                    Spacer(minLength: 0)
+                }
+                photoButton
+                templateButton
             }
         } else {
-            HStack(alignment: .center, spacing: 5) {
-                addCard
-                bubbles
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    addButton
+                    quickAddButton
+                    VoiceMicButton(action: onVoice)
+                        .frame(width: Self.micColumn)
+                }
+                HStack(alignment: .top, spacing: 10) {
+                    photoButton
+                    templateButton
+                    micLabel
+                        .frame(width: Self.micColumn)
+                }
             }
         }
     }
 
-    private var addCard: some View {
+    private var addButton: some View {
+        BigActionButton(title: "Add Task", symbol: "plus",
+                        colors: [Color(hex: 0xFF6FB0), Palette.hotPink], glow: Palette.hotPink,
+                        action: onAdd)
+            .accessibilityHint("Opens the full to-do form")
+    }
+
+    private var quickAddButton: some View {
+        BigActionButton(title: "Quick Add", symbol: "bolt.fill",
+                        colors: [Color(hex: 0xC39BFF), Color(hex: 0x8A4DF0)], glow: Palette.grape,
+                        action: onQuickAdd)
+            .accessibilityHint("Type a title and save, nothing else")
+    }
+
+    /// "Speak a Task" under the microphone (tapping it listens too).
+    private var micLabel: some View {
         Button {
             Haptics.tap()
-            onAdd()
+            onVoice()
         } label: {
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(RadialGradient(colors: [Color(hex: 0xFF62A5), Palette.hotPink],
-                                             center: UnitPoint(x: 0.35, y: 0.3), startRadius: 0, endRadius: 26))
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(Color.white)
-                }
-                .frame(width: 36, height: 36)
-                .shadow(color: Palette.hotPink.opacity(0.4), radius: 6, x: 0, y: 3)
-
-                Text("Add a New Task ✨")
-                    .font(.rounded(.subheadline, weight: .heavy))
-                    .foregroundStyle(Palette.berry)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, minHeight: 68)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(0.7))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(Palette.bubblegum.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-            )
-            .contentShape(Rectangle())
+            Text("Speak a Task")
+                .font(.rounded(.caption, weight: .heavy))
+                .foregroundStyle(LinearGradient(colors: [Palette.hotPink, Palette.grape],
+                                                startPoint: .leading, endPoint: .trailing))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Add a new task")
+        .buttonStyle(.plain)
+        .accessibilityHidden(true)
     }
 
-    @ViewBuilder
-    private var bubbles: some View {
-        ActionBubble(title: "Quick Add", symbol: "bolt.fill", fill: Color(hex: 0xFFD9EA),
-                     tint: Palette.hotPink, action: onQuickAdd)
-        ActionBubble(title: "Voice", symbol: "mic.fill", fill: Color(hex: 0xFFEFC2),
-                     tint: Color(hex: 0xF29A0E), action: onVoice)
-        ActionBubble(title: "Photo", symbol: "camera.fill", fill: Color(hex: 0xE9E0FF),
-                     tint: Color(hex: 0x7A4FE0), action: onPhoto)
-        ActionBubble(title: "Template", symbol: "square.grid.2x2.fill", fill: Color(hex: 0xDDEBFF),
-                     tint: Color(hex: 0x3F63DC), action: onTemplate)
+    private var photoButton: some View {
+        SoftActionButton(title: "Photo", symbol: "camera.fill", tint: Color(hex: 0x7A4FE0), action: onPhoto)
+    }
+
+    private var templateButton: some View {
+        SoftActionButton(title: "Template", symbol: "square.grid.2x2.fill", tint: Color(hex: 0x3F63DC),
+                         action: onTemplate)
     }
 }
 
-private struct ActionBubble: View {
+/// A large, glossy, glowing button: "＋ Add Task" in pink, "⚡ Quick Add" in lilac.
+private struct BigActionButton: View {
     let title: String
     let symbol: String
-    let fill: Color
+    /// The fill, from the top-leading corner to the bottom-trailing one.
+    let colors: [Color]
+    let glow: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.system(size: 14, weight: .black))
+                    .frame(width: 26, height: 26)
+                    .background(Circle().fill(Color.white.opacity(0.28)))
+                Text(title)
+                    .font(.rounded(.subheadline, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .foregroundStyle(Color.white)
+            .shadow(color: Color.black.opacity(0.12), radius: 1, x: 0, y: 1)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(background)
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel(title)
+    }
+
+    private var background: some View {
+        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        return shape
+            .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .overlay(
+                // A soft shine on the top half, so the button looks raised.
+                shape
+                    .fill(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0)],
+                                         startPoint: .top, endPoint: .center))
+                    .padding(2)
+            )
+            .overlay(shape.strokeBorder(Color.white.opacity(0.7), lineWidth: 1.5))
+            .shadow(color: glow.opacity(0.5), radius: 12, x: 0, y: 6)
+            .shadow(color: glow.opacity(0.25), radius: 3, x: 0, y: 1)
+    }
+}
+
+/// The round pink-to-purple microphone with a gently glowing halo.
+private struct VoiceMicButton: View {
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let fill = LinearGradient(colors: [Color(hex: 0xFF4FA0), Color(hex: 0x8A4DF0)],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing)
+    private static let halo = RadialGradient(colors: [Color(hex: 0xC06BFF).opacity(0.55), Color(hex: 0xFF4FA0).opacity(0)],
+                                             center: .center, startRadius: 24, endRadius: 40)
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            ZStack {
+                haloView
+                Circle()
+                    .fill(Self.fill)
+                    .overlay(
+                        Circle()
+                            .fill(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0)],
+                                                 startPoint: .top, endPoint: .center))
+                            .padding(3)
+                    )
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 2))
+                    .shadow(color: Palette.grape.opacity(0.5), radius: 10, x: 0, y: 5)
+                    .frame(width: 62, height: 62)
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 25, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .shadow(color: Color.black.opacity(0.12), radius: 1, x: 0, y: 1)
+            }
+            .frame(width: 62, height: 62)
+            .contentShape(Circle())
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.9))
+        .accessibilityLabel("Speak a task")
+        .accessibilityHint("Say a to-do, like “Buy milk tomorrow at 6 PM”")
+    }
+
+    /// The glow behind the microphone; it breathes slowly unless Reduce Motion is on.
+    @ViewBuilder
+    private var haloView: some View {
+        let glow = Circle().fill(Self.halo).frame(width: 80, height: 80)
+        if reduceMotion {
+            glow
+        } else {
+            glow.phaseAnimator([false, true]) { content, isBig in
+                content
+                    .scaleEffect(isBig ? 1.1 : 0.9)
+                    .opacity(isBig ? 0.6 : 1)
+            } animation: { _ in
+                .easeInOut(duration: 1.4)
+            }
+        }
+    }
+}
+
+/// A small, soft secondary button: "📷 Photo", "▦ Template".
+private struct SoftActionButton: View {
+    let title: String
+    let symbol: String
     let tint: Color
     let action: () -> Void
 
@@ -504,24 +627,23 @@ private struct ActionBubble: View {
             Haptics.tap()
             action()
         } label: {
-            VStack(spacing: 4) {
+            HStack(spacing: 6) {
                 Image(systemName: symbol)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(tint.gradient)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(fill))
-                    .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
-                    .shadow(color: tint.opacity(0.25), radius: 5, x: 0, y: 3)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(tint)
                 Text(title)
-                    .font(.rounded(.caption2, weight: .bold))
-                    .foregroundStyle(Palette.ink)
+                    .font(.rounded(.footnote, weight: .bold))
+                    .foregroundStyle(Palette.inkSoft)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(0.8)
             }
-            .frame(width: 48)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(Capsule().fill(Color.white.opacity(0.75)))
+            .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1))
+            .contentShape(Capsule())
         }
-        .buttonStyle(PressScaleStyle(scale: 0.9))
+        .buttonStyle(PressScaleStyle(scale: 0.95))
         .accessibilityLabel(title)
     }
 }
