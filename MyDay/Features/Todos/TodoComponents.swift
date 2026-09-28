@@ -121,7 +121,6 @@ struct CategoryChipBar: View {
             .padding(.top, 4)
             .padding(.bottom, 12)
         }
-        .padding(.horizontal, -16)
     }
 }
 

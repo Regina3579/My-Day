@@ -67,16 +67,42 @@ struct TodayToDosView: View {
         }
     }
 
+    /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete
+    /// and press-and-hold reordering.
     private func scrollingPage(width: CGFloat, safeTop: CGFloat) -> some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                hero(width: width, safeTop: safeTop)
-                panel
-            }
+        List {
+            header(width: width, safeTop: safeTop)
+                .plainListRow()
+            CategoryChipBar(selection: $filter)
+                .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
+            taskRows
+            actionBar
+                .plainListRow(EdgeInsets(top: 12, leading: 16, bottom: 4, trailing: 16))
+            TodosProgressCard(done: doneCount, total: tasks.count)
+                .plainListRow(EdgeInsets(top: 18, leading: 16, bottom: 24, trailing: 16))
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.interactively)
         .tabBarSafeArea()
         .ignoresSafeArea(edges: .top)
+    }
+
+    /// The scene, then the date card on a rounded panel that overlaps it slightly.
+    private func header(width: CGFloat, safeTop: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            hero(width: width, safeTop: safeTop)
+            TodayHeaderCard(day: day)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity)
+                .background(alignment: .top) {
+                    panelBackground
+                }
+                .padding(.top, -24)
+        }
     }
 
     /// The scene; once it scrolls away, the title appears in the navigation bar.
@@ -87,19 +113,6 @@ struct TodayToDosView: View {
             } action: { isVisible in
                 heroIsVisible = isVisible
             }
-    }
-
-    /// Everything below the scene, on a rounded panel that overlaps it slightly.
-    private var panel: some View {
-        content
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 20)
-            .frame(maxWidth: .infinity)
-            .background(alignment: .top) {
-                panelBackground
-            }
-            .padding(.top, -24)
     }
 
     private var panelBackground: some View {
@@ -154,51 +167,50 @@ struct TodayToDosView: View {
 
     // MARK: Content
 
-    private var content: some View {
-        VStack(spacing: 14) {
-            TodayHeaderCard(day: day)
-            CategoryChipBar(selection: $filter)
-                .padding(.bottom, -8)
-            list
-            TodosActionBar(
-                onAdd: { sheet = .compose(filter, nil) },
-                onQuickAdd: { sheet = .quickAdd },
-                onVoice: { sheet = .voice(sample: nil) },
-                onPhoto: { sheet = .compose(filter, .photo) },
-                onTemplate: { sheet = .templates }
-            )
-            .padding(.top, 4)
-            TodosProgressCard(done: doneCount, total: tasks.count)
-                .padding(.top, 10)
+    private var actionBar: some View {
+        TodosActionBar(
+            onAdd: { sheet = .compose(filter, nil) },
+            onQuickAdd: { sheet = .quickAdd },
+            onVoice: { sheet = .voice(sample: nil) },
+            onPhoto: { sheet = .compose(filter, .photo) },
+            onTemplate: { sheet = .templates }
+        )
+    }
+
+    @ViewBuilder
+    private var taskRows: some View {
+        let rows = visible
+        if rows.isEmpty {
+            emptyCard
+                .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+        } else {
+            ForEach(Array(rows.enumerated()), id: \.element.persistentModelID) { index, task in
+                row(task, index: index)
+            }
+            .onMove { source, destination in
+                move(from: source, to: destination, in: rows)
+            }
         }
     }
 
     @ViewBuilder
-    private var list: some View {
-        let rows = visible
-        if rows.isEmpty {
-            if tasks.isEmpty {
-                TodosEmptyCard(title: "Nothing planned yet",
-                               message: "Add your first to-do and make this day wonderful 💖",
-                               actionTitle: "Add a New Task ✨") { sheet = .compose(filter, nil) }
-            } else if let filter {
-                TodosEmptyCard(title: "No \(filter.label) to-dos",
-                               message: "Nothing in \(filter.label) \(day.isToday ? "today" : "on this day") yet.",
-                               actionTitle: "Add a \(filter.label) Task") { sheet = .compose(filter, nil) }
-            } else {
-                TodosEmptyCard(title: "All done — you're a star! ⭐",
-                               message: "Finished to-dos are hidden. You can show them again in Settings.",
-                               actionTitle: "Add a New Task ✨") { sheet = .compose(nil, nil) }
-            }
+    private var emptyCard: some View {
+        if tasks.isEmpty {
+            TodosEmptyCard(title: "Nothing planned yet",
+                           message: "Add your first to-do and make this day wonderful 💖",
+                           actionTitle: "Add a New Task ✨") { sheet = .compose(filter, nil) }
+        } else if let filter {
+            TodosEmptyCard(title: "No \(filter.label) to-dos",
+                           message: "Nothing in \(filter.label) \(day.isToday ? "today" : "on this day") yet.",
+                           actionTitle: "Add a \(filter.label) Task") { sheet = .compose(filter, nil) }
         } else {
-            VStack(spacing: 10) {
-                ForEach(Array(rows.enumerated()), id: \.element.persistentModelID) { index, task in
-                    row(task, index: index)
-                }
-            }
+            TodosEmptyCard(title: "All done — you're a star! ⭐",
+                           message: "Finished to-dos are hidden. You can show them again in Settings.",
+                           actionTitle: "Add a New Task ✨") { sheet = .compose(nil, nil) }
         }
     }
 
+    /// One to-do. Swipe left to delete it; press and hold to drag it to a new place.
     private func row(_ task: TaskItem, index: Int) -> some View {
         TodoRow(
             task: task,
@@ -207,25 +219,15 @@ struct TodayToDosView: View {
             onOpen: { sheet = .edit(task, nil) },
             onAction: { action in handle(action, for: task) }
         )
-        .draggable(task.id.uuidString) {
-            dragPreview(for: task)
+        .plainListRow(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                delete(task)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
-        .dropDestination(for: String.self) { items, _ in
-            move(items.first, onto: task)
-        }
-        .transition(Self.rowTransition)
-    }
-
-    private static let rowTransition = AnyTransition.asymmetric(
-        insertion: .scale(scale: 0.92).combined(with: .opacity), removal: .opacity
-    )
-
-    private func dragPreview(for task: TaskItem) -> some View {
-        Text(task.title)
-            .font(.rounded(.body, weight: .semibold))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Capsule().fill(Color.white))
+        .moveDisabled(task.isCompleted)
     }
 
     @ViewBuilder
@@ -288,24 +290,24 @@ struct TodayToDosView: View {
         show("To-do deleted")
     }
 
-    /// Drag a to-do onto another to put it there.
-    private func move(_ id: String?, onto target: TaskItem) -> Bool {
-        guard let id, let moving = tasks.first(where: { $0.id.uuidString == id }),
-              moving.persistentModelID != target.persistentModelID,
-              !moving.isCompleted, !target.isCompleted
-        else { return false }
-        var open = tasks.filter { !$0.isCompleted }
-        guard let from = open.firstIndex(where: { $0.persistentModelID == moving.persistentModelID }),
-              let to = open.firstIndex(where: { $0.persistentModelID == target.persistentModelID })
-        else { return false }
-        open.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
-        withAnimation(.snappy) {
-            for (index, task) in open.enumerated() {
-                task.sortOrder = Double(index)
+    /// Press-and-hold reordering. The shown to-dos take their new order; to-dos hidden by
+    /// the category filter keep their places.
+    private func move(from source: IndexSet, to destination: Int, in rows: [TaskItem]) {
+        var reordered = rows
+        reordered.move(fromOffsets: source, toOffset: destination)
+        let shownOpen = reordered.filter { !$0.isCompleted }
+        let shownIDs = Set(shownOpen.map(\.persistentModelID))
+        var allOpen = tasks.filter { !$0.isCompleted }
+        var next = shownOpen.makeIterator()
+        for index in allOpen.indices where shownIDs.contains(allOpen[index].persistentModelID) {
+            if let task = next.next() {
+                allOpen[index] = task
             }
         }
+        for (index, task) in allOpen.enumerated() {
+            task.sortOrder = Double(index)
+        }
         Haptics.tap()
-        return true
     }
 
     private func show(_ message: String) {
@@ -344,6 +346,16 @@ enum TodoSheet: Identifiable {
         case .voice: "voice"
         case .templates: "templates"
         }
+    }
+}
+
+private extension View {
+    /// A List row that shows only its own content: no background, separator or default padding.
+    func plainListRow(_ insets: EdgeInsets = EdgeInsets()) -> some View {
+        listRowInsets(insets)
+            .listRowSeparator(.hidden)
+            .listSectionSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
 
