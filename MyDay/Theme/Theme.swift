@@ -84,6 +84,7 @@ extension Font {
 extension Mood {
     var color: Color {
         switch self {
+        case .amazing: Color(hex: 0xFFB800)
         case .happy: Color(hex: 0xFFC83D)
         case .loved: Color(hex: 0xFF5C9D)
         case .excited: Color(hex: 0xFF8A3D)

@@ -271,7 +271,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "My Day uses the camera when you take a photo for a to-do.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "My Day uses Face ID to keep your journal private.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "My Day listens when you add a to-do with your voice.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "My Day adds the name of the place you are to a journal page, only when you tap Use My Location.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "My Day listens when you add a to-do with your voice or record a voice note for your journal.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "My Day turns your spoken words into a to-do. You always check it before it is added.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -304,7 +305,8 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "My Day uses the camera when you take a photo for a to-do.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "My Day uses Face ID to keep your journal private.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "My Day listens when you add a to-do with your voice.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "My Day adds the name of the place you are to a journal page, only when you tap Use My Location.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "My Day listens when you add a to-do with your voice or record a voice note for your journal.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "My Day turns your spoken words into a to-do. You always check it before it is added.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -1,12 +1,43 @@
 import SwiftUI
 import SwiftData
 
-/// "My Journal — Capture your thoughts and beautiful moments".
+/// "My Journal": opens on today's page, ready to write (or on the page already written today).
+/// Every page is in `JournalPagesView`, from the ⋮ menu or the link under Save.
 struct JournalView: View {
     @Environment(AppState.self) private var appState
     #if DEBUG
     @Environment(Router.self) private var router
     #endif
+    @AppStorage(Prefs.journalLock) private var lockEnabled = false
+    @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
+
+    var body: some View {
+        Group {
+            if lockEnabled && !appState.isJournalUnlocked {
+                JournalLockView()
+                    .tabBarSafeArea()
+                    .background(DreamyBackground(theme: .journal))
+                    .navigationTitle("My Journal")
+                    .navigationBarTitleDisplayMode(.inline)
+            } else {
+                JournalComposer(entry: entries.first(where: { $0.date.isToday }), date: .now, presentation: .page)
+            }
+        }
+        #if DEBUG
+        .task {
+            if DebugLaunchRoute.takeJournalPage(), let newest = entries.first {
+                router.homePath.append(newest)
+            } else if DebugLaunchRoute.takeJournalPages() {
+                router.homePath.append(AppRoute.journalPages)
+            }
+        }
+        #endif
+    }
+}
+
+/// "My Journal Pages": every page, with search, favourites and little wins.
+struct JournalPagesView: View {
+    @Environment(AppState.self) private var appState
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
     @State private var search = ""
@@ -23,18 +54,11 @@ struct JournalView: View {
         }
         .tabBarSafeArea()
         .background(DreamyBackground(theme: .journal))
-        .navigationTitle("My Journal")
+        .navigationTitle("My Journal Pages")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isComposing) {
             NewJournalEntrySheet(date: .now)
         }
-        #if DEBUG
-        .task {
-            if DebugLaunchRoute.takeJournalPage(), let newest = entries.first {
-                router.homePath.append(newest)
-            }
-        }
-        #endif
     }
 
     // MARK: Content
@@ -56,13 +80,13 @@ struct JournalView: View {
     private var journal: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "My Journal", subtitle: "Capture your thoughts and beautiful moments",
+                SectionHeader(title: "My Pages", subtitle: "Every thought and beautiful moment",
                               symbol: "book.closed.fill", theme: .journal)
 
                 Button {
                     isComposing = true
                 } label: {
-                    Label("Write today's page", systemImage: "pencil.and.scribble")
+                    Label("Write a new page", systemImage: "pencil.and.scribble")
                 }
                 .buttonStyle(PillButtonStyle())
 
@@ -113,7 +137,7 @@ struct JournalView: View {
     }
 }
 
-extension JournalView {
+extension JournalPagesView {
     @ViewBuilder
     private var emptyState: some View {
         if !search.isEmpty {
@@ -153,11 +177,10 @@ enum JournalShelf: CaseIterable {
 }
 
 private extension JournalEntry {
-    /// Search looks in the title, the text and the little win.
+    /// Search looks in the title, the text, the little win, the other prompts, the place and the tags.
     func matches(_ query: String) -> Bool {
-        title.localizedCaseInsensitiveContains(query)
-            || body.localizedCaseInsensitiveContains(query)
-            || littleWin.localizedCaseInsensitiveContains(query)
+        [title, body, littleWin, gratitude, highlight, lookingForward, place, tagsText]
+            .contains { $0.localizedCaseInsensitiveContains(query) }
     }
 }
 

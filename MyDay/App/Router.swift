@@ -30,6 +30,8 @@ enum AppRoute: Hashable {
     case todos(Date)
     case priority(Date)
     case journal
+    /// Every journal page, with search, favourites and little wins.
+    case journalPages
 }
 
 /// Sheets that can be opened from anywhere in the app.
@@ -77,6 +79,15 @@ final class Router {
         homePath = path
     }
 
+    /// Shows `route` on top of what `tab` shows now (on the tabs whose paths the router keeps).
+    func push(_ route: AppRoute, in tab: AppTab) {
+        switch tab {
+        case .home: homePath.append(route)
+        case .calendar: calendarPath.append(route)
+        case .insights, .settings: break
+        }
+    }
+
     func goHome() {
         tab = .home
         homePath = NavigationPath()
@@ -107,6 +118,7 @@ extension View {
             case .todos(let day): TodayToDosView(day: day)
             case .priority(let day): TodaysPriorityView(day: day)
             case .journal: JournalView()
+            case .journalPages: JournalPagesView()
             }
         }
         .navigationDestination(for: JournalEntry.self) { entry in

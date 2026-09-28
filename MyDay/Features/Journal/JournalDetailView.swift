@@ -110,6 +110,8 @@ struct JournalDetailView: View {
                         .lineSpacing(5)
                         .textSelection(.enabled)
                 }
+
+                JournalPageExtras(entry: entry)
             }
             .cuteCard(tint: Palette.hotPink, padding: 20)
             .padding(18)
@@ -159,5 +161,82 @@ private struct LittleWinBanner: View {
                 .strokeBorder(Palette.butter, lineWidth: 1.5)
         )
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The rest of a page: the weather and place, stickers, tags, the voice note and the
+/// grateful, highlight and tomorrow lines.
+private struct JournalPageExtras: View {
+    let entry: JournalEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if entry.weather != nil || !entry.temperature.isEmpty || !entry.place.isEmpty {
+                HStack(spacing: 8) {
+                    if let weather = entry.weather {
+                        chip(symbol: weather.symbol, multicolor: true,
+                             text: entry.temperature.isEmpty ? weather.label : "\(weather.label) · \(entry.temperature)")
+                    } else if !entry.temperature.isEmpty {
+                        chip(symbol: "thermometer.medium", multicolor: false, text: entry.temperature)
+                    }
+                    if !entry.place.isEmpty {
+                        chip(symbol: "mappin.circle.fill", multicolor: false, text: entry.place)
+                    }
+                }
+            }
+            if !entry.stickers.isEmpty {
+                StickerRow(stickers: entry.stickers, size: 34)
+            }
+            if !entry.tags.isEmpty {
+                TagChips(tags: entry.tags)
+            }
+            if let note = entry.voiceNote {
+                VoiceNotePlayer(data: note)
+            }
+            line(art: "JournalJar", title: "I'm grateful for…", text: entry.gratitude)
+            line(art: "JournalHighlightStar", title: "A highlight of my day…", text: entry.highlight)
+            line(art: "JournalSprout", title: "I look forward to…", text: entry.lookingForward)
+        }
+    }
+
+    private func chip(symbol: String, multicolor: Bool, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+                .symbolRenderingMode(multicolor ? .multicolor : .monochrome)
+                .foregroundStyle(JournalStyle.pink)
+            Text(text)
+                .lineLimit(1)
+        }
+        .font(.rounded(.subheadline, weight: .bold))
+        .foregroundStyle(JournalStyle.ink)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Capsule().fill(JournalStyle.pinkFill))
+    }
+
+    @ViewBuilder
+    private func line(art: String, title: String, text: String) -> some View {
+        if !text.isEmpty {
+            HStack(alignment: .top, spacing: 12) {
+                Image(art)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 40, height: 48)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.rounded(.subheadline, weight: .heavy))
+                        .foregroundStyle(JournalStyle.plum)
+                    Text(text)
+                        .font(.rounded(.body, weight: .medium))
+                        .foregroundStyle(Palette.ink)
+                        .textSelection(.enabled)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(JournalStyle.fieldFill))
+            .accessibilityElement(children: .combine)
+        }
     }
 }

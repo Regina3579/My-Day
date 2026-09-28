@@ -30,19 +30,28 @@ enum DebugLaunchRoute {
         context.insert(plants)
         plants.customCategory = home
         context.insert(Priority(title: "Finish the project report ⭐", date: today, order: 0))
-        context.insert(JournalEntry(
+        let page = JournalEntry(
             date: today,
             title: "A calm, happy day 💖",
             body: "Coffee in the garden, a long walk and a good talk with a friend.\n\nGrateful for the little things.",
-            mood: .happy,
+            mood: .amazing,
             littleWin: "Finished my workout."
-        ))
+        )
+        page.gratitude = "My family and our cozy home."
+        page.highlight = "Watching the sunset with my puppy."
+        page.stickers = "🌸☕️🐶"
+        page.tags = ["Good Vibes", "Grateful"]
+        page.weather = .sunny
+        page.temperature = "28°C"
+        context.insert(page)
     }
 
     /// A To-Dos sheet to open once the screen appears ("todos-add" → "add").
     @MainActor private static var todosSheet: String?
     /// Open the newest journal page once the journal appears ("journal-page").
     @MainActor private static var journalPage = false
+    /// Show every journal page once the journal appears ("journal-pages").
+    @MainActor private static var journalPages = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Days from today that the calendar selects when it appears ("calendar-tomorrow").
@@ -61,6 +70,12 @@ enum DebugLaunchRoute {
     static func takeJournalPage() -> Bool {
         defer { journalPage = false }
         return journalPage
+    }
+
+    @MainActor
+    static func takeJournalPages() -> Bool {
+        defer { journalPages = false }
+        return journalPages
     }
 
     @MainActor
@@ -112,6 +127,9 @@ enum DebugLaunchRoute {
         case "journal": router.open(.journal)
         case "journal-page":
             journalPage = true
+            router.open(.journal)
+        case "journal-pages":
+            journalPages = true
             router.open(.journal)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":
