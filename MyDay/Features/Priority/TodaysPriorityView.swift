@@ -64,7 +64,22 @@ struct TodaysPriorityView: View {
         }
         .onAppear { router.setFullScreen(true, in: hostTab) }
         .onDisappear { router.setFullScreen(false, in: hostTab) }
+        #if DEBUG
+        .task { await tickForScreenshot() }
+        #endif
     }
+
+    #if DEBUG
+    /// `priority-hearts`: ticks the first priority about when the screenshot is taken
+    /// (10 seconds after the app is ready), so its hearts show.
+    private func tickForScreenshot() async {
+        guard DebugLaunchRoute.takePriorityTick() else { return }
+        try? await Task.sleep(for: .seconds(9.4))
+        if let first = priorities.first(where: { !$0.isCompleted }) {
+            toggle(first)
+        }
+    }
+    #endif
 
     /// A List (not a ScrollView), so every priority keeps swipe-left Delete and
     /// press-and-hold reordering. The scene runs up under the status bar.
@@ -310,10 +325,10 @@ struct TodaysPriorityView: View {
 /// The picture at the top of Today's Priority, with its "Today's Priority — Focus on what
 /// matters most" title. Its first 150 rows are soft curtains that sit behind the status bar.
 enum PriorityScene {
-    static let imageSize = CGSize(width: 941, height: 709)
+    static let imageSize = CGSize(width: 941, height: 792)
     /// The row (px) where the design's back and ⋮ buttons sit: it lines up with the
     /// navigation bar's buttons.
-    static let buttonsRow: CGFloat = 220
+    static let buttonsRow: CGFloat = 216
     /// The panel covers the picture's last 44 rows.
     static let overlapRows: CGFloat = 44
 
@@ -438,12 +453,15 @@ struct PriorityEmptyCard: View {
     let isToday: Bool
     let minHeight: CGFloat
 
+    /// Short screens (iPhone SE) get a smaller star, so the card still fits.
+    private var isCompact: Bool { minHeight < 400 }
+
     var body: some View {
         VStack(spacing: 10) {
             Image("PriorityEmptyStar")
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: 250)
+                .frame(maxWidth: isCompact ? 190 : 250)
                 .padding(.bottom, 10)
                 .accessibilityHidden(true)
             Text(isToday ? "Set your today's priority" : "Set a priority for this day")
@@ -458,7 +476,7 @@ struct PriorityEmptyCard: View {
         }
         .multilineTextAlignment(.center)
         .padding(.horizontal, 24)
-        .padding(.vertical, 28)
+        .padding(.vertical, isCompact ? 18 : 28)
         .frame(maxWidth: .infinity, minHeight: minHeight)
         .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Color.white.opacity(0.35)))
         .overlay(
@@ -511,12 +529,16 @@ enum PriorityMoreSymbol {
     }()
 }
 
-/// A numbered golden card for one priority.
+/// A numbered golden card for one priority. Ticking it pops two little yellow hearts.
 struct PriorityCard: View {
     let rank: Int
     let priority: Priority
     let onToggle: () -> Void
     let onOpen: () -> Void
+
+    /// Goes up each time the priority is ticked; every change pops two little hearts.
+    @State private var tickPops = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 14) {
@@ -546,5 +568,19 @@ struct PriorityCard: View {
             .accessibilityLabel(priority.isCompleted ? "Mark as not done" : "Mark as done")
         }
         .cuteCard(tint: Palette.honey, padding: 16)
+        .overlay(alignment: .trailing) {
+            // Over the tick (the card's padding is 16).
+            if tickPops > 0 {
+                TickPop(tint: .yellow)
+                    .id(tickPops)
+                    .frame(width: 32, height: 32)
+                    .padding(.trailing, 16)
+            }
+        }
+        .onChange(of: priority.isCompleted) { wasDone, isDone in
+            if isDone && !wasDone && !reduceMotion {
+                tickPops += 1
+            }
+        }
     }
 }

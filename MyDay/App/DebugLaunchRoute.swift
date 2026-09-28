@@ -43,8 +43,10 @@ enum DebugLaunchRoute {
     @MainActor private static var todosSheet: String?
     /// Open the newest journal page once the journal appears ("journal-page").
     @MainActor private static var journalPage = false
-    /// "todos-hearts": keep a tick's two hearts (and its to-do's place) a few seconds longer,
-    /// so the screenshot can catch them.
+    /// Tick the first priority once Today's Priority appears ("priority-hearts").
+    @MainActor private static var priorityTick = false
+    /// "todos-hearts" and "priority-hearts": keep a tick's two hearts (and a to-do's place) a
+    /// few seconds longer, so the screenshot can catch them.
     @MainActor static private(set) var holdsTickPop = false
 
     @MainActor
@@ -57,6 +59,12 @@ enum DebugLaunchRoute {
     static func takeJournalPage() -> Bool {
         defer { journalPage = false }
         return journalPage
+    }
+
+    @MainActor
+    static func takePriorityTick() -> Bool {
+        defer { priorityTick = false }
+        return priorityTick
     }
 
     /// Tells `scripts/screenshots.sh` the app is up: it waits for this file (in the app's
@@ -79,6 +87,10 @@ enum DebugLaunchRoute {
         case "menu": router.isMenuOpen = true
         case "todos": router.open(.todos(today))
         case "priority": router.open(.priority(today))
+        case "priority-hearts":
+            priorityTick = true
+            holdsTickPop = true
+            router.open(.priority(today))
         case "priority-empty":
             // The last route: clears the day's demo priority to show the empty page.
             let start = today.startOfDay
