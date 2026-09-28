@@ -142,14 +142,25 @@ struct TodayToDosView: View {
     }
 
     /// The scene; once it scrolls away, the title appears in the navigation bar.
+    /// (`safeTop` includes the navigation bar; the scene only keeps clear of the status bar.)
     private func hero(width: CGFloat, safeTop: CGFloat) -> some View {
-        TodosHero(width: width, safeTop: safeTop)
+        TodosHero(width: width, statusBar: Self.statusBarHeight(fallback: max(0, safeTop - 44)))
             .onGeometryChange(for: Bool.self) { geometry in
                 // Visible while it still reaches below the navigation bar.
-                geometry.frame(in: .global).maxY > safeTop + 60
+                geometry.frame(in: .global).maxY > safeTop + 8
             } action: { isVisible in
                 heroIsVisible = isVisible
             }
+    }
+
+    /// The height of the status bar (and the Dynamic Island), from the app's window.
+    @MainActor
+    private static func statusBarHeight(fallback: CGFloat) -> CGFloat {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+        return window?.safeAreaInsets.top ?? fallback
     }
 
     private var panelBackground: some View {

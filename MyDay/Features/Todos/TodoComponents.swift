@@ -19,25 +19,26 @@ enum TodosScene {
         width * widthFraction / imageSize.width
     }
 
-    /// The first image row shown.
-    static func topRow(width: CGFloat, safeTop: CGFloat) -> CGFloat {
-        max(0, eyesRow - (safeTop + 4) / scale(width: width))
+    /// The first image row shown: the girl's eyes sit just below the status bar.
+    static func topRow(width: CGFloat, statusBar: CGFloat) -> CGFloat {
+        max(0, eyesRow - (statusBar + 4) / scale(width: width))
     }
 
-    static func height(width: CGFloat, safeTop: CGFloat) -> CGFloat {
-        (bottomRow - topRow(width: width, safeTop: safeTop)) * scale(width: width)
+    static func height(width: CGFloat, statusBar: CGFloat) -> CGFloat {
+        (bottomRow - topRow(width: width, statusBar: statusBar)) * scale(width: width)
     }
 }
 
 /// The illustrated header band: the "Today's To-Dos" sign, the girl and her puppy.
 struct TodosHero: View {
     let width: CGFloat
-    let safeTop: CGFloat
+    /// Height of the status bar (not counting the navigation bar).
+    let statusBar: CGFloat
 
     var body: some View {
         let scale = TodosScene.scale(width: width)
-        let top = TodosScene.topRow(width: width, safeTop: safeTop)
-        let height = TodosScene.height(width: width, safeTop: safeTop)
+        let top = TodosScene.topRow(width: width, statusBar: statusBar)
+        let height = TodosScene.height(width: width, statusBar: statusBar)
         let imageWidth = width * TodosScene.widthFraction
         ZStack(alignment: .topTrailing) {
             // A soft, blurred copy fills the strip on the left.
