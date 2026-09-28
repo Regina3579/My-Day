@@ -447,6 +447,8 @@ struct JournalComposer: View {
                 }
             }
             writingBox
+            // What was added from the extras sits right under the writing.
+            attachments
         }
         .journalCard()
     }
@@ -526,7 +528,6 @@ struct JournalComposer: View {
                     extra = .tags
                 }
             }
-            attachments
         }
         .journalCard()
     }
@@ -582,7 +583,8 @@ struct JournalComposer: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// What was added, under the extras.
+    /// What was added from the extras (photos, stickers, the voice note, the place and tags),
+    /// shown under the writing.
     @ViewBuilder
     private var attachments: some View {
         if !photos.isEmpty {
