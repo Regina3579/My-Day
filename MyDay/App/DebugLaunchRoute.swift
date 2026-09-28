@@ -139,8 +139,11 @@ enum DebugLaunchRoute {
         case "journal-pages":
             journalPages = true
             router.open(.journal)
-        case "journal-middle", "journal-bottom":
-            journalAnchor = route == "journal-middle" ? "write" : "save"
+        case "journal-middle":
+            journalAnchor = "write"
+            router.open(.journal)
+        case "journal-bottom":
+            journalAnchor = "save"
             router.open(.journal)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":
