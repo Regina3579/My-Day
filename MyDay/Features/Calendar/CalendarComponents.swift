@@ -441,7 +441,7 @@ struct AgendaRow<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 iconBubble
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 5) {
@@ -463,8 +463,9 @@ struct AgendaRow<Content: View>: View {
                 }
                 .accessibilityElement(children: .combine)
                 Spacer(minLength: 0)
-                // Room for the picture, which sits behind this row.
-                Color.clear.frame(width: 72, height: 1)
+                // Room for the picture, which sits behind this row (its left edge is soft,
+                // so the note may run under it a little).
+                Color.clear.frame(width: 54, height: 1)
                 plusButton
             }
             .frame(minHeight: Self.headerHeight)
