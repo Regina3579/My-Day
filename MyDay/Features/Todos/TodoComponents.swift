@@ -805,17 +805,86 @@ struct SparkleBurst: View {
     }
 }
 
+/// The slim "Today's Progress" pinned under the add buttons: the counts, a heart for every
+/// to-do and the kitten's cheer, in about half the height of `TodosProgressCard`.
+struct TodosProgressStrip: View {
+    let done: Int
+    let total: Int
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(LinearGradient(colors: [Palette.lavender, Palette.grape],
+                                                        startPoint: .top, endPoint: .bottom))
+                        .accessibilityHidden(true)
+                    Text("Today's Progress")
+                        .font(.rounded(.subheadline, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
+                    Spacer(minLength: 4)
+                    Text(total == 0 ? "No to-dos yet" : "\(done) of \(total) completed")
+                        .font(.rounded(.caption, weight: .semibold))
+                        .foregroundStyle(Palette.inkSoft)
+                        .contentTransition(.numericText(value: Double(done)))
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                HStack(spacing: 8) {
+                    HeartTrack(done: done, total: total, maxSize: 16)
+                        .frame(height: 18)
+                    Text(TodosProgressCard.cheer(done: done, total: total))
+                        .font(.rounded(.caption, weight: .heavy))
+                        .foregroundStyle(Palette.berry)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .fixedSize()
+                        .contentTransition(.opacity)
+                }
+            }
+            Image("ProgressKitten")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 42)
+                .accessibilityHidden(true)
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white.opacity(0.92), Color(hex: 0xFFF0F6)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .shadow(color: Palette.hotPink.opacity(0.12), radius: 8, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(Color.white, lineWidth: 1.5)
+        )
+        .animation(.spring(response: 0.45, dampingFraction: 0.75), value: done)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(total == 0
+            ? "Today's Progress: no to-dos yet"
+            : "Today's Progress: \(done) of \(total) completed. \(TodosProgressCard.cheer(done: done, total: total))")
+    }
+}
+
 /// "Today's Progress · 3 of 8 completed" with a heart for every to-do and the kitten's cheer.
+/// (At the largest text sizes, where the add buttons are not pinned, it ends the list.)
 struct TodosProgressCard: View {
     let done: Int
     let total: Int
 
-    private var cheer: String {
+    /// The kitten's cheer for this much progress.
+    static func cheer(done: Int, total: Int) -> String {
         if total == 0 { return "Let's Plan!" }
         if done == total { return "All Done!" }
         if done == 0 { return "You Can Do It!" }
         return Double(done) / Double(total) < 0.5 ? "Great Start!" : "You're Doing Great!"
     }
+
+    private var cheer: String { Self.cheer(done: done, total: total) }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -873,6 +942,8 @@ struct TodosProgressCard: View {
 struct HeartTrack: View {
     let done: Int
     let total: Int
+    /// The largest a heart may be (they shrink to fit long lists).
+    var maxSize: CGFloat = 22
 
     private var slots: Int { total == 0 ? 5 : min(total, 10) }
     private var filled: Int {
@@ -883,7 +954,7 @@ struct HeartTrack: View {
     var body: some View {
         GeometryReader { proxy in
             let spacing: CGFloat = 4
-            let size = min(22, (proxy.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots))
+            let size = min(maxSize, (proxy.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots))
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color(hex: 0xEBD9E2))

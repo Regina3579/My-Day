@@ -77,8 +77,8 @@ struct TodayToDosView: View {
     }
 
     /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete
-    /// and press-and-hold reordering. The add buttons are pinned at the bottom and the
-    /// list scrolls behind them.
+    /// and press-and-hold reordering. The add buttons and Today's Progress are pinned at the
+    /// bottom and the list scrolls behind them.
     private func scrollingPage(width: CGFloat, safeTop: CGFloat) -> some View {
         List {
             header(width: width, safeTop: safeTop)
@@ -87,12 +87,17 @@ struct TodayToDosView: View {
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
             progressLine
             taskRows
-            if !pinsActions {
+            if pinsActions {
+                // A little room between the last to-do and the pinned panel.
+                Color.clear
+                    .frame(height: 8)
+                    .plainListRow()
+            } else {
                 actionBar
                     .plainListRow(EdgeInsets(top: 12, leading: 16, bottom: 4, trailing: 16))
+                TodosProgressCard(done: doneCount, total: tasks.count)
+                    .plainListRow(EdgeInsets(top: 18, leading: 16, bottom: 24, trailing: 16))
             }
-            TodosProgressCard(done: doneCount, total: tasks.count)
-                .plainListRow(EdgeInsets(top: 18, leading: 16, bottom: 24, trailing: 16))
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -192,20 +197,24 @@ struct TodayToDosView: View {
 
     // MARK: Content
 
-    /// The add buttons on a frosted panel that reaches down behind the tab bar.
+    /// The add buttons, then Today's Progress, on a frosted panel that reaches down behind
+    /// the tab bar.
     private var actionDock: some View {
-        actionBar
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 8)
-            .background(alignment: .top) {
-                dockBackground
-            }
-            .onGeometryChange(for: CGFloat.self) { geometry in
-                geometry.size.height
-            } action: { height in
-                dockHeight = height
-            }
+        VStack(spacing: 10) {
+            actionBar
+            TodosProgressStrip(done: doneCount, total: tasks.count)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
+        .background(alignment: .top) {
+            dockBackground
+        }
+        .onGeometryChange(for: CGFloat.self) { geometry in
+            geometry.size.height
+        } action: { height in
+            dockHeight = height
+        }
     }
 
     private var dockBackground: some View {
