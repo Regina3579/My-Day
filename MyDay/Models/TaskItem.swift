@@ -20,6 +20,11 @@ final class TaskItem {
     /// Shared by every occurrence of a repeating task.
     var seriesID: UUID = UUID()
     var sortOrder: Double = 0
+    /// Marked with the ☆ in its row; important to-dos are listed first.
+    var isImportant: Bool = false
+    /// A category the person added (nil for the five built in). `categoryRaw` then stays
+    /// "personal", which is what the to-do shows if that category is deleted.
+    var customCategory: CustomCategory?
     /// Optional photo the task is about (max 1600 px), stored outside the database file.
     @Attribute(.externalStorage) var photoData: Data?
     var photoThumbnail: Data?
@@ -55,6 +60,21 @@ final class TaskItem {
         set { categoryRaw = newValue.rawValue }
     }
 
+    /// The category as shown and chosen on screen: built in or added by the person.
+    var choice: CategoryChoice {
+        get { customCategory.map(CategoryChoice.custom) ?? .builtIn(category) }
+        set {
+            switch newValue {
+            case .builtIn(let builtIn):
+                category = builtIn
+                customCategory = nil
+            case .custom(let custom):
+                category = .personal
+                customCategory = custom
+            }
+        }
+    }
+
     var repeatOption: RepeatOption {
         get { RepeatOption(rawValue: repeatRaw) ?? .never }
         set { repeatRaw = newValue.rawValue }
@@ -62,6 +82,20 @@ final class TaskItem {
 
     /// The reminder moment, only while reminders are switched on for this task.
     var activeReminder: Date? { reminderEnabled ? reminderDate : nil }
+}
+
+/// A to-do's category: one of the five built in, or one the person added.
+enum CategoryChoice: Hashable {
+    case builtIn(TaskCategory)
+    case custom(CustomCategory)
+
+    /// A stable text key (for sheet identity).
+    var key: String {
+        switch self {
+        case .builtIn(let builtIn): builtIn.rawValue
+        case .custom(let custom): "custom-\(custom.id.uuidString)"
+        }
+    }
 }
 
 enum TaskCategory: String, CaseIterable, Identifiable, Codable {

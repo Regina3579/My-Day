@@ -10,7 +10,7 @@ struct TodayToDosView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Prefs.showCompleted) private var showCompleted = true
     @Query private var tasks: [TaskItem]
-    @State private var filter: TaskCategory?
+    @State private var filter: CategoryChoice?
     @State private var sheet: TodoSheet?
     @State private var pendingDelete: TaskItem?
     @State private var toast: String?
@@ -40,11 +40,12 @@ struct TodayToDosView: View {
         day.isToday ? "Today's To-Dos" : day.formatted(.dateTime.weekday(.wide).month().day())
     }
 
-    /// Open to-dos in the person's order, then finished ones (unless hidden in Settings).
-    /// A to-do ticked a moment ago still sits among the open ones.
+    /// Open to-dos in the person's order, important ones (★) first, then finished ones
+    /// (unless hidden in Settings). A to-do ticked a moment ago still sits among the open ones.
     private var visible: [TaskItem] {
-        let pool = filter.map { category in tasks.filter { $0.category == category } } ?? tasks
-        let open = pool.filter { !$0.isCompleted || settling.contains($0.persistentModelID) }
+        let pool = filter.map { choice in tasks.filter { $0.choice == choice } } ?? tasks
+        let unfinished = pool.filter { !$0.isCompleted || settling.contains($0.persistentModelID) }
+        let open = unfinished.filter(\.isImportant) + unfinished.filter { !$0.isImportant }
         guard showCompleted else { return open }
         let done = pool.filter { $0.isCompleted && !settling.contains($0.persistentModelID) }
             .sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
@@ -206,9 +207,10 @@ struct TodayToDosView: View {
     }
 
     #if DEBUG
-    /// `todos-<name>` opens a sheet. `todos-alldone` ticks every to-do; `todos-star` ticks one
-    /// and `todos-confetti` plays the confetti, both timed so the screenshot (taken about
-    /// 11 seconds after launch) catches them in the air.
+    /// `todos-<name>` opens a sheet. `todos-alldone` ticks every to-do; `todos-star` and
+    /// `todos-heart` tick one (a star or a heart pops), and `todos-confetti` plays the
+    /// confetti, timed so the screenshot (taken about 10 seconds after the app is ready)
+    /// catches them.
     private func openDebugRoute() async {
         guard let route = DebugLaunchRoute.takeTodosSheet() else { return }
         switch route {
@@ -221,6 +223,15 @@ struct TodayToDosView: View {
             try? await Task.sleep(for: .seconds(9.4))
             if let first = visible.first(where: { !$0.isCompleted }) {
                 toggle(first)
+            }
+        case "heart":
+            try? await Task.sleep(for: .seconds(9.4))
+            let hearty = visible.first { task in
+                !task.isCompleted && task.customCategory == nil
+                    && (task.category == .personal || task.category == .shopping)
+            }
+            if let hearty {
+                toggle(hearty)
             }
         case "confetti":
             try? await Task.sleep(for: .seconds(9.4))
@@ -324,6 +335,7 @@ struct TodayToDosView: View {
             task: task,
             tint: RowTint.at(index),
             onToggle: { toggle(task) },
+            onImportant: { toggleImportant(task) },
             onOpen: { sheet = .edit(task, nil) },
             onAction: { action in handle(action, for: task) }
         )
@@ -342,7 +354,7 @@ struct TodayToDosView: View {
     private func sheetContent(_ sheet: TodoSheet) -> some View {
         switch sheet {
         case .compose(let category, let focus):
-            NewTaskSheet(date: day, category: category ?? .personal, focus: focus) { saved in
+            NewTaskSheet(date: day, category: category ?? .builtIn(.personal), focus: focus) { saved in
                 show("Added “\(saved.title)” ✨")
             }
         case .edit(let task, let focus):
@@ -401,6 +413,14 @@ struct TodayToDosView: View {
         if DebugLaunchRoute.holdsStar { return 4.5 }
         #endif
         return 0.9
+    }
+
+    /// ☆ / ★: important to-dos move to the top of the list.
+    private func toggleImportant(_ task: TaskItem) {
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+            task.isImportant.toggle()
+        }
+        AccessibilityNotification.Announcement(task.isImportant ? "Marked important" : "No longer important").post()
     }
 
     /// Everything is done: "All done for today!" and the big confetti.
@@ -477,7 +497,7 @@ struct TodayToDosView: View {
 /// The sheets the To-Dos screen can show.
 enum TodoSheet: Identifiable {
     /// A new to-do, optionally in a category and opened at a section (e.g. the photo).
-    case compose(TaskCategory?, TaskSheetFocus?)
+    case compose(CategoryChoice?, TaskSheetFocus?)
     case edit(TaskItem, TaskSheetFocus?)
     /// A new to-do filled in by Voice Add, to check and finish.
     case draft(TaskDraft)
@@ -486,7 +506,7 @@ enum TodoSheet: Identifiable {
 
     var id: String {
         switch self {
-        case .compose(let category, let focus): "compose-\(category?.rawValue ?? "")-\(focus?.rawValue ?? "")"
+        case .compose(let category, let focus): "compose-\(category?.key ?? "")-\(focus?.rawValue ?? "")"
         case .edit(let task, let focus): "edit-\(task.id.uuidString)-\(focus?.rawValue ?? "")"
         case .draft: "draft"
         case .voice: "voice"

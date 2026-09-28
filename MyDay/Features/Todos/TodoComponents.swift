@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 // MARK: - Header scene
@@ -132,9 +133,15 @@ struct TodayHeaderCard: View {
 
 // MARK: - Category filter
 
-/// "All · Personal · Work · Health · Learning · Shopping".
+/// "All · Personal · Work · Health · Learning · Shopping", then the categories the person
+/// added, then ＋ to add one. Press and hold an added category to delete it.
 struct CategoryChipBar: View {
-    @Binding var selection: TaskCategory?
+    @Binding var selection: CategoryChoice?
+
+    @Environment(\.modelContext) private var context
+    @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
+    @State private var showsNewCategory = false
+    @State private var pendingDelete: CustomCategory?
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -143,16 +150,73 @@ struct CategoryChipBar: View {
                     selection = nil
                 }
                 ForEach(TaskCategory.allCases) { category in
-                    CategoryChip(title: category.label, icon: category.emoji, tint: category.color,
-                                 isOn: selection == category) {
-                        selection = selection == category ? nil : category
-                    }
+                    chip(.builtIn(category))
                 }
+                ForEach(customs) { custom in
+                    chip(.custom(custom))
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                pendingDelete = custom
+                            } label: {
+                                Label("Delete Category", systemImage: "trash")
+                            }
+                        }
+                }
+                addChip
             }
             .padding(.horizontal, 16)
             .padding(.top, 2)
             .padding(.bottom, 10)
         }
+        .sheet(isPresented: $showsNewCategory) {
+            NewCategorySheet { added in
+                withAnimation(.snappy) { selection = .custom(added) }
+            }
+        }
+        .confirmationDialog("Delete this category?", isPresented: deleteBinding, titleVisibility: .visible,
+                            presenting: pendingDelete) { custom in
+            Button("Delete “\(custom.name)”", role: .destructive) { delete(custom) }
+        } message: { _ in
+            Text("Its to-dos stay, in Personal.")
+        }
+    }
+
+    private func chip(_ choice: CategoryChoice) -> some View {
+        CategoryChip(title: choice.label, icon: choice.emoji, tint: choice.color, isOn: selection == choice) {
+            selection = selection == choice ? nil : choice
+        }
+    }
+
+    private var addChip: some View {
+        Button {
+            Haptics.tap()
+            showsNewCategory = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Palette.hotPink)
+                .frame(width: 44, height: 34)
+                .background(Capsule().fill(Color.white.opacity(0.85)))
+                .overlay(
+                    Capsule().strokeBorder(Palette.hotPink.opacity(0.4), style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
+                )
+                .padding(.vertical, 3)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("Add a category")
+    }
+
+    private func delete(_ custom: CustomCategory) {
+        if selection == .custom(custom) {
+            selection = nil
+        }
+        withAnimation(.snappy) { context.delete(custom) }
+        Haptics.success()
+    }
+
+    private var deleteBinding: Binding<Bool> {
+        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
     }
 }
 
@@ -236,19 +300,30 @@ enum TaskMenuAction: String, CaseIterable, Identifiable {
     }
 }
 
-/// One to-do: tick box on the left, title and details, and the ✏️ that manages it.
+/// One to-do: tick box on the left, title and details, the ☆ that marks it important and
+/// the ✏️ that manages it.
 struct TodoRow: View {
     let task: TaskItem
     let tint: RowTint
     let onToggle: () -> Void
+    let onImportant: () -> Void
     let onOpen: () -> Void
     let onAction: (TaskMenuAction) -> Void
 
     @State private var showsMenu = false
     @State private var chosen: TaskMenuAction?
-    /// Goes up each time the to-do is ticked; every change pops one star.
-    @State private var starPops = 0
+    /// Goes up each time the to-do is ticked; every change pops one heart or star.
+    @State private var tickPops = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Personal and Shopping to-dos pop a heart when ticked; the others pop a star.
+    private var popKind: TickPop.Kind {
+        guard task.customCategory == nil else { return .star }
+        switch task.category {
+        case .personal, .shopping: return .heart
+        case .work, .health, .learning: return .star
+        }
+    }
 
     var body: some View {
         HStack(spacing: 4) {
@@ -278,6 +353,8 @@ struct TodoRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Shows the details")
+
+            importantButton
 
             Button {
                 Haptics.tap()
@@ -317,17 +394,17 @@ struct TodoRow: View {
         .shadow(color: tint.edge.opacity(0.45), radius: 6, x: 0, y: 3)
         .opacity(task.isCompleted ? 0.8 : 1)
         .overlay(alignment: .leading) {
-            // Over the tick box (after the fade above, so the star stays bright).
-            if starPops > 0 {
-                StarPop()
-                    .id(starPops)
+            // Over the tick box (after the fade above, so the heart or star stays bright).
+            if tickPops > 0 {
+                TickPop(kind: popKind)
+                    .id(tickPops)
                     .frame(width: 44, height: 44)
                     .padding(.leading, 4)
             }
         }
         .onChange(of: task.isCompleted) { wasDone, isDone in
             if isDone && !wasDone && !reduceMotion {
-                starPops += 1
+                tickPops += 1
             }
         }
         .onChange(of: showsMenu) { _, isShowing in
@@ -340,6 +417,30 @@ struct TodoRow: View {
             }
         }
     }
+
+    /// ☆ / ★: important to-dos move to the top of the list.
+    private var importantButton: some View {
+        Button {
+            Haptics.tap()
+            onImportant()
+        } label: {
+            Image(systemName: task.isImportant ? "star.fill" : "star")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(task.isImportant ? AnyShapeStyle(Self.importantFill)
+                                                  : AnyShapeStyle(tint.accent.opacity(0.5)))
+                .shadow(color: Color(hex: 0xFFB800).opacity(task.isImportant ? 0.45 : 0), radius: 3, x: 0, y: 1)
+                .symbolEffect(.bounce, value: task.isImportant)
+                .frame(width: 32, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.85))
+        .accessibilityLabel("Important")
+        .accessibilityValue(task.isImportant ? "On" : "Off")
+        .accessibilityHint(task.isImportant ? "Stops listing it first" : "Lists it first")
+    }
+
+    private static let importantFill = LinearGradient(colors: [Color(hex: 0xFFD84D), Color(hex: 0xFFA800)],
+                                                      startPoint: .top, endPoint: .bottom)
 }
 
 /// The cute pop-up behind a to-do's ✏️.
@@ -435,7 +536,7 @@ struct TodoMetaLine: View {
     }
 
     var body: some View {
-        let category = Text(task.category.label).foregroundStyle(task.category.color)
+        let category = Text(task.choice.label).foregroundStyle(task.choice.color)
         let rest = Text(details).foregroundStyle(Palette.inkSoft)
         Text("\(category)\(rest)")
             .font(.rounded(.caption, weight: .semibold))
@@ -444,7 +545,7 @@ struct TodoMetaLine: View {
     }
 
     private var spokenText: String {
-        var parts = [task.category.label]
+        var parts = [task.choice.label]
         if let time = task.time {
             parts.append("at " + time.formatted(date: .omitted, time: .shortened))
         }

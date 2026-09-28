@@ -20,8 +20,15 @@ enum DebugLaunchRoute {
         let today = Date()
         context.insert(TaskItem(title: "Team meeting at 10 💼", category: .work, date: today))
         context.insert(TaskItem(title: "Evening walk 🌸", category: .health, date: today, repeatOption: .daily))
-        context.insert(TaskItem(title: "Read 20 pages 📚", category: .learning, date: today))
+        let reading = TaskItem(title: "Read 20 pages 📚", category: .learning, date: today)
+        reading.isImportant = true
+        context.insert(reading)
         context.insert(TaskItem(title: "Buy milk and bread 🥛", category: .shopping, date: today))
+        let home = CustomCategory(name: "Home", emoji: "🏠", colorIndex: 1)
+        context.insert(home)
+        let plants = TaskItem(title: "Water the plants 🪴", date: today)
+        context.insert(plants)
+        plants.customCategory = home
         context.insert(Priority(title: "Finish the project report ⭐", date: today, order: 0))
         context.insert(JournalEntry(
             date: today,
@@ -36,8 +43,8 @@ enum DebugLaunchRoute {
     @MainActor private static var todosSheet: String?
     /// Open the newest journal page once the journal appears ("journal-page").
     @MainActor private static var journalPage = false
-    /// "todos-star": keep a tick's star (and its to-do's place) a few seconds longer, so the
-    /// screenshot can catch it.
+    /// "todos-star" and "todos-heart": keep a tick's star or heart (and its to-do's place) a
+    /// few seconds longer, so the screenshot can catch it.
     @MainActor static private(set) var holdsStar = false
 
     @MainActor
@@ -83,7 +90,7 @@ enum DebugLaunchRoute {
         case "newjournal": router.sheet = .newJournal(.now)
         case let route where route.hasPrefix("todos-"):
             todosSheet = String(route.dropFirst("todos-".count))
-            holdsStar = route == "todos-star"
+            holdsStar = route == "todos-star" || route == "todos-heart"
             router.open(.todos(today))
         default: break
         }

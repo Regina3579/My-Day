@@ -19,7 +19,7 @@ struct NewTaskSheet: View {
 
     @State private var title: String
     @State private var notes: String
-    @State private var category: TaskCategory
+    @State private var category: CategoryChoice
     @State private var date: Date
     @State private var hasTime: Bool
     @State private var time: Date
@@ -51,9 +51,9 @@ struct NewTaskSheet: View {
     }
 
     /// A new to-do on `date`.
-    init(date: Date, category: TaskCategory = .personal, focus: TaskSheetFocus? = nil,
+    init(date: Date, category: CategoryChoice = .builtIn(.personal), focus: TaskSheetFocus? = nil,
          onSaved: ((TaskItem) -> Void)? = nil) {
-        self.init(existing: nil, draft: TaskDraft(day: date, category: category), focus: focus, onSaved: onSaved)
+        self.init(existing: nil, draft: TaskDraft(day: date, choice: category), focus: focus, onSaved: onSaved)
     }
 
     /// A new to-do filled in from Voice Add (or anything else), for the person to check.
@@ -63,7 +63,7 @@ struct NewTaskSheet: View {
 
     /// An existing to-do.
     init(task: TaskItem, focus: TaskSheetFocus? = nil) {
-        var draft = TaskDraft(day: task.date, category: task.category)
+        var draft = TaskDraft(day: task.date, choice: task.choice)
         draft.title = task.title
         draft.notes = task.notes
         draft.time = task.time
@@ -80,7 +80,7 @@ struct NewTaskSheet: View {
         let nextHour = Self.nextHour(on: draft.day)
         _title = State(initialValue: draft.title)
         _notes = State(initialValue: draft.notes)
-        _category = State(initialValue: draft.category)
+        _category = State(initialValue: draft.choice)
         _date = State(initialValue: draft.day)
         _hasTime = State(initialValue: draft.time != nil)
         _time = State(initialValue: draft.time ?? nextHour)
@@ -603,7 +603,7 @@ struct NewTaskSheet: View {
         if let task {
             task.title = cleanTitle
             task.notes = notes.trimmed
-            task.category = category
+            task.choice = category
             task.date = day
             task.time = taskTime
             task.reminderEnabled = reminderEnabled
@@ -611,10 +611,11 @@ struct NewTaskSheet: View {
             task.repeatOption = repeatOption
             saved = task
         } else {
-            saved = TaskItem(title: cleanTitle, notes: notes.trimmed, category: category, date: day,
+            saved = TaskItem(title: cleanTitle, notes: notes.trimmed, date: day,
                              time: taskTime, reminderEnabled: reminderEnabled, reminderDate: reminderDate,
                              repeatOption: repeatOption)
             context.insert(saved)
+            saved.choice = category
         }
         if photoChanged {
             saved.photoData = newPhoto
@@ -645,8 +646,8 @@ struct NewTaskSheet: View {
 
 // MARK: - Pieces
 
-/// Small caps label above a section of the sheet.
-private struct SheetLabel: View {
+/// Small caps label above a section of the task and category sheets.
+struct SheetLabel: View {
     let text: String
 
     var body: some View {
@@ -758,38 +759,47 @@ private struct DayChip: View {
     }
 }
 
-/// Personal · Work · Health · Learning · Shopping.
+/// Personal · Work · Health · Learning · Shopping, then the categories the person added.
 struct CategoryPicker: View {
-    @Binding var selection: TaskCategory
+    @Binding var selection: CategoryChoice
+    @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
+
+    private var choices: [CategoryChoice] {
+        TaskCategory.allCases.map(CategoryChoice.builtIn) + customs.map(CategoryChoice.custom)
+    }
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
-            ForEach(TaskCategory.allCases) { category in
-                let isOn = selection == category
-                Button {
-                    withAnimation(.snappy) { selection = category }
-                    Haptics.tap()
-                } label: {
-                    HStack(spacing: 5) {
-                        Text(category.emoji)
-                        Text(category.label)
-                            .foregroundStyle(isOn ? Color.white : Palette.ink)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .font(.rounded(.subheadline, weight: .bold))
-                    .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(
-                        Capsule().fill(isOn ? AnyShapeStyle(category.color.gradient)
-                                            : AnyShapeStyle(Color.white.opacity(0.85)))
-                    )
-                    .overlay(Capsule().strokeBorder(category.color.opacity(isOn ? 0 : 0.25), lineWidth: 1))
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(PressScaleStyle())
-                .accessibilityLabel(category.label)
-                .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
+            ForEach(choices, id: \.key) { choice in
+                option(choice)
             }
         }
+    }
+
+    private func option(_ choice: CategoryChoice) -> some View {
+        let isOn = selection == choice
+        return Button {
+            withAnimation(.snappy) { selection = choice }
+            Haptics.tap()
+        } label: {
+            HStack(spacing: 5) {
+                Text(choice.emoji)
+                Text(choice.label)
+                    .foregroundStyle(isOn ? Color.white : Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .font(.rounded(.subheadline, weight: .bold))
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(
+                Capsule().fill(isOn ? AnyShapeStyle(choice.color.gradient)
+                                    : AnyShapeStyle(Color.white.opacity(0.85)))
+            )
+            .overlay(Capsule().strokeBorder(choice.color.opacity(isOn ? 0 : 0.25), lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel(choice.label)
+        .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
     }
 }

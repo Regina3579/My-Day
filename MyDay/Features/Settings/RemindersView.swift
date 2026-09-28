@@ -78,8 +78,8 @@ struct RemindersView: View {
                 } else {
                     ForEach(upcoming) { task in
                         HStack(spacing: 10) {
-                            Image(systemName: task.category.symbol)
-                                .foregroundStyle(task.category.color)
+                            Image(systemName: task.choice.symbol)
+                                .foregroundStyle(task.choice.color)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(task.title)
                                     .font(.rounded(.body, weight: .semibold))

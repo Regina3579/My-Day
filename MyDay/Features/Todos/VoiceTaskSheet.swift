@@ -293,8 +293,7 @@ struct VoiceTaskSheet: View {
     private func addTask() {
         let draft = result.draft
         guard !draft.title.trimmed.isEmpty else { return }
-        let task = draft.makeTask()
-        context.insert(task)
+        let task = draft.insertTask(into: context)
         ReminderCenter.sync(task)
         if task.activeReminder != nil {
             // First reminder: this is when My Day asks for notification permission.

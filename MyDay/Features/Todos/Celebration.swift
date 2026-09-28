@@ -188,20 +188,33 @@ extension ConfettiPiece {
     }
 }
 
-// MARK: - One to-do done: the star
+// MARK: - One to-do done: a little heart or star
 
-/// A cute yellow star that pops out of a to-do's tick box when it is ticked, with a few tiny
-/// sparkles around it.
-struct StarPop: View {
+/// A little heart (pink) or star (yellow) that pops out of a to-do's tick box when it is
+/// ticked, with a few tiny sparkles around it.
+struct TickPop: View {
+    enum Kind {
+        case heart, star
+    }
+
+    let kind: Kind
+
     @State private var isOut = false
     @State private var isRisen = false
     @State private var isFaded = false
 
-    private static let fill = LinearGradient(colors: [Color(hex: 0xFFE66D), Color(hex: 0xFFB800)],
-                                             startPoint: .top, endPoint: .bottom)
+    private static let starFill = LinearGradient(colors: [Color(hex: 0xFFE66D), Color(hex: 0xFFB800)],
+                                                 startPoint: .top, endPoint: .bottom)
+    private static let heartFill = LinearGradient(colors: [Color(hex: 0xFF8CC6), Palette.hotPink],
+                                                  startPoint: .top, endPoint: .bottom)
     private static let sparkleColors: [Color] = [
         Palette.hotPink, Color(hex: 0xFFD23F), Palette.grape, Color(hex: 0x5AA9FF), Palette.bubblegum
     ]
+
+    private var symbol: String { kind == .heart ? "heart.fill" : "star.fill" }
+    private var outline: String { kind == .heart ? "heart" : "star" }
+    private var fill: LinearGradient { kind == .heart ? Self.heartFill : Self.starFill }
+    private var glow: Color { kind == .heart ? Palette.hotPink : Color(hex: 0xFF9F00) }
 
     var body: some View {
         ZStack {
@@ -209,22 +222,22 @@ struct StarPop: View {
                 let angle: Double = Double(index) / 5 * 2 * Double.pi - Double.pi / 2
                 Circle()
                     .fill(Self.sparkleColors[index])
-                    .frame(width: 6, height: 6)
-                    .offset(x: isOut ? CGFloat(cos(angle) * 28) : 0, y: isOut ? CGFloat(sin(angle) * 28) : 0)
+                    .frame(width: 4, height: 4)
+                    .offset(x: isOut ? CGFloat(cos(angle) * 18) : 0, y: isOut ? CGFloat(sin(angle) * 18) : 0)
                     .opacity(isFaded ? 0 : 1)
             }
-            Image(systemName: "star.fill")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(Self.fill)
+            Image(systemName: symbol)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(fill)
                 .overlay(
-                    Image(systemName: "star")
-                        .font(.system(size: 30, weight: .semibold))
+                    Image(systemName: outline)
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.white)
                 )
-                .shadow(color: Color(hex: 0xFF9F00).opacity(0.7), radius: 7, x: 0, y: 2)
-                .scaleEffect(isOut ? 1.25 : 0.2)
-                .rotationEffect(.degrees(isOut ? 18 : -40))
-                .offset(y: isRisen ? -40 : 0)
+                .shadow(color: glow.opacity(0.6), radius: 5, x: 0, y: 1)
+                .scaleEffect(isOut ? 1.15 : 0.2)
+                .rotationEffect(.degrees(isOut ? (kind == .heart ? -8 : 18) : -40))
+                .offset(y: isRisen ? -28 : 0)
                 .opacity(isFaded ? 0 : 1)
         }
         .allowsHitTesting(false)
@@ -236,7 +249,7 @@ struct StarPop: View {
         }
     }
 
-    /// Seconds before the star fades (longer in a screenshot run, so it can be captured).
+    /// Seconds before it fades (longer in a screenshot run, so it can be captured).
     @MainActor
     private static var fadeDelay: Double {
         #if DEBUG

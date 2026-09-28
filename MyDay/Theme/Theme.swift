@@ -108,6 +108,52 @@ extension TaskCategory {
     }
 }
 
+/// Colours for the categories people add (different from the five built in).
+enum CategoryPalette {
+    static let colors: [Color] = [
+        Color(hex: 0xE85D9C), Color(hex: 0x2FB8A6), Color(hex: 0xB15CEF), Color(hex: 0xFF7A6B),
+        Color(hex: 0x3F9BEA), Color(hex: 0xE0A21B), Color(hex: 0x5C6BC0), Color(hex: 0x6DAF3A)
+    ]
+
+    static func color(at index: Int) -> Color {
+        colors[((index % colors.count) + colors.count) % colors.count]
+    }
+}
+
+extension CustomCategory {
+    var color: Color { CategoryPalette.color(at: colorIndex) }
+}
+
+extension CategoryChoice {
+    var label: String {
+        switch self {
+        case .builtIn(let builtIn): builtIn.label
+        case .custom(let custom): custom.name
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .builtIn(let builtIn): builtIn.emoji
+        case .custom(let custom): custom.emoji
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .builtIn(let builtIn): builtIn.color
+        case .custom(let custom): custom.color
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .builtIn(let builtIn): builtIn.symbol
+        case .custom: "tag.fill"
+        }
+    }
+}
+
 /// The soft colours the to-do rows take in turn, as in the design.
 struct RowTint {
     let fill: Color

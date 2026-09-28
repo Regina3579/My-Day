@@ -66,6 +66,8 @@ enum TaskActions {
             seriesID: series
         )
         context.insert(next)
+        next.customCategory = task.customCategory
+        next.isImportant = task.isImportant
         ReminderCenter.sync(next)
     }
 }

@@ -13,7 +13,7 @@ starts empty.
 
 | Home | Today's To-Dos | All Done ✨ | Add a Task | Voice Add |
 | --- | --- | --- | --- | --- |
-| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-04-todos.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-19-todos-confetti.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-todos-add.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-07-todos-voice.jpg" width="170"> |
+| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-04-todos.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-20-todos-confetti.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-todos-add.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-07-todos-voice.jpg" width="170"> |
 
 | Templates | Quick Add menu | Today's Priority | My Journal | A Journal Page |
 | --- | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ starts empty.
 | Screen | What you can do |
 | --- | --- |
 | **My Day** (home) | The illustrated home screen from the design. The girl, pets and garden are an image; everything else is native SwiftUI: the ☰ menu, the "My Day" title, today's real date, the 🔔 reminders button, **Daily Motivation** (a short hand-written quote from 112 built-in quotes about happiness, productivity, gratitude, self-belief, consistency, peaceful living and progress; it stays the same all day, changes after midnight and works offline), the three feature cards with live badges, the pink **+** Quick Add menu and the floating tab bar. |
-| **Today's To-Dos** | The illustrated header, today's date with a daily quote, category chips (All, Personal, Work, Health, Learning, Shopping) and soft pastel rows such as "Health · 5:00 PM 🔔". The box on the left ticks a to-do off; the little ✏️ on the right opens a menu: Edit, Change date/time, Add reminder, Repeat, Move to Priority and Delete. Swipe a to-do to the left to delete it, tap it for its details, or press and hold to drag it to a new place. **Daily Progress** sits at the top of the list: "Today ✨ 3 of 5 completed ● ● ● ○ ○"; ticking a to-do pops a cute yellow star out of its box, and when every to-do is done it says "✨ All done for today!" while a big shower of pink, purple, yellow and blue stars, hearts and confetti bursts across the screen (both skipped with Reduce Motion). **Today's Progress** (the counts, a heart for every to-do and the kitten's cheer) is pinned at the bottom, under the add buttons. Finishing a repeating to-do creates the next one. |
+| **Today's To-Dos** | The illustrated header, today's date with a daily quote, category chips (All, Personal, Work, Health, Learning, Shopping, then your own) with a ＋ chip to add a category of your own (a name, an emoji and a colour; press and hold it to delete it, and its to-dos move to Personal), and soft pastel rows such as "Health · 5:00 PM 🔔". The box on the left ticks a to-do off; the ☆ next to the ✏️ marks it important, and important to-dos (★) are always listed first; the little ✏️ on the right opens a menu: Edit, Change date/time, Add reminder, Repeat, Move to Priority and Delete. Swipe a to-do to the left to delete it, tap it for its details, or press and hold to drag it to a new place. **Daily Progress** sits at the top of the list: "Today ✨ 3 of 5 completed ● ● ● ○ ○"; ticking a to-do pops a little pink heart (Personal and Shopping) or a little yellow star (every other category) out of its box, and when every to-do is done it says "✨ All done for today!" while a big shower of pink, purple, yellow and blue stars, hearts and confetti bursts across the screen (both skipped with Reduce Motion). **Today's Progress** (the counts, a heart for every to-do and the kitten's cheer) is pinned at the bottom, under the add buttons. Finishing a repeating to-do creates the next one. |
 | **Four ways to add** | The two fastest are bright and glowing: a long pink ＋ **Add Task** button and, beside it, a round yellow 🎙 microphone labelled "Speak a Task". 📷 **Photo** and ▦ **Template** are smaller and softer, underneath. All four, with Today's Progress under them, stay pinned at the bottom of the screen, just above the tab bar, on a frosted panel; only the list scrolls, sliding behind them. ＋ **Add Task**: a pastel sheet where only the title is needed; category, date & time, reminder, repeat, photo and note are optional. 🎙 **Speak a Task**: Apple's Speech framework (on the device when supported) turns what you say into text; My Day spots words like *today*, *tomorrow*, *at 5 PM*, *every day* and category words, then shows a preview (Task, Category, Date, Time, Reminder) with Cancel, Edit and Add Task. Nothing is saved without your tap, and guesses are pointed out. 📷 **Photo**: take or choose a photo, add the title and details, and save; view it full size, replace it or remove it later. ▦ **Templates**: Morning Routine, Grocery Shopping, Travel Checklist, Workout Routine, Home Cleaning and Study Session; untick what you don't need and tap "Add to My Day". "Save as Template" keeps your own lists on the device. |
 | **Today's Priority** | Numbered golden cards for the few things that matter most. Add, edit, reorder and complete them, or pick one from today's to-dos. |
 | **My Journal** | Pages with a mood, title, text, writing prompts and up to 6 photos. **Today's Little Win 🏆** is one optional line on each page ("🌟 My little win today…", such as "Called my mom."); it shows as a gold ribbon on the page, and the **Little Wins 🏆** shelf collects them all, so the journal becomes a collection of little achievements. Search (titles, text and wins), favourites, a "week in moods" strip, and an optional **Face ID lock**. |
@@ -47,7 +47,8 @@ it on in Settings and offers another way (for example, typing instead of speakin
 
 | Model | Fields |
 | --- | --- |
-| `TaskItem` (the spec's *Task*; `Task` is Swift's concurrency type) | id, title, category (Personal, Work, Health, Learning, Shopping), date, time, reminderEnabled, reminderDate, repeatOption, isCompleted, createdAt (+ notes, completedAt, seriesID, sortOrder, photoData stored outside the database, photoThumbnail) |
+| `TaskItem` (the spec's *Task*; `Task` is Swift's concurrency type) | id, title, category (Personal, Work, Health, Learning, Shopping), date, time, reminderEnabled, reminderDate, repeatOption, isCompleted, createdAt (+ notes, completedAt, seriesID, sortOrder, isImportant, customCategory, photoData stored outside the database, photoThumbnail) |
+| `CustomCategory` | id, name, emoji, colorIndex, createdAt — the categories you add with ＋ (deleting one moves its to-dos to Personal) |
 | `TaskTemplate` | id, name, emoji, category, items, createdAt — the templates you save yourself |
 | `Priority` | id, title, date, order, isCompleted (+ completedAt, createdAt) |
 | `JournalEntry` | id, date, title, body, mood, photos (`[JournalPhoto]`), createdAt, updatedAt (+ isFavorite, littleWin) |
@@ -70,8 +71,8 @@ it on in Settings and offers another way (for example, typing instead of speakin
 ```
 MyDay/
 ├── App/            App entry, navigation (Router), UIKit appearance
-├── Models/         SwiftData models: TaskItem, TaskTemplate, Priority, JournalEntry,
-│                   JournalPhoto; TaskDraft (an unsaved to-do)
+├── Models/         SwiftData models: TaskItem, CustomCategory, TaskTemplate, Priority,
+│                   JournalEntry, JournalPhoto; TaskDraft (an unsaved to-do)
 ├── Services/       Reminders, speech (SpeechTranscriber, VoiceTaskParser),
 │                   Face ID lock, haptics, day rollover, helpers
 ├── Theme/          Colours from the artwork, fonts, shared components
@@ -80,8 +81,8 @@ MyDay/
 │   ├── Home/       HomeView, HomeHeader, DailyQuoteView, HomeFeatureCard,
 │   │               QuickAddButton / QuickAddMenu, card illustrations
 │   ├── Todos/      TodayToDosView, TodoComponents (rows, ✏️ menu, progress),
-│   │               NewTaskSheet, VoiceTaskSheet,
-│   │               TemplatePickerSheet, TaskPhotoViews
+│   │               NewTaskSheet, NewCategorySheet, VoiceTaskSheet,
+│   │               TemplatePickerSheet, TaskPhotoViews, Celebration (confetti, tick pop)
 │   ├── Priority/   TodaysPriorityView, NewPrioritySheet
 │   ├── Journal/    JournalView, JournalDetailView, NewJournalEntrySheet, lock screen
 │   ├── Calendar/   CalendarView

@@ -107,7 +107,7 @@ struct CalendarView: View {
                 emptyLine("No to-dos for this day yet.")
             } else {
                 ForEach(dayTasks) { task in
-                    CompactCheckRow(title: task.title, isDone: task.isCompleted, tint: task.category.color) {
+                    CompactCheckRow(title: task.title, isDone: task.isCompleted, tint: task.choice.color) {
                         withAnimation(.snappy) { TaskActions.toggle(task, in: context) }
                     }
                 }
