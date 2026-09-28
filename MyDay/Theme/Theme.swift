@@ -108,6 +108,17 @@ extension TaskCategory {
         case .shopping: Color(hex: 0x8A55E8)
         }
     }
+
+    /// A slightly deeper shade of `color` for text, so even the yellow stays easy to read.
+    var textColor: Color {
+        switch self {
+        case .personal: Color(hex: 0xD6106A)
+        case .work: Color(hex: 0x2F5BC9)
+        case .health: Color(hex: 0x1F8A52)
+        case .learning: Color(hex: 0xAD7200)
+        case .shopping: Color(hex: 0x7442D6)
+        }
+    }
 }
 
 /// Colours for the categories people add. New categories are pink (the first one) unless
@@ -158,6 +169,14 @@ extension CategoryChoice {
     var color: Color {
         switch self {
         case .builtIn(let builtIn): builtIn.color
+        case .custom(let custom): custom.color
+        }
+    }
+
+    /// The colour for the category's name.
+    var textColor: Color {
+        switch self {
+        case .builtIn(let builtIn): builtIn.textColor
         case .custom(let custom): custom.color
         }
     }

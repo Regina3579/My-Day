@@ -182,7 +182,8 @@ struct CategoryChipBar: View {
     }
 
     private func chip(_ choice: CategoryChoice) -> some View {
-        CategoryChip(title: choice.label, icon: choice.emoji, tint: choice.color, isOn: selection == choice) {
+        CategoryChip(title: choice.label, icon: choice.emoji, tint: choice.color, textTint: choice.textColor,
+                     isOn: selection == choice) {
             selection = selection == choice ? nil : choice
         }
     }
@@ -220,11 +221,15 @@ struct CategoryChipBar: View {
     }
 }
 
+/// A category chip in its category's colour: a soft tint with the name in colour, or filled
+/// with white text when chosen.
 struct CategoryChip: View {
     let title: String
     /// An emoji; `nil` shows a heart (used by "All").
     let icon: String?
     let tint: Color
+    /// The colour for the name when not chosen (`tint` if nil).
+    var textTint: Color?
     let isOn: Bool
     let action: () -> Void
 
@@ -241,16 +246,19 @@ struct CategoryChip: View {
                         .foregroundStyle(isOn ? Color.white : tint)
                 }
                 Text(title)
-                    .foregroundStyle(isOn ? Color.white : Palette.ink)
+                    .foregroundStyle(isOn ? Color.white : (textTint ?? tint))
             }
-            .font(.rounded(.subheadline, weight: .semibold))
+            .font(.rounded(.subheadline, weight: isOn ? .bold : .semibold))
             .padding(.horizontal, 12)
             .frame(minHeight: 34)
-            .background(
-                Capsule().fill(isOn ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(Color.white.opacity(0.85)))
-            )
-            .overlay(Capsule().strokeBorder(isOn ? Color.white.opacity(0.7) : tint.opacity(0.18), lineWidth: 1))
-            .shadow(color: tint.opacity(isOn ? 0.35 : 0.1), radius: 6, x: 0, y: 3)
+            .background {
+                ZStack {
+                    Capsule().fill(Color.white)
+                    Capsule().fill(isOn ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(tint.opacity(0.14)))
+                }
+            }
+            .overlay(Capsule().strokeBorder(isOn ? Color.white.opacity(0.7) : tint.opacity(0.4), lineWidth: 1))
+            .shadow(color: tint.opacity(isOn ? 0.35 : 0.12), radius: 6, x: 0, y: 3)
             .overlay(alignment: .bottom) {
                 if isOn {
                     Circle()
@@ -536,7 +544,7 @@ struct TodoMetaLine: View {
     }
 
     var body: some View {
-        let category = Text(task.choice.label).foregroundStyle(task.choice.color)
+        let category = Text(task.choice.label).foregroundStyle(task.choice.textColor)
         let rest = Text(details).foregroundStyle(Palette.inkSoft)
         Text("\(category)\(rest)")
             .font(.rounded(.caption, weight: .semibold))

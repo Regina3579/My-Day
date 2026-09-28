@@ -788,17 +788,20 @@ struct CategoryPicker: View {
             HStack(spacing: 5) {
                 Text(choice.emoji)
                 Text(choice.label)
-                    .foregroundStyle(isOn ? Color.white : Palette.ink)
+                    .foregroundStyle(isOn ? Color.white : choice.textColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             .font(.rounded(.subheadline, weight: .bold))
             .frame(maxWidth: .infinity, minHeight: 42)
-            .background(
-                Capsule().fill(isOn ? AnyShapeStyle(choice.color.gradient)
-                                    : AnyShapeStyle(Color.white.opacity(0.85)))
-            )
-            .overlay(Capsule().strokeBorder(choice.color.opacity(isOn ? 0 : 0.25), lineWidth: 1))
+            .background {
+                ZStack {
+                    Capsule().fill(Color.white)
+                    Capsule().fill(isOn ? AnyShapeStyle(choice.color.gradient)
+                                        : AnyShapeStyle(choice.color.opacity(0.14)))
+                }
+            }
+            .overlay(Capsule().strokeBorder(choice.color.opacity(isOn ? 0 : 0.4), lineWidth: 1))
             .contentShape(Capsule())
         }
         .buttonStyle(PressScaleStyle())
