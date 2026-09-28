@@ -6,6 +6,7 @@ import SwiftUI
 struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.tabBarClearance) private var tabBarClearance
+    @Environment(\.dynamicTypeSize) private var typeSize
     @AppStorage(Prefs.showCompleted) private var showCompleted = true
     @Query private var tasks: [TaskItem]
     @State private var filter: TaskCategory?
@@ -14,6 +15,8 @@ struct TodayToDosView: View {
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
     @State private var heroIsVisible = true
+    /// Height of the pinned add buttons, so the toast can float above them.
+    @State private var dockHeight: CGFloat = 0
     /// Goes up each time the last to-do of the day is ticked (plays the sparkle burst).
     @State private var celebration = 0
     private let day: Date
@@ -44,6 +47,10 @@ struct TodayToDosView: View {
 
     private var doneCount: Int { tasks.filter(\.isCompleted).count }
 
+    /// The add buttons stay pinned above the tab bar. At the largest text sizes they would
+    /// cover most of the screen, so there they sit at the end of the list instead.
+    private var pinsActions: Bool { !typeSize.isAccessibilitySize }
+
     // The body is split into small steps so the compiler can type-check each one quickly.
     var body: some View {
         withSheets
@@ -70,7 +77,8 @@ struct TodayToDosView: View {
     }
 
     /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete
-    /// and press-and-hold reordering.
+    /// and press-and-hold reordering. The add buttons are pinned at the bottom and the
+    /// list scrolls behind them.
     private func scrollingPage(width: CGFloat, safeTop: CGFloat) -> some View {
         List {
             header(width: width, safeTop: safeTop)
@@ -79,8 +87,10 @@ struct TodayToDosView: View {
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
             progressLine
             taskRows
-            actionBar
-                .plainListRow(EdgeInsets(top: 12, leading: 16, bottom: 4, trailing: 16))
+            if !pinsActions {
+                actionBar
+                    .plainListRow(EdgeInsets(top: 12, leading: 16, bottom: 4, trailing: 16))
+            }
             TodosProgressCard(done: doneCount, total: tasks.count)
                 .plainListRow(EdgeInsets(top: 18, leading: 16, bottom: 24, trailing: 16))
         }
@@ -88,6 +98,11 @@ struct TodayToDosView: View {
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if pinsActions {
+                actionDock
+            }
+        }
         .tabBarSafeArea()
         .ignoresSafeArea(edges: .top)
     }
@@ -132,7 +147,7 @@ struct TodayToDosView: View {
     private var toastView: some View {
         if let toast {
             TodoToast(text: toast)
-                .padding(.bottom, tabBarClearance + 12)
+                .padding(.bottom, tabBarClearance + (pinsActions ? dockHeight : 0) + 12)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .allowsHitTesting(false)
         }
@@ -176,6 +191,36 @@ struct TodayToDosView: View {
     #endif
 
     // MARK: Content
+
+    /// The add buttons on a frosted panel that reaches down behind the tab bar.
+    private var actionDock: some View {
+        actionBar
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
+            .background(alignment: .top) {
+                dockBackground
+            }
+            .onGeometryChange(for: CGFloat.self) { geometry in
+                geometry.size.height
+            } action: { height in
+                dockHeight = height
+            }
+    }
+
+    private var dockBackground: some View {
+        let shape = UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+        return shape
+            .fill(.ultraThinMaterial)
+            .overlay(shape.fill(Self.dockTint))
+            .overlay(shape.stroke(Color.white.opacity(0.9), lineWidth: 1))
+            .shadow(color: Palette.hotPink.opacity(0.16), radius: 14, x: 0, y: -4)
+            .ignoresSafeArea(edges: .bottom)
+    }
+
+    private static let dockTint = LinearGradient(
+        colors: [Color.white.opacity(0.72), TodosBackdrop.base.opacity(0.9)], startPoint: .top, endPoint: .bottom
+    )
 
     private var actionBar: some View {
         TodosActionBar(

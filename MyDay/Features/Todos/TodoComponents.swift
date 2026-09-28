@@ -414,9 +414,9 @@ struct TodoMetaLine: View {
 
 // MARK: - Actions
 
-/// The ways to add a to-do. The three fastest are big, bright and glowing: ＋ Add Task,
-/// ⚡ Quick Add and the 🎙 microphone ("Speak a Task"). Photo and Template are smaller
-/// and softer, underneath:
+/// The ways to add a to-do, pinned at the bottom of the To-Dos screen. The three fastest
+/// are big, bright and glowing: ＋ Add Task, ⚡ Quick Add and the 🎙 microphone
+/// ("Speak a Task"). Photo and Template are smaller and softer, underneath:
 ///
 ///     [ ＋ Add Task ]  [ ⚡ Quick Add ]  ( 🎙 )
 ///     [ 📷 Photo    ]  [ ▦ Template   ]  Speak a Task
