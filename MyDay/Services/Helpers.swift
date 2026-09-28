@@ -33,9 +33,29 @@ extension Date {
     }
 
     /// A stable number for the calendar day, used to rotate daily content.
-    var dayNumber: Int {
-        Calendar.current.ordinality(of: .day, in: .era, for: self) ?? 0
+    var dayNumber: Int { dayNumber(in: .current) }
+
+    /// Days from 1 January of year 1 to this date as it reads in `calendar`'s time zone.
+    /// Only the year, month and day count, so the same date gives the same number in every
+    /// time zone, and the number changes exactly at local midnight.
+    func dayNumber(in calendar: Calendar) -> Int {
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = calendar.timeZone
+        let day = local.dateComponents([.year, .month, .day], from: self)
+        let noon = DateComponents(year: day.year, month: day.month, day: day.day, hour: 12)
+        guard let date = Self.utcCalendar.date(from: noon) else { return 0 }
+        let daysSince2001 = Int((date.timeIntervalSinceReferenceDate / 86_400).rounded(.down))
+        return daysSince2001 + Self.daysFromYear1To2001
     }
+
+    private static let utcCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        return calendar
+    }()
+
+    /// 1 Jan 0001 to 1 Jan 2001 in the (proleptic) Gregorian calendar.
+    private static let daysFromYear1To2001 = 730_485
 }
 
 extension String {

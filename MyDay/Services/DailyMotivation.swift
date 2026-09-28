@@ -33,9 +33,10 @@ enum DailyMotivation {
         var text: String { "\(firstLine) \(secondLine)" }
     }
 
-    /// Today's quote (for `date`'s calendar day in the person's time zone).
+    /// Today's quote (for `date`'s calendar day in the person's time zone). Every device
+    /// shows the same quote on the same date.
     static func quote(for date: Date, calendar: Calendar = .current) -> Quote {
-        let day = calendar.ordinality(of: .day, in: .era, for: date) ?? 0
+        let day = date.dayNumber(in: calendar)
         // Stepping by a number that shares no factor with the count visits every quote
         // once per cycle, and neighbouring days get different themes.
         let index = (day * step) % all.count
