@@ -52,6 +52,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalPage = false
     /// Show every journal page once the journal appears ("journal-pages").
     @MainActor private static var journalPages = false
+    /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save).
+    @MainActor private static var journalAnchor: String?
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Days from today that the calendar selects when it appears ("calendar-tomorrow").
@@ -70,6 +72,12 @@ enum DebugLaunchRoute {
     static func takeJournalPage() -> Bool {
         defer { journalPage = false }
         return journalPage
+    }
+
+    @MainActor
+    static func takeJournalAnchor() -> String? {
+        defer { journalAnchor = nil }
+        return journalAnchor
     }
 
     @MainActor
@@ -130,6 +138,9 @@ enum DebugLaunchRoute {
             router.open(.journal)
         case "journal-pages":
             journalPages = true
+            router.open(.journal)
+        case "journal-middle", "journal-bottom":
+            journalAnchor = route == "journal-middle" ? "write" : "save"
             router.open(.journal)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":

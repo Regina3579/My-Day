@@ -213,7 +213,14 @@ struct JournalComposer: View {
                     }
                 } else {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
+                        // A round ✕, like the page's back button, so the picture's title stays clear.
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .foregroundStyle(JournalStyle.pink)
+                        }
+                        .accessibilityLabel("Cancel")
                     }
                 }
             }
@@ -241,27 +248,16 @@ struct JournalComposer: View {
 
     private var page: some View {
         GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    JournalHero(width: proxy.size.width, statusBar: statusBar(safeTop: proxy.safeAreaInsets.top))
-                        .onGeometryChange(for: Bool.self) { geometry in
-                            geometry.frame(in: .global).maxY > proxy.safeAreaInsets.top + 60
-                        } action: { isVisible in
-                            heroIsVisible = isVisible
-                        }
-                    cards
-                        .padding(.horizontal, 16)
-                        .padding(.top, 20)
-                        .padding(.bottom, 30)
-                        .frame(maxWidth: .infinity)
-                        .background(alignment: .top) {
-                            JournalPanel()
-                        }
-                        .padding(.top, -JournalScene.overlap(width: proxy.size.width))
-                }
+            ScrollViewReader { reader in
+                scroller(proxy)
+                #if DEBUG
+                    .task {
+                        guard let anchor = DebugLaunchRoute.takeJournalAnchor() else { return }
+                        try? await Task.sleep(for: .seconds(1))
+                        reader.scrollTo(anchor, anchor: anchor == "save" ? .bottom : .top)
+                    }
+                #endif
             }
-            .scrollDismissesKeyboard(.interactively)
-            .ignoresSafeArea(edges: .top)
         }
         .background(JournalBackdrop())
         .overlay(alignment: .bottom) {
@@ -278,6 +274,31 @@ struct JournalComposer: View {
                     .allowsHitTesting(false)
             }
         }
+    }
+
+    /// The picture, then the cards on their panel.
+    private func scroller(_ proxy: GeometryProxy) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                JournalHero(width: proxy.size.width, statusBar: statusBar(safeTop: proxy.safeAreaInsets.top))
+                    .onGeometryChange(for: Bool.self) { geometry in
+                        geometry.frame(in: .global).maxY > proxy.safeAreaInsets.top + 60
+                    } action: { isVisible in
+                        heroIsVisible = isVisible
+                    }
+                cards
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, 30)
+                    .frame(maxWidth: .infinity)
+                    .background(alignment: .top) {
+                        JournalPanel()
+                    }
+                    .padding(.top, -JournalScene.overlap(width: proxy.size.width))
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .ignoresSafeArea(edges: .top)
     }
 
     private func statusBar(safeTop: CGFloat) -> CGFloat {
@@ -299,7 +320,9 @@ struct JournalComposer: View {
             dayRow
             moodCard
             writeCard
+                .id("write")
             extrasCard
+                .id("extras")
             reflectionCard(title: date.isToday ? "Today I'm grateful for…" : "I'm grateful for…",
                            art: "JournalJar", placeholder: "Write something you're grateful for…",
                            text: $gratitude)
@@ -311,6 +334,7 @@ struct JournalComposer: View {
             littleWinCard
             saveButton
                 .padding(.top, 6)
+                .id("save")
             if presentation == .page {
                 NavigationLink(value: AppRoute.journalPages) {
                     Label("See all my journal pages", systemImage: "books.vertical.fill")
@@ -333,11 +357,12 @@ struct JournalComposer: View {
                     Image(systemName: "calendar")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(JournalStyle.pinkGradient)
-                    Text(date.formatted(.dateTime.weekday(.wide).day().month(.wide).year()))
-                        .font(.rounded(.headline, weight: .heavy))
-                        .foregroundStyle(JournalStyle.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
+                    // The whole date when it fits, a shorter one when it doesn't.
+                    ViewThatFits(in: .horizontal) {
+                        dateText(.dateTime.weekday(.wide).day().month(.wide).year())
+                        dateText(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year())
+                        dateText(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                    }
                     Image(systemName: "chevron.down")
                         .font(.system(size: 13, weight: .heavy))
                         .foregroundStyle(JournalStyle.pink)
@@ -377,6 +402,14 @@ struct JournalComposer: View {
         }
     }
 
+    private func dateText(_ format: Date.FormatStyle) -> some View {
+        Text(date.formatted(format))
+            .font(.rounded(.headline, weight: .heavy))
+            .foregroundStyle(JournalStyle.ink)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
     private var weatherChipText: String {
         if !temperature.isEmpty { return temperature }
         return weather?.label ?? "Weather"
@@ -387,7 +420,8 @@ struct JournalComposer: View {
     private var moodCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             cardTitle(date.isToday ? "How are you feeling today?" : "How were you feeling?", color: JournalStyle.plum)
-            HStack(spacing: 4) {
+            // Two rows of three, so the stars and their names can be big.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(Mood.pickerMoods) { option in
                     moodButton(option)
                 }
@@ -409,19 +443,19 @@ struct JournalComposer: View {
                 Image(option.artName ?? "MoodHappy")
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 50)
+                    .frame(height: 62)
                     .scaleEffect(isOn ? 1.08 : 1)
                 Text(option.label)
-                    .font(.rounded(.subheadline, weight: isOn ? .heavy : .semibold))
+                    .font(.rounded(.headline, weight: .heavy))
                     .foregroundStyle(isOn ? JournalStyle.ink : JournalStyle.moodLabel)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.65)
+                    .minimumScaleFactor(0.85)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 2)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 4)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(isOn ? JournalStyle.selectedMoodFill : Color.clear))
+                .fill(isOn ? JournalStyle.selectedMoodFill : Color.white.opacity(0.7)))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(isOn ? JournalStyle.selectedMoodEdge : Color.clear, lineWidth: 2))
             .contentShape(Rectangle())
