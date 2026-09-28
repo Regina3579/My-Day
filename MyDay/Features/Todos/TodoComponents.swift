@@ -1136,6 +1136,58 @@ struct Scallop: Shape {
     }
 }
 
+// MARK: - Completed
+
+/// "› Completed  4": finished to-dos wait under this button; tap it to show or hide them.
+struct CompletedHeader: View {
+    let count: Int
+    let isOpen: Bool
+    let action: () -> Void
+
+    private static let fill = LinearGradient(colors: [Color(hex: 0xFFE1EF), Color(hex: 0xECE3FF)],
+                                             startPoint: .leading, endPoint: .trailing)
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(Palette.hotPink)
+                    .rotationEffect(.degrees(isOpen ? 90 : 0))
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Palette.mint)
+                Text("Completed")
+                    .font(.rounded(.subheadline, weight: .heavy))
+                    .foregroundStyle(Palette.berry)
+                Text("\(count)")
+                    .font(.rounded(.caption, weight: .heavy))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Palette.hotPink.gradient))
+                    .contentTransition(.numericText(value: Double(count)))
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 38)
+            .background(Capsule().fill(Self.fill))
+            .overlay(Capsule().strokeBorder(Color.white, lineWidth: 1.5))
+            .shadow(color: Palette.hotPink.opacity(0.15), radius: 6, x: 0, y: 3)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressScaleStyle())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isOpen)
+        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: count)
+        .accessibilityLabel("Completed, \(count)")
+        .accessibilityValue(isOpen ? "Shown" : "Hidden")
+        .accessibilityHint(isOpen ? "Hides the finished to-dos" : "Shows the finished to-dos")
+    }
+}
+
 // MARK: - Feedback
 
 /// A short message that floats above the tab bar.

@@ -8,7 +8,8 @@ struct TodayToDosView: View {
     @Environment(\.tabBarClearance) private var tabBarClearance
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(Prefs.showCompleted) private var showCompleted = true
+    /// Whether the Completed list is open (also "Show finished to-dos" in Settings).
+    @AppStorage(Prefs.showCompleted) private var showCompleted = false
     @Query private var tasks: [TaskItem]
     @State private var filter: CategoryChoice?
     @State private var sheet: TodoSheet?
@@ -40,16 +41,22 @@ struct TodayToDosView: View {
         day.isToday ? "Today's To-Dos" : day.formatted(.dateTime.weekday(.wide).month().day())
     }
 
-    /// Open to-dos in the person's order, important ones (★) first, then finished ones
-    /// (unless hidden in Settings). A to-do ticked a moment ago still sits among the open ones.
-    private var visible: [TaskItem] {
-        let pool = filter.map { choice in tasks.filter { $0.choice == choice } } ?? tasks
+    /// The day's to-dos in the chosen category (all of them with "All").
+    private var pool: [TaskItem] {
+        filter.map { choice in tasks.filter { $0.choice == choice } } ?? tasks
+    }
+
+    /// Open to-dos in the person's order, important ones (★) first. A to-do ticked a moment
+    /// ago still sits here until it slides into Completed.
+    private var openRows: [TaskItem] {
         let unfinished = pool.filter { !$0.isCompleted || settling.contains($0.persistentModelID) }
-        let open = unfinished.filter(\.isImportant) + unfinished.filter { !$0.isImportant }
-        guard showCompleted else { return open }
-        let done = pool.filter { $0.isCompleted && !settling.contains($0.persistentModelID) }
+        return unfinished.filter(\.isImportant) + unfinished.filter { !$0.isImportant }
+    }
+
+    /// Finished to-dos, in the order they were ticked: listed under "Completed" when it is open.
+    private var doneRows: [TaskItem] {
+        pool.filter { $0.isCompleted && !settling.contains($0.persistentModelID) }
             .sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
-        return open + done
     }
 
     private var doneCount: Int { tasks.filter(\.isCompleted).count }
@@ -221,12 +228,12 @@ struct TodayToDosView: View {
             }
         case "star":
             try? await Task.sleep(for: .seconds(9.4))
-            if let first = visible.first(where: { !$0.isCompleted }) {
+            if let first = openRows.first(where: { !$0.isCompleted }) {
                 toggle(first)
             }
         case "heart":
             try? await Task.sleep(for: .seconds(9.4))
-            let hearty = visible.first { task in
+            let hearty = openRows.first { task in
                 !task.isCompleted && task.customCategory == nil
                     && (task.category == .personal || task.category == .shopping)
             }
@@ -296,36 +303,45 @@ struct TodayToDosView: View {
         }
     }
 
+    /// Open to-dos, then "› Completed" with the finished ones under it while it is open.
     @ViewBuilder
     private var taskRows: some View {
-        let rows = visible
-        if rows.isEmpty {
+        let open = openRows
+        let done = doneRows
+        if open.isEmpty && done.isEmpty {
             emptyCard
                 .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
         } else {
-            ForEach(rows, id: \.persistentModelID) { task in
+            ForEach(open, id: \.persistentModelID) { task in
                 row(task)
             }
             .onMove { source, destination in
-                move(from: source, to: destination, in: rows)
+                move(from: source, to: destination, in: open)
+            }
+            if !done.isEmpty {
+                CompletedHeader(count: done.count, isOpen: showCompleted) {
+                    withAnimation(.snappy) { showCompleted.toggle() }
+                }
+                .plainListRow(EdgeInsets(top: open.isEmpty ? 4 : 10, leading: 16, bottom: 4, trailing: 16))
+                if showCompleted {
+                    ForEach(done, id: \.persistentModelID) { task in
+                        row(task)
+                    }
+                }
             }
         }
     }
 
     @ViewBuilder
     private var emptyCard: some View {
-        if tasks.isEmpty {
-            TodosEmptyCard(title: "Nothing planned yet",
-                           message: "Add your first to-do and make this day wonderful 💖",
-                           actionTitle: "Add a New Task ✨") { sheet = .compose(filter, nil) }
-        } else if let filter {
+        if let filter, !tasks.isEmpty {
             TodosEmptyCard(title: "No \(filter.label) to-dos",
                            message: "Nothing in \(filter.label) \(day.isToday ? "today" : "on this day") yet.",
                            actionTitle: "Add a \(filter.label) Task") { sheet = .compose(filter, nil) }
         } else {
-            TodosEmptyCard(title: "All done — you're a star! ⭐",
-                           message: "Finished to-dos are hidden. You can show them again in Settings.",
-                           actionTitle: "Add a New Task ✨") { sheet = .compose(nil, nil) }
+            TodosEmptyCard(title: "Nothing planned yet",
+                           message: "Add your first to-do and make this day wonderful 💖",
+                           actionTitle: "Add a New Task ✨") { sheet = .compose(filter, nil) }
         }
     }
 

@@ -7,7 +7,8 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @AppStorage(Prefs.userName) private var userName = ""
     @AppStorage(Prefs.carryOver) private var carryOver = true
-    @AppStorage(Prefs.showCompleted) private var showCompleted = true
+    /// The Completed list on the To-Dos screen is open (it starts closed).
+    @AppStorage(Prefs.showCompleted) private var showCompleted = false
     @AppStorage(Prefs.haptics) private var haptics = true
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @State private var lockMessage: String?
