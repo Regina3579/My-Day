@@ -52,10 +52,20 @@ enum DebugLaunchRoute {
         return journalPage
     }
 
+    /// Tells `scripts/screenshots.sh` the app is up: it waits for this file (in the app's
+    /// Caches folder) before it starts timing a screenshot.
+    static func markReady() {
+        guard isScreenshotRun,
+              let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        else { return }
+        try? Data().write(to: caches.appendingPathComponent("screenshot-ready"))
+    }
+
     @MainActor
     static func apply(to router: Router, today: Date) {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-screenshotRoute"), index + 1 < arguments.count else { return }
+        defer { markReady() }
 
         switch arguments[index + 1] {
         case "quickadd": router.isQuickAddOpen = true

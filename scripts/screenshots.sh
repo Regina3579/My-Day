@@ -70,33 +70,26 @@ for i in "${!UDIDS[@]}"; do
     --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
   xcrun simctl install "$udid" "$APP"
 
-  # A picture of the launch screen (taken just after the first launch), to spot a
-  # screen that was captured before the app had drawn it. Launch screens are identical.
-  launch_ref="$(mktemp -d)/launch.png"
-  wait_seconds=12
+  # The app writes this file once its screen is up (see DebugLaunchRoute.markReady), so a
+  # slow start on a busy machine does not end up as a picture of the launch screen.
+  marker="$(xcrun simctl get_app_container "$udid" "$BUNDLE_ID" data)/Library/Caches/screenshot-ready"
+  wait_seconds=10
   n=1
   for route in "${ROUTES[@]}"; do
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    rm -f "$marker"
     xcrun simctl launch "$udid" "$BUNDLE_ID" -screenshotRoute "$route" >/dev/null
-    if [ ! -f "$launch_ref" ]; then
-      sleep 0.3
-      xcrun simctl io "$udid" screenshot "$launch_ref" >/dev/null
-    fi
+    for _ in $(seq 1 90); do
+      [ -f "$marker" ] && break
+      sleep 0.5
+    done
+    [ -f "$marker" ] || echo "  $route: the app did not say it was ready within 45 seconds"
     # The first screen that shows the keyboard also starts the simulator's
     # keyboard services, which takes several seconds.
-    [ "$route" = "todos-add" ] && wait_seconds=16
+    [ "$route" = "todos-add" ] && wait_seconds=15
     sleep "$wait_seconds"
-    wait_seconds=11
-    shot="$OUT/${slug}-$(printf '%02d' "$n")-${route}.png"
-    xcrun simctl io "$udid" screenshot "$shot" >/dev/null
-    # On a busy CI machine the app sometimes has not drawn its screen yet: wait and retake.
-    tries=0
-    while [ "$tries" -lt 3 ] && cmp -s "$shot" "$launch_ref"; do
-      echo "  $route: still on the launch screen, taking it again"
-      sleep 6
-      xcrun simctl io "$udid" screenshot "$shot" >/dev/null
-      tries=$((tries + 1))
-    done
+    wait_seconds=10
+    xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}.png" >/dev/null
     pid="$(pgrep -f "/MyDay.app/MyDay" | head -1 || true)"
     [ -z "$pid" ] && echo "  $route: MyDay is not running"
     if [ -n "$pid" ] && [[ " ${SAMPLE_ROUTES:-} " == *" $route "* ]]; then
