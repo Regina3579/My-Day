@@ -445,15 +445,14 @@ struct TodoMetaLine: View {
 
 // MARK: - Actions
 
-/// The ways to add a to-do, pinned at the bottom of the To-Dos screen. The three fastest
-/// are big, bright and glowing: ＋ Add Task, ⚡ Quick Add and the 🎙 microphone
-/// ("Speak a Task"). Photo and Template are smaller and softer, underneath:
+/// The ways to add a to-do, pinned at the bottom of the To-Dos screen. The two fastest are
+/// bright and glowing: the long ＋ Add Task button and the 🎙 microphone ("Speak a Task").
+/// Photo and Template are smaller and softer, underneath:
 ///
-///     [ ＋ Add Task ]  [ ⚡ Quick Add ]  ( 🎙 )
+///     [ ＋ Add Task                  ]  ( 🎙 )
 ///     [ 📷 Photo    ]  [ ▦ Template   ]  Speak a Task
 struct TodosActionBar: View {
     let onAdd: () -> Void
-    let onQuickAdd: () -> Void
     let onVoice: () -> Void
     let onPhoto: () -> Void
     let onTemplate: () -> Void
@@ -467,7 +466,6 @@ struct TodosActionBar: View {
         if typeSize.isAccessibilitySize {
             VStack(spacing: 12) {
                 addButton
-                quickAddButton
                 HStack(spacing: 12) {
                     VoiceMicButton(action: onVoice)
                     micLabel
@@ -480,7 +478,6 @@ struct TodosActionBar: View {
             VStack(spacing: 6) {
                 HStack(spacing: 8) {
                     addButton
-                    quickAddButton
                     VoiceMicButton(action: onVoice)
                         .frame(width: Self.micColumn)
                 }
@@ -499,13 +496,6 @@ struct TodosActionBar: View {
                         colors: [Color(hex: 0xFF6FB0), Palette.hotPink], glow: Palette.hotPink,
                         action: onAdd)
             .accessibilityHint("Opens the full to-do form")
-    }
-
-    private var quickAddButton: some View {
-        BigActionButton(title: "Quick Add", symbol: "bolt.fill",
-                        colors: [Color(hex: 0xC39BFF), Color(hex: 0x8A4DF0)], glow: Palette.grape,
-                        action: onQuickAdd)
-            .accessibilityHint("Type a title and save, nothing else")
     }
 
     /// "Speak a Task" under the microphone (tapping it listens too).
@@ -534,7 +524,7 @@ struct TodosActionBar: View {
     }
 }
 
-/// A large, glossy, glowing button: "＋ Add Task" in pink, "⚡ Quick Add" in lilac.
+/// A large, glossy, glowing button: the pink "＋ Add Task".
 private struct BigActionButton: View {
     let title: String
     let symbol: String

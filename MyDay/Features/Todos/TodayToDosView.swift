@@ -235,7 +235,6 @@ struct TodayToDosView: View {
     private var actionBar: some View {
         TodosActionBar(
             onAdd: { sheet = .compose(filter, nil) },
-            onQuickAdd: { sheet = .quickAdd },
             onVoice: { sheet = .voice(sample: nil) },
             onPhoto: { sheet = .compose(filter, .photo) },
             onTemplate: { sheet = .templates }
@@ -317,8 +316,6 @@ struct TodayToDosView: View {
             NewTaskSheet(draft: draft) { saved in
                 show("Added “\(saved.title)” ✨")
             }
-        case .quickAdd:
-            QuickAddTaskSheet(day: day)
         case .voice(let sample):
             VoiceTaskSheet(
                 day: day,
@@ -408,7 +405,6 @@ enum TodoSheet: Identifiable {
     case edit(TaskItem, TaskSheetFocus?)
     /// A new to-do filled in by Voice Add, to check and finish.
     case draft(TaskDraft)
-    case quickAdd
     case voice(sample: String?)
     case templates
 
@@ -417,7 +413,6 @@ enum TodoSheet: Identifiable {
         case .compose(let category, let focus): "compose-\(category?.rawValue ?? "")-\(focus?.rawValue ?? "")"
         case .edit(let task, let focus): "edit-\(task.id.uuidString)-\(focus?.rawValue ?? "")"
         case .draft: "draft"
-        case .quickAdd: "quick"
         case .voice: "voice"
         case .templates: "templates"
         }
@@ -455,7 +450,6 @@ extension TodoSheet {
         switch debugRoute {
         case "add": self = .compose(nil, nil)
         case "photo": self = .compose(nil, .photo)
-        case "quick": self = .quickAdd
         case "voice": self = .voice(sample: "Remind me to call the doctor tomorrow at 5 PM")
         case "templates": self = .templates
         default: return nil
