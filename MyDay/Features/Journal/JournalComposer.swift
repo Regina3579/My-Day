@@ -324,12 +324,12 @@ struct JournalComposer: View {
             extrasCard
                 .id("extras")
             reflectionCard(title: date.isToday ? "Today I'm grateful for…" : "I'm grateful for…",
-                           art: "JournalJar", placeholder: "Write something you're grateful for…",
+                           art: "JournalJar", placeholder: "What are you grateful for?",
                            text: $gratitude)
             reflectionCard(title: "A highlight of my day…", art: "JournalHighlightStar",
                            placeholder: "What made today special?", text: $highlight)
             reflectionCard(title: "Tomorrow I look forward to…", art: "JournalSprout",
-                           placeholder: "Write something you're excited about…", text: $lookingForward,
+                           placeholder: "What are you excited about?", text: $lookingForward,
                            titleColor: JournalStyle.ink)
             littleWinCard
             saveButton
