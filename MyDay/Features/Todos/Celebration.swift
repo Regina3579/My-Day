@@ -188,73 +188,70 @@ extension ConfettiPiece {
     }
 }
 
-// MARK: - One to-do done: a little heart or star
+// MARK: - One to-do done: two little hearts
 
-/// A little heart (pink) or star (yellow) that pops out of a to-do's tick box when it is
-/// ticked, with a few tiny sparkles around it.
+/// Two little pink hearts, one a bit bigger and one very small, that pop out of a to-do's
+/// tick box when it is ticked, float up and fade (in under a second).
 struct TickPop: View {
-    enum Kind {
-        case heart, star
-    }
-
-    let kind: Kind
-
     @State private var isOut = false
+    @State private var isSmallOut = false
     @State private var isRisen = false
     @State private var isFaded = false
 
-    private static let starFill = LinearGradient(colors: [Color(hex: 0xFFE66D), Color(hex: 0xFFB800)],
-                                                 startPoint: .top, endPoint: .bottom)
-    private static let heartFill = LinearGradient(colors: [Color(hex: 0xFF8CC6), Palette.hotPink],
+    private static let bigFill = LinearGradient(colors: [Color(hex: 0xFF8CC6), Palette.hotPink],
+                                                startPoint: .top, endPoint: .bottom)
+    private static let smallFill = LinearGradient(colors: [Color(hex: 0xFFC2E0), Palette.bubblegum],
                                                   startPoint: .top, endPoint: .bottom)
-    private static let sparkleColors: [Color] = [
-        Palette.hotPink, Color(hex: 0xFFD23F), Palette.grape, Color(hex: 0x5AA9FF), Palette.bubblegum
-    ]
-
-    private var symbol: String { kind == .heart ? "heart.fill" : "star.fill" }
-    private var outline: String { kind == .heart ? "heart" : "star" }
-    private var fill: LinearGradient { kind == .heart ? Self.heartFill : Self.starFill }
-    private var glow: Color { kind == .heart ? Palette.hotPink : Color(hex: 0xFF9F00) }
 
     var body: some View {
         ZStack {
-            ForEach(0..<5, id: \.self) { index in
-                let angle: Double = Double(index) / 5 * 2 * Double.pi - Double.pi / 2
-                Circle()
-                    .fill(Self.sparkleColors[index])
-                    .frame(width: 4, height: 4)
-                    .offset(x: isOut ? CGFloat(cos(angle) * 18) : 0, y: isOut ? CGFloat(sin(angle) * 18) : 0)
-                    .opacity(isFaded ? 0 : 1)
-            }
-            Image(systemName: symbol)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(fill)
-                .overlay(
-                    Image(systemName: outline)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.white)
-                )
-                .shadow(color: glow.opacity(0.6), radius: 5, x: 0, y: 1)
-                .scaleEffect(isOut ? 1.15 : 0.2)
-                .rotationEffect(.degrees(isOut ? (kind == .heart ? -8 : 18) : -40))
-                .offset(y: isRisen ? -28 : 0)
-                .opacity(isFaded ? 0 : 1)
+            // A soft pink ring that pops with them.
+            Circle()
+                .strokeBorder(Palette.bubblegum.opacity(0.55), lineWidth: 1.5)
+                .frame(width: 26, height: 26)
+                .scaleEffect(isOut ? 1.3 : 0.4)
+                .opacity(isOut ? 0 : 0.9)
+            heart(size: 15, fill: Self.bigFill)
+                .scaleEffect(isOut ? 1 : 0.2)
+                .rotationEffect(.degrees(isOut ? -12 : 10))
+                .offset(x: isOut ? -5 : 0, y: isOut ? -20 : 0)
+            heart(size: 9, fill: Self.smallFill)
+                .scaleEffect(isSmallOut ? 1 : 0.2)
+                .rotationEffect(.degrees(isSmallOut ? 16 : -10))
+                .offset(x: isSmallOut ? 12 : 0, y: isSmallOut ? -12 : 0)
+                .opacity(isSmallOut ? 1 : 0)
         }
+        .offset(y: isRisen ? -12 : 0)
+        .opacity(isFaded ? 0 : 1)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .onAppear {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) { isOut = true }
-            withAnimation(.easeOut(duration: 0.8)) { isRisen = true }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) { isOut = true }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.5).delay(0.07)) { isSmallOut = true }
+            withAnimation(.easeOut(duration: 0.9)) { isRisen = true }
             withAnimation(.easeIn(duration: 0.3).delay(Self.fadeDelay)) { isFaded = true }
         }
     }
 
-    /// Seconds before it fades (longer in a screenshot run, so it can be captured).
+    /// A glossy heart with a thin white edge.
+    private func heart(size: CGFloat, fill: LinearGradient) -> some View {
+        Image(systemName: "heart.fill")
+            .font(.system(size: size, weight: .bold))
+            .foregroundStyle(fill)
+            .overlay(
+                Image(systemName: "heart")
+                    .font(.system(size: size, weight: .semibold))
+                    .foregroundStyle(Color.white)
+            )
+            .shadow(color: Palette.hotPink.opacity(0.5), radius: 4, x: 0, y: 1)
+    }
+
+    /// Seconds before they fade (longer in a screenshot run, so they can be captured).
     @MainActor
     private static var fadeDelay: Double {
         #if DEBUG
-        if DebugLaunchRoute.holdsStar { return 4 }
+        if DebugLaunchRoute.holdsTickPop { return 4 }
         #endif
-        return 0.65
+        return 0.6
     }
 }

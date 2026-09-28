@@ -320,18 +320,9 @@ struct TodoRow: View {
 
     @State private var showsMenu = false
     @State private var chosen: TaskMenuAction?
-    /// Goes up each time the to-do is ticked; every change pops one heart or star.
+    /// Goes up each time the to-do is ticked; every change pops two little hearts.
     @State private var tickPops = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    /// Personal and Shopping to-dos pop a heart when ticked; the others pop a star.
-    private var popKind: TickPop.Kind {
-        guard task.customCategory == nil else { return .star }
-        switch task.category {
-        case .personal, .shopping: return .heart
-        case .work, .health, .learning: return .star
-        }
-    }
 
     var body: some View {
         HStack(spacing: 4) {
@@ -402,9 +393,9 @@ struct TodoRow: View {
         .shadow(color: tint.edge.opacity(0.45), radius: 6, x: 0, y: 3)
         .opacity(task.isCompleted ? 0.8 : 1)
         .overlay(alignment: .leading) {
-            // Over the tick box (after the fade above, so the heart or star stays bright).
+            // Over the tick box (after the fade above, so the hearts stay bright).
             if tickPops > 0 {
-                TickPop(kind: popKind)
+                TickPop()
                     .id(tickPops)
                     .frame(width: 44, height: 44)
                     .padding(.leading, 4)

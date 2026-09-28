@@ -22,7 +22,7 @@ struct TodayToDosView: View {
     /// Goes up each time the last to-do of the day is ticked; each change plays the confetti.
     @State private var celebration = 0
     @State private var showsConfetti = false
-    /// Just-ticked to-dos stay in place for a moment (so their star can pop) before they
+    /// Just-ticked to-dos stay in place for a moment (so their hearts can pop) before they
     /// move down to the finished ones.
     @State private var settling: Set<PersistentIdentifier> = []
     private let day: Date
@@ -214,8 +214,8 @@ struct TodayToDosView: View {
     }
 
     #if DEBUG
-    /// `todos-<name>` opens a sheet. `todos-alldone` ticks every to-do; `todos-star` and
-    /// `todos-heart` tick one (a star or a heart pops), and `todos-confetti` plays the
+    /// `todos-<name>` opens a sheet. `todos-alldone` ticks every to-do; `todos-hearts` ticks
+    /// one (two little hearts pop), and `todos-confetti` plays the
     /// confetti, timed so the screenshot (taken about 10 seconds after the app is ready)
     /// catches them.
     private func openDebugRoute() async {
@@ -226,19 +226,10 @@ struct TodayToDosView: View {
             for task in tasks where !task.isCompleted {
                 toggle(task)
             }
-        case "star":
+        case "hearts":
             try? await Task.sleep(for: .seconds(9.4))
             if let first = openRows.first(where: { !$0.isCompleted }) {
                 toggle(first)
-            }
-        case "heart":
-            try? await Task.sleep(for: .seconds(9.4))
-            let hearty = openRows.first { task in
-                !task.isCompleted && task.customCategory == nil
-                    && (task.category == .personal || task.category == .shopping)
-            }
-            if let hearty {
-                toggle(hearty)
             }
         case "confetti":
             try? await Task.sleep(for: .seconds(9.4))
@@ -408,7 +399,7 @@ struct TodayToDosView: View {
             TaskActions.toggle(task, in: context)
         }
         if isFinishing {
-            // Let the tick and its star show, then move it down to the finished ones.
+            // Let the tick and its hearts show, then move it down to the finished ones.
             let settle = Self.settleDelay
             Task {
                 try? await Task.sleep(for: .seconds(settle))
@@ -422,12 +413,12 @@ struct TodayToDosView: View {
         }
     }
 
-    /// Seconds a just-ticked to-do stays in place (longer in a screenshot run, so its star
+    /// Seconds a just-ticked to-do stays in place (longer in a screenshot run, so its hearts
     /// can be captured).
     @MainActor
     private static var settleDelay: Double {
         #if DEBUG
-        if DebugLaunchRoute.holdsStar { return 4.5 }
+        if DebugLaunchRoute.holdsTickPop { return 4.5 }
         #endif
         return 0.9
     }
