@@ -79,7 +79,8 @@ for i in "${!UDIDS[@]}"; do
     # keyboard services, which takes several seconds.
     [ "$route" = "todos-add" ] && wait_seconds=16
     sleep "$wait_seconds"
-    wait_seconds=8
+    # 8 seconds was sometimes too short on busy CI machines (the launch screen was captured).
+    wait_seconds=11
     xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}.png" >/dev/null
     pid="$(pgrep -f "/MyDay.app/MyDay" | head -1 || true)"
     [ -z "$pid" ] && echo "  $route: MyDay is not running"

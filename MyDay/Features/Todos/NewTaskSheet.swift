@@ -262,7 +262,7 @@ struct NewTaskSheet: View {
     private var titleField: some View {
         VStack(alignment: .leading, spacing: 6) {
             SheetLabel(text: "Task")
-            TextField("e.g. Call the doctor", text: $title)
+            TextField("", text: $title)
                 .font(.rounded(.title3, weight: .semibold))
                 .foregroundStyle(Palette.ink)
                 .submitLabel(.done)

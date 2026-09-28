@@ -345,7 +345,8 @@ private struct SaveTemplateView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 field(label: "Name") {
-                    TextField("e.g. Sunday Reset", text: $name)
+                    TextField("", text: $name)
+                        .accessibilityLabel("Template name")
                         .font(.rounded(.title3, weight: .semibold))
                         .submitLabel(.next)
                         .focused($focus, equals: .name)

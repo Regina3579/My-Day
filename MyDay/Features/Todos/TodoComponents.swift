@@ -594,7 +594,7 @@ private struct VoiceMicButton: View {
         }
         .buttonStyle(PressScaleStyle(scale: 0.9))
         .accessibilityLabel("Speak a task")
-        .accessibilityHint("Say a to-do, like “Buy milk tomorrow at 6 PM”")
+        .accessibilityHint("Add a to-do with your voice")
     }
 
     /// The glow behind the microphone; it breathes slowly unless Reduce Motion is on.

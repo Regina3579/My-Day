@@ -127,7 +127,7 @@ struct VoiceTaskSheet: View {
                 Text(listeningTitle)
                     .font(.rounded(.title3, weight: .heavy))
                     .foregroundStyle(Palette.ink)
-                Text("Say something like “Call the doctor tomorrow at 5 PM”")
+                Text("Say your to-do. You can add a day and a time.")
                     .font(.rounded(.subheadline, weight: .medium))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
