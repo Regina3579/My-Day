@@ -62,11 +62,9 @@ struct TodaysPriorityView: View {
         .sheet(item: $editing) { priority in
             NewPrioritySheet(priority: priority)
         }
-        // Full screen, as in the design: no clock or battery over the picture (only while
-        // this page's tab is showing).
-        .statusBarHidden(router.tab == hostTab)
-        .onAppear { router.setFullScreen(true, in: hostTab) }
-        .onDisappear { router.setFullScreen(false, in: hostTab) }
+        // Full screen, as in the design: no tab bar, and no clock or battery over the picture.
+        .onAppear { router.setFullScreen(true, in: hostTab, hidingStatusBar: true) }
+        .onDisappear { router.setFullScreen(false, in: hostTab, hidingStatusBar: true) }
         #if DEBUG
         .task { await tickForScreenshot() }
         #endif

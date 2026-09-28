@@ -53,6 +53,7 @@ struct RootView: View {
             .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
             .animation(.easeInOut(duration: 0.25), value: router.showsTabBar)
         }
+        .statusBarHidden(router.hidesStatusBar)
         .sheet(item: sheetBinding) { sheet in
             sheetContent(sheet)
         }

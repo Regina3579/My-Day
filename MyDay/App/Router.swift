@@ -63,12 +63,21 @@ final class Router {
     /// while the current tab shows one. A count, not a flag, so a page that replaces another
     /// one of its kind (its `onAppear` can run before the old page's `onDisappear`) keeps it hidden.
     private var fullScreenPages: [AppTab: Int] = [:]
+    /// The same count for full-screen pages that also hide the status bar.
+    private var statusBarHidingPages: [AppTab: Int] = [:]
 
     var showsTabBar: Bool { fullScreenPages[tab, default: 0] == 0 }
 
+    /// Read by the root view: a status bar hidden from inside a navigation stack is ignored.
+    var hidesStatusBar: Bool { statusBarHidingPages[tab, default: 0] > 0 }
+
     /// Called by a full-screen page when it appears (`true`) and disappears (`false`).
-    func setFullScreen(_ isOn: Bool, in tab: AppTab) {
-        fullScreenPages[tab] = max(0, fullScreenPages[tab, default: 0] + (isOn ? 1 : -1))
+    func setFullScreen(_ isOn: Bool, in tab: AppTab, hidingStatusBar: Bool = false) {
+        let step = isOn ? 1 : -1
+        fullScreenPages[tab] = max(0, fullScreenPages[tab, default: 0] + step)
+        if hidingStatusBar {
+            statusBarHidingPages[tab] = max(0, statusBarHidingPages[tab, default: 0] + step)
+        }
     }
 
     /// Jumps to the My Day tab and shows `route` on top of the home screen.
