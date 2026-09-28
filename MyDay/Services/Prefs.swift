@@ -11,5 +11,8 @@ enum Prefs {
     static let morningTime = "morningReminderSeconds"
     static let eveningOn = "eveningReminderOn"
     static let eveningTime = "eveningReminderSeconds"
+    /// Set by earlier versions, which added example to-dos, a priority and a journal page.
     static let didSeedWelcome = "didSeedWelcomeContent"
+    /// Set once those examples have been removed (see `SampleContent`).
+    static let didRemoveSamples = "didRemoveSampleContent"
 }

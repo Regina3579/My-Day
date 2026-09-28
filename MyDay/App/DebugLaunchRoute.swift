@@ -1,9 +1,37 @@
 #if DEBUG
 import Foundation
+import SwiftData
 
 /// Debug builds only: `-screenshotRoute <name>` opens a screen at launch,
 /// so `scripts/screenshots.sh` can capture every screen in the simulator.
 enum DebugLaunchRoute {
+    private static var isScreenshotRun: Bool {
+        ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
+    }
+
+    /// Screenshot runs only: adds demo to-dos, a priority and a journal page once, so the
+    /// screenshots have something to show. Every other launch, even of a Debug build, starts empty.
+    @MainActor
+    static func addDemoData(in context: ModelContext) {
+        let key = "debugDemoDataAdded"
+        guard isScreenshotRun, !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+
+        let today = Date()
+        context.insert(TaskItem(title: "Team meeting at 10 💼", category: .work, date: today))
+        context.insert(TaskItem(title: "Evening walk 🌸", category: .health, date: today, repeatOption: .daily))
+        context.insert(TaskItem(title: "Read 20 pages 📚", category: .learning, date: today))
+        context.insert(TaskItem(title: "Buy milk and bread 🥛", category: .shopping, date: today))
+        context.insert(Priority(title: "Finish the project report ⭐", date: today, order: 0))
+        context.insert(JournalEntry(
+            date: today,
+            title: "A calm, happy day 💖",
+            body: "Coffee in the garden, a long walk and a good talk with a friend.\n\nGrateful for the little things.",
+            mood: .happy,
+            littleWin: "Finished my workout."
+        ))
+    }
+
     /// A To-Dos sheet to open once the screen appears ("todos-add" → "add").
     @MainActor private static var todosSheet: String?
     /// Open the newest journal page once the journal appears ("journal-page").

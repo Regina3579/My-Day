@@ -7,7 +7,9 @@ and keeping a private journal. It is built with **SwiftUI** and **SwiftData**.
 
 ## Screenshots
 
-Captured automatically in the iPhone 17 Pro simulator by CI.
+Captured automatically in the iPhone 17 Pro simulator by CI. The to-dos, priority and
+journal page in them are demo data added only for these screenshot runs; the app itself
+starts empty.
 
 | Home | Today's To-Dos | All Done ✨ | Add a Task | Voice Add |
 | --- | --- | --- | --- | --- |

@@ -66,7 +66,10 @@ struct RootView: View {
             refreshDay()
         }
         .task {
-            WelcomeContent.seedIfNeeded(in: modelContext)
+            SampleContent.removeIfNeeded(in: modelContext)
+            #if DEBUG
+            DebugLaunchRoute.addDemoData(in: modelContext)
+            #endif
             refreshDay()
             #if DEBUG
             DebugLaunchRoute.apply(to: router, today: appState.today)

@@ -117,31 +117,41 @@ enum DayRollover {
     }
 }
 
-/// A friendly first page so a brand-new app never looks empty.
-enum WelcomeContent {
+/// The app starts empty. Earlier versions added a few example to-dos, a priority and a
+/// welcome journal page on first launch; this removes them once, so an existing install
+/// becomes blank too. Only unchanged examples are removed: anything renamed is kept.
+enum SampleContent {
+    /// Every example to-do title any earlier version added.
+    private static let taskTitles: Set<String> = [
+        "Tap the circle to finish a to-do ✓",
+        "Tick the box to finish a to-do ✓",
+        "Star a to-do to make it today's priority ⭐",
+        "Drink 8 glasses of water 💧",
+        "Write my first journal page 📔",
+        "Buy fresh flowers 🌷"
+    ]
+    private static let priorityTitle = "Do the one thing that matters most ⭐"
+    private static let journalTitle = "Welcome to My Day 💖"
+    private static let journalOpening = "This is my little place for plans, priorities and beautiful moments."
+
     @MainActor
-    static func seedIfNeeded(in context: ModelContext) {
+    static func removeIfNeeded(in context: ModelContext) {
         let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: Prefs.didSeedWelcome) else { return }
-        defaults.set(true, forKey: Prefs.didSeedWelcome)
+        guard !defaults.bool(forKey: Prefs.didRemoveSamples) else { return }
+        defaults.set(true, forKey: Prefs.didRemoveSamples)
+        // Only installs that were given the examples have anything to remove.
+        guard defaults.bool(forKey: Prefs.didSeedWelcome) else { return }
 
-        let existing = (try? context.fetchCount(FetchDescriptor<TaskItem>())) ?? 0
-        guard existing == 0 else { return }
-
-        let today = Date()
-        context.insert(TaskItem(title: "Tick the box to finish a to-do ✓", category: .personal, date: today))
-        context.insert(TaskItem(title: "Drink 8 glasses of water 💧", category: .health, date: today,
-                                repeatOption: .daily))
-        context.insert(TaskItem(title: "Write my first journal page 📔", category: .personal, date: today))
-        context.insert(TaskItem(title: "Buy fresh flowers 🌷", category: .shopping, date: today))
-        context.insert(Priority(title: "Do the one thing that matters most ⭐", date: today, order: 0))
-        context.insert(JournalEntry(
-            date: today,
-            title: "Welcome to My Day 💖",
-            body: "This is my little place for plans, priorities and beautiful moments.\n\nA new day, a fresh start — I've got this!",
-            mood: .happy,
-            littleWin: "Started my own little journal."
-        ))
+        for task in (try? context.fetch(FetchDescriptor<TaskItem>())) ?? [] where taskTitles.contains(task.title) {
+            TaskActions.delete(task, in: context)
+        }
+        for priority in (try? context.fetch(FetchDescriptor<Priority>())) ?? [] where priority.title == priorityTitle {
+            context.delete(priority)
+        }
+        for entry in (try? context.fetch(FetchDescriptor<JournalEntry>())) ?? []
+        where entry.title == journalTitle && entry.body.hasPrefix(journalOpening) {
+            context.delete(entry)
+        }
     }
 }
 
