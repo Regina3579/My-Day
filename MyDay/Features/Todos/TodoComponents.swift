@@ -2,62 +2,93 @@ import SwiftUI
 
 // MARK: - Header scene
 
-/// Proportions of the To-Dos header scene, as fractions of the screen width (853 px design).
+/// The compact band of the To-Dos header scene (the image is 853 × 482 px).
+///
+/// Only the lower part is shown: the girl's face sits just below the status bar and the band
+/// ends under the puppy. The picture is drawn a little narrower than the screen, against its
+/// right edge, so the "Today's To-Dos" sign stays clear of the back button.
 enum TodosScene {
-    /// Soft strip above the scenery, used when the status bar is taller than in the design.
-    static let extensionHeight: CGFloat = 80.0 / 853.0
-    static let imageHeight: CGFloat = 482.0 / 853.0
-    /// The scenery itself (the design's top 402 px).
-    static let bodyHeight: CGFloat = 402.0 / 853.0
-    static let designStatusBar: CGFloat = 60.0 / 853.0
+    static let imageSize = CGSize(width: 853, height: 482)
+    static let widthFraction: CGFloat = 0.88
+    /// Image rows (px): the girl's eyes, and the last row shown.
+    static let eyesRow: CGFloat = 300
+    static let bottomRow: CGFloat = 452
 
-    /// How far the scenery moves down so the sign stays clear of the back button.
-    static func shift(width: CGFloat, safeTop: CGFloat) -> CGFloat {
-        min(max(0, safeTop - width * designStatusBar), width * extensionHeight)
+    /// Points per image pixel.
+    static func scale(width: CGFloat) -> CGFloat {
+        width * widthFraction / imageSize.width
+    }
+
+    /// The first image row shown.
+    static func topRow(width: CGFloat, safeTop: CGFloat) -> CGFloat {
+        max(0, eyesRow - (safeTop + 4) / scale(width: width))
+    }
+
+    static func height(width: CGFloat, safeTop: CGFloat) -> CGFloat {
+        (bottomRow - topRow(width: width, safeTop: safeTop)) * scale(width: width)
     }
 }
 
-/// The illustrated header: the "Today's To-Dos" sign, the girl and her puppy.
+/// The illustrated header band: the "Today's To-Dos" sign, the girl and her puppy.
 struct TodosHero: View {
     let width: CGFloat
     let safeTop: CGFloat
 
     var body: some View {
-        let shift = TodosScene.shift(width: width, safeTop: safeTop)
-        Image("TodosScene")
-            .resizable()
-            .frame(width: width, height: width * TodosScene.imageHeight)
-            .offset(y: shift - width * TodosScene.extensionHeight)
-            .frame(width: width, height: shift + width * TodosScene.bodyHeight, alignment: .top)
-            .clipped()
-            .accessibilityHidden(true)
+        let scale = TodosScene.scale(width: width)
+        let top = TodosScene.topRow(width: width, safeTop: safeTop)
+        let height = TodosScene.height(width: width, safeTop: safeTop)
+        let imageWidth = width * TodosScene.widthFraction
+        ZStack(alignment: .topTrailing) {
+            // A soft, blurred copy fills the strip on the left.
+            Image("TodosScene")
+                .resizable()
+                .scaledToFill()
+                .frame(width: width, height: height)
+                .blur(radius: 16, opaque: true)
+                .clipped()
+            Image("TodosScene")
+                .resizable()
+                .frame(width: imageWidth, height: TodosScene.imageSize.height * scale)
+                .offset(y: -top * scale)
+                .frame(width: imageWidth, height: height, alignment: .top)
+                .clipped()
+                .mask(Self.edgeFade)
+        }
+        .frame(width: width, height: height)
+        .clipped()
+        .accessibilityHidden(true)
     }
+
+    /// Blends the picture's left edge into the blurred strip.
+    private static let edgeFade = LinearGradient(
+        stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.1)],
+        startPoint: .leading, endPoint: .trailing
+    )
 }
 
 // MARK: - Date and quote
 
-/// "Today ♥ · 27 May 2025" with the day's gentle quote.
+/// "Today ♥ · 27 May 2025" with the day's gentle quote, in one slim card.
 struct TodayHeaderCard: View {
     let day: Date
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             DateBadge(date: day)
-                .scaleEffect(1.25)
-                .frame(width: 50, height: 50)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 5) {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 4) {
                     Text(day.isToday ? "Today" : day.formatted(.dateTime.weekday(.wide)))
-                        .font(.rounded(.title3, weight: .heavy))
+                        .font(.rounded(.headline, weight: .heavy))
                         .foregroundStyle(Palette.ink)
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Palette.hotPink)
                         .accessibilityHidden(true)
                 }
-                Text(day.formatted(.dateTime.day().month(.wide).year()))
-                    .font(.rounded(.subheadline, weight: .medium))
+                Text(day.formatted(.dateTime.day().month(.abbreviated).year()))
+                    .font(.rounded(.caption, weight: .medium))
                     .foregroundStyle(Palette.inkSoft)
             }
             .lineLimit(1)
@@ -66,32 +97,32 @@ struct TodayHeaderCard: View {
 
             Capsule()
                 .fill(Palette.hotPink.opacity(0.25))
-                .frame(width: 1.5, height: 44)
+                .frame(width: 1.5, height: 32)
                 .accessibilityHidden(true)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Text("☀️")
-                    .font(.system(size: 26))
+                    .font(.system(size: 18))
                     .accessibilityHidden(true)
                 Text("“\(TodoQuotes.quote(for: day))”")
-                    .font(.custom("Noteworthy-Bold", size: 14, relativeTo: .subheadline))
+                    .font(.custom("Noteworthy-Bold", size: 13, relativeTo: .footnote))
                     .foregroundStyle(Palette.berry)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.75)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(LinearGradient(colors: [Color.white, Color(hex: 0xFFF1F7)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
-                .shadow(color: Palette.hotPink.opacity(0.14), radius: 12, x: 0, y: 6)
+                .shadow(color: Palette.hotPink.opacity(0.12), radius: 8, x: 0, y: 4)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(Color.white, lineWidth: 1.5)
         )
         .accessibilityElement(children: .combine)
@@ -118,8 +149,8 @@ struct CategoryChipBar: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 4)
-            .padding(.bottom, 12)
+            .padding(.top, 2)
+            .padding(.bottom, 10)
         }
     }
 }
@@ -148,8 +179,8 @@ struct CategoryChip: View {
                     .foregroundStyle(isOn ? Color.white : Palette.ink)
             }
             .font(.rounded(.subheadline, weight: .semibold))
-            .padding(.horizontal, 13)
-            .frame(minHeight: 38)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 34)
             .background(
                 Capsule().fill(isOn ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(Color.white.opacity(0.85)))
             )
@@ -160,7 +191,7 @@ struct CategoryChip: View {
                     Circle()
                         .fill(tint)
                         .frame(width: 7, height: 7)
-                        .offset(y: 11)
+                        .offset(y: 10)
                         .transition(.scale)
                 }
             }
@@ -218,8 +249,8 @@ struct TodoRow: View {
     var body: some View {
         HStack(spacing: 4) {
             Button(action: onToggle) {
-                CheckBubble(isOn: task.isCompleted, tint: tint.accent, size: 28)
-                    .frame(width: 48, height: 48)
+                CheckBubble(isOn: task.isCompleted, tint: tint.accent, size: 26)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressScaleStyle(scale: 0.85))
@@ -237,7 +268,7 @@ struct TodoRow: View {
                         .lineLimit(2)
                     TodoMetaLine(task: task)
                 }
-                .padding(.vertical, 10)
+                .padding(.vertical, 7)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
@@ -249,12 +280,12 @@ struct TodoRow: View {
                 showsMenu = true
             } label: {
                 Image(systemName: "pencil")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(tint.accent)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 30, height: 30)
                     .background(Circle().fill(Color.white.opacity(0.85)))
                     .overlay(Circle().strokeBorder(tint.edge, lineWidth: 1))
-                    .frame(width: 46, height: 48)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressScaleStyle(scale: 0.86))
@@ -269,7 +300,7 @@ struct TodoRow: View {
         }
         .padding(.leading, 4)
         .padding(.trailing, 2)
-        .frame(minHeight: 60)
+        .frame(minHeight: 52)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(LinearGradient(colors: [tint.fill.opacity(0.75), tint.fill],
@@ -430,7 +461,7 @@ struct TodosActionBar: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     /// Width of the microphone column, so the rows line up.
-    private static let micColumn: CGFloat = 86
+    private static let micColumn: CGFloat = 80
 
     var body: some View {
         if typeSize.isAccessibilitySize {
@@ -446,14 +477,14 @@ struct TodosActionBar: View {
                 templateButton
             }
         } else {
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
                     addButton
                     quickAddButton
                     VoiceMicButton(action: onVoice)
                         .frame(width: Self.micColumn)
                 }
-                HStack(alignment: .top, spacing: 10) {
+                HStack(alignment: .top, spacing: 8) {
                     photoButton
                     templateButton
                     micLabel
@@ -485,8 +516,7 @@ struct TodosActionBar: View {
         } label: {
             Text("Speak a Task")
                 .font(.rounded(.caption, weight: .heavy))
-                .foregroundStyle(LinearGradient(colors: [Palette.hotPink, Palette.grape],
-                                                startPoint: .leading, endPoint: .trailing))
+                .foregroundStyle(Color(hex: 0xB86E00))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
@@ -520,8 +550,8 @@ private struct BigActionButton: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .black))
-                    .frame(width: 26, height: 26)
+                    .font(.system(size: 12, weight: .black))
+                    .frame(width: 22, height: 22)
                     .background(Circle().fill(Color.white.opacity(0.28)))
                 Text(title)
                     .font(.rounded(.subheadline, weight: .heavy))
@@ -531,16 +561,16 @@ private struct BigActionButton: View {
             .foregroundStyle(Color.white)
             .shadow(color: Color.black.opacity(0.12), radius: 1, x: 0, y: 1)
             .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, minHeight: 60)
+            .frame(maxWidth: .infinity, minHeight: 46)
             .background(background)
-            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(title)
     }
 
     private var background: some View {
-        let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return shape
             .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
             .overlay(
@@ -551,20 +581,20 @@ private struct BigActionButton: View {
                     .padding(2)
             )
             .overlay(shape.strokeBorder(Color.white.opacity(0.7), lineWidth: 1.5))
-            .shadow(color: glow.opacity(0.5), radius: 12, x: 0, y: 6)
-            .shadow(color: glow.opacity(0.25), radius: 3, x: 0, y: 1)
+            .shadow(color: glow.opacity(0.45), radius: 8, x: 0, y: 4)
+            .shadow(color: glow.opacity(0.25), radius: 2, x: 0, y: 1)
     }
 }
 
-/// The round pink-to-purple microphone with a gently glowing halo.
+/// The round yellow microphone with a gently glowing halo.
 private struct VoiceMicButton: View {
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let fill = LinearGradient(colors: [Color(hex: 0xFF4FA0), Color(hex: 0x8A4DF0)],
+    private static let fill = LinearGradient(colors: [Color(hex: 0xFFDA4D), Color(hex: 0xFFA800)],
                                              startPoint: .topLeading, endPoint: .bottomTrailing)
-    private static let halo = RadialGradient(colors: [Color(hex: 0xC06BFF).opacity(0.55), Color(hex: 0xFF4FA0).opacity(0)],
-                                             center: .center, startRadius: 24, endRadius: 40)
+    private static let halo = RadialGradient(colors: [Color(hex: 0xFFC83D).opacity(0.6), Color(hex: 0xFFDA4D).opacity(0)],
+                                             center: .center, startRadius: 19, endRadius: 31)
 
     var body: some View {
         Button {
@@ -582,14 +612,14 @@ private struct VoiceMicButton: View {
                             .padding(3)
                     )
                     .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 2))
-                    .shadow(color: Palette.grape.opacity(0.5), radius: 10, x: 0, y: 5)
-                    .frame(width: 62, height: 62)
+                    .shadow(color: Palette.honey.opacity(0.55), radius: 8, x: 0, y: 4)
+                    .frame(width: 48, height: 48)
                 Image(systemName: "mic.fill")
-                    .font(.system(size: 25, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.white)
-                    .shadow(color: Color.black.opacity(0.12), radius: 1, x: 0, y: 1)
+                    .shadow(color: Color(hex: 0xB86E00).opacity(0.55), radius: 1.5, x: 0, y: 1)
             }
-            .frame(width: 62, height: 62)
+            .frame(width: 48, height: 48)
             .contentShape(Circle())
         }
         .buttonStyle(PressScaleStyle(scale: 0.9))
@@ -600,7 +630,7 @@ private struct VoiceMicButton: View {
     /// The glow behind the microphone; it breathes slowly unless Reduce Motion is on.
     @ViewBuilder
     private var haloView: some View {
-        let glow = Circle().fill(Self.halo).frame(width: 80, height: 80)
+        let glow = Circle().fill(Self.halo).frame(width: 62, height: 62)
         if reduceMotion {
             glow
         } else {
@@ -629,7 +659,7 @@ private struct SoftActionButton: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: symbol)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(tint)
                 Text(title)
                     .font(.rounded(.footnote, weight: .bold))
@@ -638,7 +668,7 @@ private struct SoftActionButton: View {
                     .minimumScaleFactor(0.8)
             }
             .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: 36)
             .background(Capsule().fill(Color.white.opacity(0.75)))
             .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1))
             .contentShape(Capsule())
@@ -677,8 +707,8 @@ struct DailyProgressLine: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
         .background(Capsule().fill(Color.white.opacity(0.72)))
         .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.14), lineWidth: 1))
         .overlay {
@@ -813,15 +843,15 @@ struct TodosProgressStrip: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Image(systemName: "chart.bar.fill")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(LinearGradient(colors: [Palette.lavender, Palette.grape],
                                                         startPoint: .top, endPoint: .bottom))
                         .accessibilityHidden(true)
                     Text("Today's Progress")
-                        .font(.rounded(.subheadline, weight: .heavy))
+                        .font(.rounded(.footnote, weight: .heavy))
                         .foregroundStyle(Palette.ink)
                     Spacer(minLength: 4)
                     Text(total == 0 ? "No to-dos yet" : "\(done) of \(total) completed")
@@ -832,8 +862,8 @@ struct TodosProgressStrip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 HStack(spacing: 8) {
-                    HeartTrack(done: done, total: total, maxSize: 16)
-                        .frame(height: 18)
+                    HeartTrack(done: done, total: total, maxSize: 14)
+                        .frame(height: 16)
                     Text(TodosProgressCard.cheer(done: done, total: total))
                         .font(.rounded(.caption, weight: .heavy))
                         .foregroundStyle(Palette.berry)
@@ -846,20 +876,20 @@ struct TodosProgressStrip: View {
             Image("ProgressKitten")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 42)
+                .frame(width: 34)
                 .accessibilityHidden(true)
         }
-        .padding(.leading, 14)
+        .padding(.leading, 12)
         .padding(.trailing, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(LinearGradient(colors: [Color.white.opacity(0.92), Color(hex: 0xFFF0F6)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
                 .shadow(color: Palette.hotPink.opacity(0.12), radius: 8, x: 0, y: 4)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(Color.white, lineWidth: 1.5)
         )
         .animation(.spring(response: 0.45, dampingFraction: 0.75), value: done)

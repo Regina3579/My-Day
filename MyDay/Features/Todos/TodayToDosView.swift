@@ -118,13 +118,13 @@ struct TodayToDosView: View {
             hero(width: width, safeTop: safeTop)
             TodayHeaderCard(day: day)
                 .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
                 .frame(maxWidth: .infinity)
                 .background(alignment: .top) {
                     panelBackground
                 }
-                .padding(.top, -24)
+                .padding(.top, -16)
         }
     }
 
@@ -132,7 +132,8 @@ struct TodayToDosView: View {
     private func hero(width: CGFloat, safeTop: CGFloat) -> some View {
         TodosHero(width: width, safeTop: safeTop)
             .onGeometryChange(for: Bool.self) { geometry in
-                geometry.frame(in: .global).maxY > 150
+                // Visible while it still reaches below the navigation bar.
+                geometry.frame(in: .global).maxY > safeTop + 60
             } action: { isVisible in
                 heroIsVisible = isVisible
             }
@@ -200,13 +201,13 @@ struct TodayToDosView: View {
     /// The add buttons, then Today's Progress, on a frosted panel that reaches down behind
     /// the tab bar.
     private var actionDock: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             actionBar
             TodosProgressStrip(done: doneCount, total: tasks.count)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
         .background(alignment: .top) {
             dockBackground
         }
@@ -246,7 +247,7 @@ struct TodayToDosView: View {
     private var progressLine: some View {
         if !tasks.isEmpty {
             DailyProgressLine(day: day, done: doneCount, total: tasks.count, celebration: celebration)
-                .plainListRow(EdgeInsets(top: 0, leading: 16, bottom: 7, trailing: 16))
+                .plainListRow(EdgeInsets(top: 0, leading: 16, bottom: 6, trailing: 16))
         }
     }
 
@@ -292,7 +293,7 @@ struct TodayToDosView: View {
             onOpen: { sheet = .edit(task, nil) },
             onAction: { action in handle(action, for: task) }
         )
-        .plainListRow(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+        .plainListRow(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 delete(task)
