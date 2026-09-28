@@ -66,7 +66,7 @@ struct HomeView: View {
                     onCalendar: { router.tab = .calendar },
                     onReminders: { router.sheet = .reminders }
                 )
-                DailyQuoteView(date: today)
+                DailyQuoteView(date: today, maxWidth: w * 0.33)
                     .padding(.leading, w * 0.09)
             }
             .padding(.top, topInset + 4)

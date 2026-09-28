@@ -56,24 +56,6 @@ enum Greeting {
     }
 }
 
-/// The three-line message on the home screen. It changes every day.
-enum DailyQuotes {
-    static let all: [[String]] = [
-        ["A new day", "A fresh start", "You got this! 💕"],
-        ["Small steps", "Big dreams", "Keep going! 🌸"],
-        ["Be kind", "Be brave", "Be you! 💖"],
-        ["Breathe in", "Smile wide", "Shine bright! ✨"],
-        ["Dream it", "Plan it", "Do it! ⭐"],
-        ["One step", "at a time", "You're doing great! 💕"],
-        ["Bloom where", "you are", "planted 🌷"]
-    ]
-
-    static func lines(for date: Date, offset: Int = 0) -> [String] {
-        let index = (date.dayNumber + offset) % all.count
-        return all[(index + all.count) % all.count]
-    }
-}
-
 enum FocusQuotes {
     private static let quotes = [
         "Small steps every day add up to big dreams. 🌸",

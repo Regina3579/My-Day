@@ -1,33 +1,34 @@
 import SwiftUI
 
-/// The hand-written three-line message. It changes every day; tapping shows another one.
+/// Daily Motivation: today's short quote, written by hand in the scene below the header.
+/// It stays the same all day and changes after midnight (see `DailyMotivation`).
 struct DailyQuoteView: View {
     let date: Date
-    @State private var offset = 0
+    /// The widest the note may be; longer lines shrink a little to fit.
+    var maxWidth: CGFloat = .infinity
 
     var body: some View {
-        let lines = DailyQuotes.lines(for: date, offset: offset)
-        Button {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { offset += 1 }
-            Haptics.tap()
-        } label: {
-            VStack(alignment: .leading, spacing: -5) {
-                ForEach(Array(lines.enumerated()), id: \.offset) { line in
-                    Text(line.element)
-                }
-            }
-            .font(.custom("Noteworthy-Bold", size: 15, relativeTo: .headline))
-            .foregroundStyle(Palette.berry)
-            .shadow(color: Color.white, radius: 0.5)
-            .shadow(color: Color.white.opacity(0.9), radius: 5)
-            .padding(4)
-            .background(SoftGlow().padding(-10))
-            .rotationEffect(.degrees(-10))
-            .id(lines.joined())
-            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        let quote = DailyMotivation.quote(for: date)
+        VStack(alignment: .leading, spacing: -4) {
+            Text(quote.firstLine)
+            Text("\(quote.secondLine) \(quote.theme.emoji)")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(lines.joined(separator: " "))
-        .accessibilityHint("Shows another message")
+        .font(.custom("Noteworthy-Bold", size: 15, relativeTo: .headline))
+        .foregroundStyle(Palette.berry)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .frame(maxWidth: maxWidth, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .shadow(color: Color.white, radius: 0.5)
+        .shadow(color: Color.white.opacity(0.9), radius: 5)
+        .padding(4)
+        .background(SoftGlow().padding(-10))
+        .rotationEffect(.degrees(-10))
+        .id(quote)
+        .transition(.opacity)
+        .animation(.easeInOut(duration: 0.4), value: quote)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Today's motivation: \(quote.text)")
     }
 }
