@@ -32,7 +32,7 @@ starts empty.
 | **Four ways to add** | The two fastest are bright and glowing: a long pink ＋ **Add Task** button and, beside it, a round yellow 🎙 microphone labelled "Speak a Task". 📷 **Photo** and ▦ **Template** are smaller and softer, underneath. All four, with Today's Progress under them, stay pinned at the bottom of the screen, just above the tab bar, on a frosted panel; only the list scrolls, sliding behind them. ＋ **Add Task**: a pastel sheet where only the title is needed; category, date & time, reminder, repeat, photo and note are optional. 🎙 **Speak a Task**: Apple's Speech framework (on the device when supported) turns what you say into text; My Day spots words like *today*, *tomorrow*, *at 5 PM*, *every day* and category words, then shows a preview (Task, Category, Date, Time, Reminder) with Cancel, Edit and Add Task. Nothing is saved without your tap, and guesses are pointed out. 📷 **Photo**: take or choose a photo, add the title and details, and save; view it full size, replace it or remove it later. ▦ **Templates**: Morning Routine, Grocery Shopping, Travel Checklist, Workout Routine, Home Cleaning and Study Session; untick what you don't need and tap "Add to My Day". "Save as Template" keeps your own lists on the device. |
 | **Today's Priority** | A full-screen page (the status bar and the tab bar hide here): the illustrated "Today's Priority — Focus on what matters most" scene fills the top of the screen, right up to the top edge, and a soft pink panel below it holds a glowing **＋ Add today's priority…** field. Until the day has a priority, a little star hugging a heart says "Set your today's priority". Priorities are numbered golden cards with a "1 of 2 done" count: tick (two little pink hearts pop out of the tick), edit, swipe to delete and press and hold to reorder them. The ⋮ button picks a priority from the day's open to-dos or removes the finished ones. |
 | **My Journal** | Pages with a mood, title, text, writing prompts and up to 6 photos. **Today's Little Win 🏆** is one optional line on each page ("🌟 My little win today…", such as "Called my mom."); it shows as a gold ribbon on the page, and the **Little Wins 🏆** shelf collects them all, so the journal becomes a collection of little achievements. Search (titles, text and wins), favourites, a "week in moods" strip, and an optional **Face ID lock**. |
-| **Calendar** | Month grid with markers for to-dos, priorities and journal pages, plus the selected day's agenda. |
+| **Calendar** | The illustrated header from the design ("Calendar — Every day is a new page" with the girl, the puppy and the kitten) and a white **Today** button. The month card has pink ‹ › buttons, "♥ September 2026 ♥", pink weekday pills, the days around the month in grey, a pink ring for today and a pink circle for the selected day; small markers show to-dos (a dot, green when all are done), priorities (a star) and journal pages (a heart). Swipe the card to change month. The selected day's card shows its date, a chip such as "☀️ Today" or "Tomorrow", and three tinted rows: **Priorities** (pink), **To-Dos** (lilac) and **Journal** (pink), each with a picture and a round ＋. The day's items are listed under their row; tick them there. |
 | **Insights** | Done today, day streak, a weekly bar chart and a 30-day mood chart (Swift Charts). |
 | **Settings** | Your name, morning and evening reminders, carrying unfinished items over to today, showing finished to-dos (the Completed list open or closed), haptics, the journal lock, and data clean-up. |
 
@@ -85,10 +85,10 @@ MyDay/
 │   │               TemplatePickerSheet, TaskPhotoViews, Celebration (confetti, tick pop)
 │   ├── Priority/   TodaysPriorityView, NewPrioritySheet
 │   ├── Journal/    JournalView, JournalDetailView, NewJournalEntrySheet, lock screen
-│   ├── Calendar/   CalendarView
+│   ├── Calendar/   CalendarView, CalendarComponents
 │   ├── Insights/   InsightsView
 │   └── Settings/   SettingsView, RemindersView
-└── Assets.xcassets App icon, home, to-dos and priority illustrations, kitten, colours
+└── Assets.xcassets App icon, home, to-dos, priority and calendar illustrations, kitten, colours
 ```
 
 ## How the home screen is built
@@ -105,6 +105,10 @@ iPhone SE).
 The To-Dos screen works the same way: only `TodosScene` (the sign, the girl and
 her puppy) and `ProgressKitten` are images. The date card, chips, rows, buttons,
 hearts and the "You're Doing Great!" badge are SwiftUI views.
+
+The Calendar's `CalendarHeader` picture (the design's title, icon and Today button painted
+out), its calendar icon, the flowers and the three row pictures are images; the text, the
+buttons, the month grid and the rows are SwiftUI.
 
 Today's Priority too: `PriorityScene` (the title, the girl, the puppy and the kitten,
 with the design's buttons painted out) and `PriorityEmptyStar` are images; the add

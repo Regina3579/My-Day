@@ -13,7 +13,7 @@ BUNDLE_ID="com.regina3579.myday"
 OUT="${1:-screenshots}"
 # todos-hearts ticks a to-do, todos-alldone ticks all of them, priority-hearts ticks the
 # day's priority and priority-empty deletes it, so they come last.
-ROUTES=(home quickadd menu todos todos-add todos-photo todos-voice todos-templates priority journal journal-page calendar insights settings newtask newjournal todos-hearts todos-alldone todos-confetti priority-hearts priority-empty)
+ROUTES=(home quickadd menu todos todos-add todos-photo todos-voice todos-templates priority journal journal-page calendar insights settings newtask newjournal todos-hearts todos-alldone todos-confetti priority-hearts priority-empty calendar-tomorrow)
 IFS='|' read -r -a DEVICES <<< "${SCREENSHOT_DEVICES:-iPhone 17 Pro|iPhone 17 Pro Max|iPhone SE (3rd generation)}"
 mkdir -p "$OUT"
 

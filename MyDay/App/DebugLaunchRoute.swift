@@ -45,6 +45,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalPage = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
+    /// Days from today that the calendar selects when it appears ("calendar-tomorrow").
+    @MainActor private static var calendarDayOffset = 0
     /// "todos-hearts" and "priority-hearts": keep a tick's two hearts (and a to-do's place) a
     /// few seconds longer, so the screenshot can catch them.
     @MainActor static private(set) var holdsTickPop = false
@@ -65,6 +67,12 @@ enum DebugLaunchRoute {
     static func takePriorityTick() -> Bool {
         defer { priorityTick = false }
         return priorityTick
+    }
+
+    @MainActor
+    static func takeCalendarDayOffset() -> Int {
+        defer { calendarDayOffset = 0 }
+        return calendarDayOffset
     }
 
     /// Tells `scripts/screenshots.sh` the app is up: it waits for this file (in the app's
@@ -106,6 +114,9 @@ enum DebugLaunchRoute {
             journalPage = true
             router.open(.journal)
         case "calendar": router.tab = .calendar
+        case "calendar-tomorrow":
+            calendarDayOffset = 1
+            router.tab = .calendar
         case "insights": router.tab = .insights
         case "settings": router.tab = .settings
         case "newtask": router.sheet = .newTask(today)
