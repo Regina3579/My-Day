@@ -232,7 +232,16 @@ struct StarPop: View {
         .onAppear {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) { isOut = true }
             withAnimation(.easeOut(duration: 0.8)) { isRisen = true }
-            withAnimation(.easeIn(duration: 0.3).delay(0.65)) { isFaded = true }
+            withAnimation(.easeIn(duration: 0.3).delay(Self.fadeDelay)) { isFaded = true }
         }
+    }
+
+    /// Seconds before the star fades (longer in a screenshot run, so it can be captured).
+    @MainActor
+    private static var fadeDelay: Double {
+        #if DEBUG
+        if DebugLaunchRoute.holdsStar { return 4 }
+        #endif
+        return 0.65
     }
 }

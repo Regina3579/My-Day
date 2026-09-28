@@ -36,6 +36,9 @@ enum DebugLaunchRoute {
     @MainActor private static var todosSheet: String?
     /// Open the newest journal page once the journal appears ("journal-page").
     @MainActor private static var journalPage = false
+    /// "todos-star": keep a tick's star (and its to-do's place) a few seconds longer, so the
+    /// screenshot can catch it.
+    @MainActor static private(set) var holdsStar = false
 
     @MainActor
     static func takeTodosSheet() -> String? {
@@ -70,6 +73,7 @@ enum DebugLaunchRoute {
         case "newjournal": router.sheet = .newJournal(.now)
         case let route where route.hasPrefix("todos-"):
             todosSheet = String(route.dropFirst("todos-".count))
+            holdsStar = route == "todos-star"
             router.open(.todos(today))
         default: break
         }

@@ -13,7 +13,7 @@ starts empty.
 
 | Home | Today's To-Dos | All Done ✨ | Add a Task | Voice Add |
 | --- | --- | --- | --- | --- |
-| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-04-todos.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-18-todos-alldone.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-todos-add.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-07-todos-voice.jpg" width="170"> |
+| <img src="docs/screenshots/iphone-17-pro-01-home.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-04-todos.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-19-todos-confetti.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-05-todos-add.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-07-todos-voice.jpg" width="170"> |
 
 | Templates | Quick Add menu | Today's Priority | My Journal | A Journal Page |
 | --- | --- | --- | --- | --- |

@@ -218,7 +218,7 @@ struct TodayToDosView: View {
                 toggle(task)
             }
         case "star":
-            try? await Task.sleep(for: .seconds(9.9))
+            try? await Task.sleep(for: .seconds(9.4))
             if let first = visible.first(where: { !$0.isCompleted }) {
                 toggle(first)
             }
@@ -380,8 +380,9 @@ struct TodayToDosView: View {
         }
         if isFinishing {
             // Let the tick and its star show, then move it down to the finished ones.
+            let settle = Self.settleDelay
             Task {
-                try? await Task.sleep(for: .seconds(0.9))
+                try? await Task.sleep(for: .seconds(settle))
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                     _ = settling.remove(id)
                 }
@@ -390,6 +391,16 @@ struct TodayToDosView: View {
         if task.isCompleted, !tasks.isEmpty, tasks.allSatisfy(\.isCompleted) {
             celebrate()
         }
+    }
+
+    /// Seconds a just-ticked to-do stays in place (longer in a screenshot run, so its star
+    /// can be captured).
+    @MainActor
+    private static var settleDelay: Double {
+        #if DEBUG
+        if DebugLaunchRoute.holdsStar { return 4.5 }
+        #endif
+        return 0.9
     }
 
     /// Everything is done: "All done for today!" and the big confetti.

@@ -70,18 +70,33 @@ for i in "${!UDIDS[@]}"; do
     --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
   xcrun simctl install "$udid" "$APP"
 
+  # A picture of the launch screen (taken just after the first launch), to spot a
+  # screen that was captured before the app had drawn it. Launch screens are identical.
+  launch_ref="$(mktemp -d)/launch.png"
   wait_seconds=12
   n=1
   for route in "${ROUTES[@]}"; do
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
     xcrun simctl launch "$udid" "$BUNDLE_ID" -screenshotRoute "$route" >/dev/null
+    if [ ! -f "$launch_ref" ]; then
+      sleep 0.3
+      xcrun simctl io "$udid" screenshot "$launch_ref" >/dev/null
+    fi
     # The first screen that shows the keyboard also starts the simulator's
     # keyboard services, which takes several seconds.
     [ "$route" = "todos-add" ] && wait_seconds=16
     sleep "$wait_seconds"
-    # 8 seconds was sometimes too short on busy CI machines (the launch screen was captured).
     wait_seconds=11
-    xcrun simctl io "$udid" screenshot "$OUT/${slug}-$(printf '%02d' "$n")-${route}.png" >/dev/null
+    shot="$OUT/${slug}-$(printf '%02d' "$n")-${route}.png"
+    xcrun simctl io "$udid" screenshot "$shot" >/dev/null
+    # On a busy CI machine the app sometimes has not drawn its screen yet: wait and retake.
+    tries=0
+    while [ "$tries" -lt 3 ] && cmp -s "$shot" "$launch_ref"; do
+      echo "  $route: still on the launch screen, taking it again"
+      sleep 6
+      xcrun simctl io "$udid" screenshot "$shot" >/dev/null
+      tries=$((tries + 1))
+    done
     pid="$(pgrep -f "/MyDay.app/MyDay" | head -1 || true)"
     [ -z "$pid" ] && echo "  $route: MyDay is not running"
     if [ -n "$pid" ] && [[ " ${SAMPLE_ROUTES:-} " == *" $route "* ]]; then
