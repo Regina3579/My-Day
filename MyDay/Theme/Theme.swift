@@ -96,27 +96,43 @@ extension Mood {
     }
 }
 
+/// Each category has its own colour, so a to-do's category shows at a glance:
+/// Personal pink, Work blue, Health green, Learning yellow, Shopping purple.
 extension TaskCategory {
     var color: Color {
         switch self {
         case .personal: Palette.hotPink
-        case .work: Color(hex: 0x6C63D9)
+        case .work: Color(hex: 0x3F6FE0)
         case .health: Color(hex: 0x2DAA6A)
-        case .learning: Color(hex: 0x4C7CF0)
-        case .shopping: Color(hex: 0xF07A2E)
+        case .learning: Color(hex: 0xE39B0B)
+        case .shopping: Color(hex: 0x8A55E8)
         }
     }
 }
 
-/// Colours for the categories people add (different from the five built in).
+/// Colours for the categories people add. New categories are pink (the first one) unless
+/// the person picks another.
 enum CategoryPalette {
-    static let colors: [Color] = [
-        Color(hex: 0xE85D9C), Color(hex: 0x2FB8A6), Color(hex: 0xB15CEF), Color(hex: 0xFF7A6B),
-        Color(hex: 0x3F9BEA), Color(hex: 0xE0A21B), Color(hex: 0x5C6BC0), Color(hex: 0x6DAF3A)
+    static let colors: [Color] = tints.map(\.accent)
+
+    /// The row colours for each: a soft fill and edge, and the colour itself.
+    static let tints: [RowTint] = [
+        RowTint(fill: Color(hex: 0xFCE8F1), edge: Color(hex: 0xF7C5DB), accent: Color(hex: 0xE85D9C)),
+        RowTint(fill: Color(hex: 0xE2F5F3), edge: Color(hex: 0xB4E5DF), accent: Color(hex: 0x2FB8A6)),
+        RowTint(fill: Color(hex: 0xF4E8FD), edge: Color(hex: 0xE3C4F9), accent: Color(hex: 0xB15CEF)),
+        RowTint(fill: Color(hex: 0xFFECEA), edge: Color(hex: 0xFFCFCA), accent: Color(hex: 0xFF7A6B)),
+        RowTint(fill: Color(hex: 0xE4F1FC), edge: Color(hex: 0xBADBF7), accent: Color(hex: 0x3F9BEA)),
+        RowTint(fill: Color(hex: 0xFBF2DF), edge: Color(hex: 0xF4DEAD), accent: Color(hex: 0xE0A21B)),
+        RowTint(fill: Color(hex: 0xE8EAF6), edge: Color(hex: 0xC4CAE8), accent: Color(hex: 0x5C6BC0)),
+        RowTint(fill: Color(hex: 0xEBF4E3), edge: Color(hex: 0xCAE2B8), accent: Color(hex: 0x6DAF3A))
     ]
 
     static func color(at index: Int) -> Color {
-        colors[((index % colors.count) + colors.count) % colors.count]
+        tint(at: index).accent
+    }
+
+    static func tint(at index: Int) -> RowTint {
+        tints[((index % tints.count) + tints.count) % tints.count]
     }
 }
 
@@ -171,5 +187,23 @@ struct RowTint {
 
     static func at(_ index: Int) -> RowTint {
         cycle[((index % cycle.count) + cycle.count) % cycle.count]
+    }
+
+    static let pink = cycle[0]
+    static let purple = cycle[1]
+    static let yellow = cycle[2]
+    static let blue = cycle[3]
+    static let green = cycle[4]
+
+    /// A to-do row's colours, from its category.
+    static func of(_ choice: CategoryChoice) -> RowTint {
+        switch choice {
+        case .builtIn(.personal): pink
+        case .builtIn(.work): blue
+        case .builtIn(.health): green
+        case .builtIn(.learning): yellow
+        case .builtIn(.shopping): purple
+        case .custom(let custom): CategoryPalette.tint(at: custom.colorIndex)
+        }
     }
 }

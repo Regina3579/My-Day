@@ -762,10 +762,13 @@ private struct DayChip: View {
 /// Personal · Work · Health · Learning · Shopping, then the categories the person added.
 struct CategoryPicker: View {
     @Binding var selection: CategoryChoice
+    /// Templates use only the five built-in categories.
+    var includesCustom = true
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
 
     private var choices: [CategoryChoice] {
-        TaskCategory.allCases.map(CategoryChoice.builtIn) + customs.map(CategoryChoice.custom)
+        let builtIn = TaskCategory.allCases.map(CategoryChoice.builtIn)
+        return includesCustom ? builtIn + customs.map(CategoryChoice.custom) : builtIn
     }
 
     var body: some View {
@@ -801,5 +804,22 @@ struct CategoryPicker: View {
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(choice.label)
         .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
+    }
+}
+
+extension CategoryPicker {
+    /// Only the five built-in categories (for templates).
+    init(builtIn selection: Binding<TaskCategory>) {
+        self.init(
+            selection: Binding(
+                get: { CategoryChoice.builtIn(selection.wrappedValue) },
+                set: { choice in
+                    if case .builtIn(let category) = choice {
+                        selection.wrappedValue = category
+                    }
+                }
+            ),
+            includesCustom: false
+        )
     }
 }

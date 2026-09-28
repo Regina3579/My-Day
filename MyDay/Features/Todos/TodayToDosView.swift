@@ -303,8 +303,8 @@ struct TodayToDosView: View {
             emptyCard
                 .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
         } else {
-            ForEach(Array(rows.enumerated()), id: \.element.persistentModelID) { index, task in
-                row(task, index: index)
+            ForEach(rows, id: \.persistentModelID) { task in
+                row(task)
             }
             .onMove { source, destination in
                 move(from: source, to: destination, in: rows)
@@ -329,11 +329,12 @@ struct TodayToDosView: View {
         }
     }
 
-    /// One to-do. Swipe left to delete it; press and hold to drag it to a new place.
-    private func row(_ task: TaskItem, index: Int) -> some View {
+    /// One to-do, in its category's colour. Swipe left to delete it; press and hold to drag it
+    /// to a new place.
+    private func row(_ task: TaskItem) -> some View {
         TodoRow(
             task: task,
-            tint: RowTint.at(index),
+            tint: RowTint.of(task.choice),
             onToggle: { toggle(task) },
             onImportant: { toggleImportant(task) },
             onOpen: { sheet = .edit(task, nil) },

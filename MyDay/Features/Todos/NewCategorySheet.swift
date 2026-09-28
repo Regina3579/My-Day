@@ -11,8 +11,8 @@ struct NewCategorySheet: View {
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
     @State private var name = ""
     @State private var emoji = "✨"
-    /// `nil` until the person picks one: then the next colour not used yet.
-    @State private var colorIndex: Int?
+    /// Pink (the first colour) unless the person picks another.
+    @State private var colorIndex = 0
     @FocusState private var nameFocused: Bool
 
     private static let emojis = [
@@ -31,9 +31,7 @@ struct NewCategorySheet: View {
 
     private var canAdd: Bool { !trimmedName.isEmpty && !isTaken }
 
-    private var chosenColor: Int {
-        colorIndex ?? customs.count % CategoryPalette.colors.count
-    }
+    private var chosenColor: Int { colorIndex }
 
     var body: some View {
         NavigationStack {

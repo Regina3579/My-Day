@@ -380,7 +380,7 @@ private struct SaveTemplateView: View {
                 }
 
                 field(label: "Category") {
-                    CategoryPicker(selection: $category)
+                    CategoryPicker(builtIn: $category)
                 }
 
                 field(label: "To-dos") {
