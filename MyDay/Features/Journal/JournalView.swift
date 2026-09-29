@@ -258,9 +258,18 @@ struct MoodWeek: View {
                 ForEach(days, id: \.self) { day in
                     let mood = entries.first(where: { $0.date.isSameDay(as: day) })?.mood
                     VStack(spacing: 4) {
-                        Text(mood?.emoji ?? "·")
-                            .font(.system(size: 24))
-                            .frame(height: 30)
+                        Group {
+                            if let mood {
+                                Image(mood.artName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .accessibilityLabel(mood.label)
+                            } else {
+                                Text("·")
+                                    .font(.system(size: 24))
+                            }
+                        }
+                        .frame(width: 38, height: 32)
                         Text(day.formatted(.dateTime.weekday(.narrow)))
                             .font(.rounded(.caption2, weight: .bold))
                             .foregroundStyle(day.isToday ? Palette.hotPink : Palette.inkSoft)
@@ -294,7 +303,11 @@ struct JournalEntryCard: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Text(entry.mood.emoji)
+                    Image(entry.mood.artName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 34, height: 30)
+                        .accessibilityLabel(entry.mood.label)
                     Text(entry.displayTitle)
                         .font(.rounded(.headline, weight: .bold))
                         .foregroundStyle(Palette.ink)

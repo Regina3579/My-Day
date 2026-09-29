@@ -80,18 +80,7 @@ struct JournalDetailView: View {
                     .shadow(color: Palette.hotPink.opacity(0.25), radius: 12, x: 0, y: 6)
                 }
 
-                HStack(spacing: 8) {
-                    Text("\(entry.mood.emoji) \(entry.mood.label)")
-                        .font(.rounded(.subheadline, weight: .bold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(entry.mood.color.opacity(0.25)))
-                        .foregroundStyle(Palette.ink)
-                    Spacer()
-                    Text(entry.date.formatted(date: .abbreviated, time: .shortened))
-                        .font(.rounded(.caption, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
-                }
+                MoodBanner(mood: entry.mood, date: entry.date)
 
                 // The heading, a line with a heart, then the page.
                 VStack(spacing: 12) {
@@ -134,6 +123,55 @@ struct JournalDetailView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             context.delete(entry)
         }
+    }
+}
+
+/// The page's mood at the top: its little star, "Feeling Bored" in the mood's colour, and
+/// when the page was written.
+private struct MoodBanner: View {
+    let mood: Mood
+    let date: Date
+
+    var body: some View {
+        let colors = mood.chooserColors
+        HStack(spacing: 14) {
+            Image(mood.artName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 84, height: 72)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Feeling \(mood.label)")
+                    .font(.rounded(.title2, weight: .heavy))
+                    .foregroundStyle(colors.label)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(date.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .font(.rounded(.subheadline, weight: .bold))
+                    .foregroundStyle(Palette.ink.opacity(0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(date.formatted(date: .omitted, time: .shortened))
+                    .font(.rounded(.caption, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.leading, 8)
+        .padding(.trailing, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(LinearGradient(colors: [colors.tile, colors.tile.opacity(0.6)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(Color.white, lineWidth: 1.5)
+        )
+        .shadow(color: mood.color.opacity(0.18), radius: 8, x: 0, y: 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Feeling \(mood.label), \(date.formatted(date: .complete, time: .shortened))")
     }
 }
 

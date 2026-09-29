@@ -238,7 +238,11 @@ struct CalendarView: View {
 
     private func journalLine(_ entry: JournalEntry) -> some View {
         HStack(spacing: 10) {
-            Text(entry.mood.emoji).font(.title3)
+            Image(entry.mood.artName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 34, height: 30)
+                .accessibilityLabel(entry.mood.label)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.displayTitle)
                     .font(.rounded(.subheadline, weight: .bold))
