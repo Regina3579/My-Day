@@ -107,10 +107,11 @@ struct JournalPanel: View {
 // MARK: - Composer
 
 /// Writing a journal page, as in the design: the day and its weather, "How are you feeling
-/// today?", "Write about your day…", the extras (photos, stickers, a voice note, the place,
-/// the weather and tags), what you're grateful for, the day's highlight, what you look forward
-/// to, your little win, and Save Journal Entry. It is the journal's opening page (`.page`) and
-/// the new-page and edit-page sheet (`.sheet`).
+/// today?", "Write about your day…" (a heading, a line with a heart, then the writing), the
+/// extras (photos, stickers, a voice note, the place, the weather and tags), what you're
+/// grateful for, the day's highlight, what you look forward to, your little win, and Save
+/// Journal Entry. It is the journal's opening page (`.page`) and the new-page and edit-page
+/// sheet (`.sheet`).
 struct JournalComposer: View {
     enum Presentation {
         case page, sheet
@@ -132,6 +133,7 @@ struct JournalComposer: View {
 
     static let maxPhotos = 6
     static let textLimit = 1000
+    static let headingLimit = 60
 
     let presentation: Presentation
 
@@ -143,6 +145,8 @@ struct JournalComposer: View {
     /// The page being edited: nil for a new page until it is first saved.
     @State private var entry: JournalEntry?
     @State private var date: Date
+    /// The page's heading, like "A wonderful day" ("" when not written).
+    @State private var title: String
     @State private var text: String
     @State private var mood: Mood
     /// A mood was chosen (a page can be saved with just its mood).
@@ -164,6 +168,7 @@ struct JournalComposer: View {
     @State private var extra: Extra?
     @State private var heroIsVisible = true
     @State private var toast: String?
+    @FocusState private var headingFocused: Bool
     @FocusState private var textFocused: Bool
 
     /// Edits `entry`, or starts a new page dated `date` when it is nil.
@@ -171,6 +176,7 @@ struct JournalComposer: View {
         self.presentation = presentation
         _entry = State(initialValue: entry)
         _date = State(initialValue: entry?.date ?? date)
+        _title = State(initialValue: entry?.title ?? "")
         _text = State(initialValue: entry?.body ?? "")
         _mood = State(initialValue: entry?.mood ?? .happy)
         _moodPicked = State(initialValue: entry != nil)
@@ -193,7 +199,7 @@ struct JournalComposer: View {
 
     private var canSave: Bool {
         moodPicked || !photos.isEmpty || voiceNote != nil || weather != nil || !tags.isEmpty || !stickers.isEmpty
-            || ![text, littleWin, gratitude, highlight, lookingForward, place].allSatisfy { $0.trimmed.isEmpty }
+            || ![title, text, littleWin, gratitude, highlight, lookingForward, place].allSatisfy { $0.trimmed.isEmpty }
     }
 
     var body: some View {
@@ -236,6 +242,11 @@ struct JournalComposer: View {
                 // Keep new writing within the limit (an older, longer page stays as it is).
                 if new.count > Self.textLimit, old.count <= Self.textLimit {
                     text = String(new.prefix(Self.textLimit))
+                }
+            }
+            .onChange(of: title) { old, new in
+                if new.count > Self.headingLimit, old.count <= Self.headingLimit {
+                    title = String(new.prefix(Self.headingLimit))
                 }
             }
             .onAppear {
@@ -487,6 +498,21 @@ struct JournalComposer: View {
         .journalCard()
     }
 
+    /// One line naming the day. Left empty, the page is named after its mood, as the hint shows.
+    private var headingField: some View {
+        TextField("Heading", text: $title,
+                  prompt: Text(moodPicked ? mood.dayName : "Name your day…")
+                      .foregroundStyle(JournalStyle.placeholder))
+            .font(.rounded(.title2, weight: .heavy))
+            .foregroundStyle(JournalStyle.plum)
+            .multilineTextAlignment(.center)
+            .submitLabel(.next)
+            .focused($headingFocused)
+            .onSubmit { textFocused = true }
+            .padding(.top, 6)
+            .accessibilityHint("A word or two about your day, like A wonderful day")
+    }
+
     private var promptButton: some View {
         Button(action: addPrompt) {
             HStack(spacing: 6) {
@@ -502,22 +528,28 @@ struct JournalComposer: View {
         .buttonStyle(PressScaleStyle())
     }
 
+    /// Like a page: the heading, a line with a heart, then the writing.
     private var writingBox: some View {
-        ZStack(alignment: .topLeading) {
-            if text.isEmpty {
-                Text("Share your thoughts, feelings, moments or anything on your mind…")
+        VStack(spacing: 12) {
+            headingField
+            HeartDivider(lineLength: nil, heartSize: 20)
+                .padding(.horizontal, 4)
+            ZStack(alignment: .topLeading) {
+                if text.isEmpty {
+                    Text("Share your thoughts, feelings, moments or anything on your mind…")
+                        .font(.rounded(.body, weight: .medium))
+                        .foregroundStyle(JournalStyle.placeholder)
+                        .padding(.horizontal, 5)
+                        .padding(.top, 8)
+                        .allowsHitTesting(false)
+                }
+                TextEditor(text: $text)
                     .font(.rounded(.body, weight: .medium))
-                    .foregroundStyle(JournalStyle.placeholder)
-                    .padding(.horizontal, 5)
-                    .padding(.top, 8)
-                    .allowsHitTesting(false)
+                    .foregroundStyle(JournalStyle.ink)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 170)
+                    .focused($textFocused)
             }
-            TextEditor(text: $text)
-                .font(.rounded(.body, weight: .medium))
-                .foregroundStyle(JournalStyle.ink)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: 190)
-                .focused($textFocused)
         }
         .padding(12)
         .padding(.bottom, 24)
@@ -878,6 +910,7 @@ struct JournalComposer: View {
         withAnimation(.snappy) {
             entry = nil
             date = .now
+            title = ""
             text = ""
             mood = .happy
             moodPicked = false
@@ -929,6 +962,7 @@ struct JournalComposer: View {
             entry = page
         }
         page.date = date
+        page.title = title.trimmed
         page.body = text.trimmed
         page.mood = mood
         page.isFavorite = isFavorite
@@ -949,6 +983,7 @@ struct JournalComposer: View {
         if presentation == .sheet {
             dismiss()
         } else {
+            headingFocused = false
             textFocused = false
             showToast("Saved to your journal 💖")
         }

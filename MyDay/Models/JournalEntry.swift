@@ -67,12 +67,11 @@ final class JournalEntry {
         set { weatherRaw = newValue?.rawValue ?? "" }
     }
 
-    /// The title, or the first line of the text when no title was given.
+    /// The page's heading, or a gentle one from its mood ("A smiley day") when none was
+    /// written. It never repeats the text below it.
     var displayTitle: String {
         let cleanTitle = title.trimmed
-        if !cleanTitle.isEmpty { return cleanTitle }
-        let firstLine = body.trimmed.components(separatedBy: .newlines).first ?? ""
-        return firstLine.isEmpty ? "A page of my day" : firstLine
+        return cleanTitle.isEmpty ? mood.dayName : cleanTitle
     }
 }
 
@@ -125,6 +124,21 @@ enum Mood: String, CaseIterable, Identifiable, Codable {
     }
 
     var label: String { rawValue.capitalized }
+
+    /// A heading for a page written in this mood, used when the page has none.
+    var dayName: String {
+        switch self {
+        case .amazing: "A wonderful day"
+        case .happy: "A smiley day"
+        case .loved: "A lovely day"
+        case .excited: "An exciting day"
+        case .calm: "A peaceful day"
+        case .grateful: "A thankful day"
+        case .tired: "A slow, cozy day"
+        case .sad: "A gentle day"
+        case .stressed: "A brave day"
+        }
+    }
 }
 
 /// The weather on a journal page, picked by hand.

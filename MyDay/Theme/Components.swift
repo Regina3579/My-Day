@@ -181,6 +181,32 @@ struct HeartUnderline: View {
     }
 }
 
+/// A line, a shiny pink heart and a line: the Priority page's divider, and the partition
+/// under a journal page's heading. The lines are `lineLength` long, or share the whole
+/// width when it is nil.
+struct HeartDivider: View {
+    private static let line = Color(hex: 0xF77FCF)
+
+    var lineLength: CGFloat? = 52
+    var heartSize: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: 10) {
+            stroke(fadingTo: .leading)
+            ShinyHeart(size: heartSize)
+            stroke(fadingTo: .trailing)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func stroke(fadingTo edge: UnitPoint) -> some View {
+        Capsule()
+            .fill(LinearGradient(colors: [Self.line.opacity(0), Self.line],
+                                 startPoint: edge, endPoint: edge == .leading ? .trailing : .leading))
+            .frame(width: lineLength, height: 2.5)
+    }
+}
+
 /// Illustrated empty state featuring the girl, the puppy and the kitten.
 struct EmptyStateCard: View {
     var title: String

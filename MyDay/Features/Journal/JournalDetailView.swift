@@ -93,15 +93,17 @@ struct JournalDetailView: View {
                         .foregroundStyle(Color.secondary)
                 }
 
-                Text(entry.displayTitle)
-                    .font(.rounded(.title, weight: .heavy))
-                    .foregroundStyle(Palette.berry)
-
-                HeartUnderline(width: 90)
-
-                if entry.hasLittleWin {
-                    LittleWinBanner(text: entry.littleWin, isToday: entry.date.isToday)
+                // The heading, a line with a heart, then the page.
+                VStack(spacing: 12) {
+                    Text(entry.displayTitle)
+                        .font(.rounded(.title, weight: .heavy))
+                        .foregroundStyle(Palette.berry)
+                        .multilineTextAlignment(.center)
+                        .accessibilityAddTraits(.isHeader)
+                    HeartDivider(lineLength: nil, heartSize: 22)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
 
                 if !entry.body.isEmpty {
                     Text(entry.body)
@@ -109,6 +111,10 @@ struct JournalDetailView: View {
                         .foregroundStyle(Palette.ink)
                         .lineSpacing(5)
                         .textSelection(.enabled)
+                }
+
+                if entry.hasLittleWin {
+                    LittleWinBanner(text: entry.littleWin, isToday: entry.date.isToday)
                 }
 
                 JournalPageExtras(entry: entry)

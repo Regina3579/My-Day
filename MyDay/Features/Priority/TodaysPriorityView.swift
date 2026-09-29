@@ -488,27 +488,6 @@ struct PriorityEmptyCard: View {
     }
 }
 
-/// A short line, a pink heart and a short line.
-struct HeartDivider: View {
-    private static let line = Color(hex: 0xF77FCF)
-
-    var body: some View {
-        HStack(spacing: 10) {
-            stroke(fadingTo: .leading)
-            ShinyHeart(size: 24)
-            stroke(fadingTo: .trailing)
-        }
-        .accessibilityHidden(true)
-    }
-
-    private func stroke(fadingTo edge: UnitPoint) -> some View {
-        Capsule()
-            .fill(LinearGradient(colors: [Self.line.opacity(0), Self.line],
-                                 startPoint: edge, endPoint: edge == .leading ? .trailing : .leading))
-            .frame(width: 52, height: 2.5)
-    }
-}
-
 /// ⋮ for the navigation bar. Toolbar menus draw their label as a plain image (a rotated
 /// SwiftUI view would lose its rotation), so the dots are drawn upright here.
 @MainActor
