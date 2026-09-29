@@ -4,7 +4,6 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
-    @Environment(AppState.self) private var appState
     @AppStorage(Prefs.userName) private var userName = ""
     @AppStorage(Prefs.carryOver) private var carryOver = true
     /// The Completed list on the To-Dos screen is open (it starts closed).
@@ -12,7 +11,9 @@ struct SettingsView: View {
     @AppStorage(Prefs.haptics) private var haptics = true
     @AppStorage(Prefs.taskCompletionSound) private var completionSound = true
     @AppStorage(Prefs.journalLock) private var journalLock = false
-    @State private var lockMessage: String?
+    @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
+    /// Turning the lock on or off, or changing how it opens.
+    @State private var lockGoal: JournalLockSetupSheet.Goal?
     @State private var confirmClearDone = false
     @State private var confirmEraseAll = false
 
@@ -79,13 +80,34 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle(isOn: lockBinding) {
-                        Label("Lock with \(JournalLock.methodName)", systemImage: JournalLock.symbolName)
+                    Toggle(isOn: lockToggle) {
+                        Label("Lock My Journal", systemImage: "lock.fill")
+                    }
+                    .id("lock")
+                    if journalLock {
+                        ForEach(JournalLockMethod.allCases) { method in
+                            Button {
+                                if method != lockMethod { lockGoal = .switchTo(method) }
+                            } label: {
+                                JournalLockMethodRow(method: method, isOn: method == lockMethod,
+                                                     isAvailable: method.usesSecret || JournalLock.canAuthenticate)
+                            }
+                            .disabled(!method.usesSecret && !JournalLock.canAuthenticate)
+                        }
+                        if lockMethod.usesSecret {
+                            Button {
+                                lockGoal = .changeSecret
+                            } label: {
+                                Label(lockMethod == .pattern ? "Change Pattern" : "Change Passcode",
+                                      systemImage: "arrow.triangle.2.circlepath")
+                                    .foregroundStyle(Palette.hotPink)
+                            }
+                        }
                     }
                 } header: {
                     Text("Journal")
                 } footer: {
-                    Text("Your journal asks for \(JournalLock.methodName) each time you come back to the app.")
+                    Text(lockFooter)
                 }
 
                 Section("Your data") {
@@ -109,10 +131,17 @@ struct SettingsView: View {
             }
             #if DEBUG
             .task {
-                // `settings-sounds`: shows Sounds & Haptics for the screenshot.
-                guard DebugLaunchRoute.takeSettingsSounds() else { return }
+                // `settings-sounds` and `settings-lock`: show Sounds & Haptics or the journal
+                // lock for the screenshot; `settings-lock-choose` opens "Lock My Journal".
+                if DebugLaunchRoute.takeSettingsLockChoose() {
+                    try? await Task.sleep(for: .seconds(1))
+                    lockGoal = .turnOn
+                }
+                let anchor: String? = DebugLaunchRoute.takeSettingsSounds() ? "sounds"
+                    : DebugLaunchRoute.takeSettingsLock() ? "lock" : nil
+                guard let anchor else { return }
                 try? await Task.sleep(for: .seconds(1))
-                reader.scrollTo("sounds", anchor: .top)
+                reader.scrollTo(anchor, anchor: .top)
             }
             #endif
         }
@@ -126,10 +155,8 @@ struct SettingsView: View {
             // A preview, so you know what it sounds like.
             if isOn { SoundEffects.play(.ting) }
         }
-        .alert("Journal lock", isPresented: lockAlertBinding) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(lockMessage ?? "")
+        .sheet(item: $lockGoal) { goal in
+            JournalLockSetupSheet(goal: goal)
         }
         .confirmationDialog("Clear finished to-dos and priorities?", isPresented: $confirmClearDone, titleVisibility: .visible) {
             Button("Clear finished items", role: .destructive, action: clearFinished)
@@ -144,27 +171,26 @@ struct SettingsView: View {
 
     // MARK: Journal lock
 
-    private var lockBinding: Binding<Bool> {
+    /// The switch opens the sheet; the lock changes only once the sheet is done.
+    private var lockToggle: Binding<Bool> {
         Binding(
             get: { journalLock },
-            set: { newValue in
-                guard JournalLock.canAuthenticate else {
-                    lockMessage = "Please set up a passcode, Face ID or Touch ID on your iPhone first."
-                    return
-                }
-                Task {
-                    let reason = newValue ? "Lock your journal" : "Turn off the journal lock"
-                    if await JournalLock.authenticate(reason: reason) {
-                        journalLock = newValue
-                        appState.isJournalUnlocked = true
-                    }
-                }
-            }
+            set: { lockGoal = $0 ? .turnOn : .turnOff }
         )
     }
 
-    private var lockAlertBinding: Binding<Bool> {
-        Binding(get: { lockMessage != nil }, set: { if !$0 { lockMessage = nil } })
+    /// How the journal opens now (Face ID when a pattern or passcode is missing).
+    private var lockMethod: JournalLockMethod {
+        let chosen = JournalLockMethod(rawValue: lockMethodRaw) ?? .biometrics
+        return chosen.usesSecret && !JournalSecretStore.hasSecret(for: chosen) ? .biometrics : chosen
+    }
+
+    private var lockFooter: String {
+        guard journalLock else {
+            return "Keep your journal private with Face ID, a pattern or a number passcode."
+        }
+        return "Your journal asks for \(lockMethod.askedFor) each time you come back to the app."
+            + (lockMethod.usesSecret ? " Forgot it? You can open it with \(JournalLock.methodName) instead." : "")
     }
 
     // MARK: Data

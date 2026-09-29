@@ -150,6 +150,10 @@ enum DebugLaunchRoute {
     @MainActor private static var journalVoice = false
     /// Scroll Settings to Sounds & Haptics ("settings-sounds").
     @MainActor private static var settingsSounds = false
+    /// Scroll Settings to the journal lock ("settings-lock"), or open Lock My Journal
+    /// ("settings-lock-choose").
+    @MainActor private static var settingsLock = false
+    @MainActor private static var settingsLockChoose = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
@@ -190,6 +194,18 @@ enum DebugLaunchRoute {
     static func takeSettingsSounds() -> Bool {
         defer { settingsSounds = false }
         return settingsSounds
+    }
+
+    @MainActor
+    static func takeSettingsLock() -> Bool {
+        defer { settingsLock = false }
+        return settingsLock
+    }
+
+    @MainActor
+    static func takeSettingsLockChoose() -> Bool {
+        defer { settingsLockChoose = false }
+        return settingsLockChoose
     }
 
     @MainActor
@@ -261,6 +277,9 @@ enum DebugLaunchRoute {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-screenshotRoute"), index + 1 < arguments.count else { return }
         defer { markReady() }
+        // Only the lock routes lock the journal (a demo pattern of five dots, an L, or the
+        // passcode 2580).
+        JournalLock.disable()
 
         switch arguments[index + 1] {
         case "quickadd": router.isQuickAddOpen = true
@@ -331,6 +350,19 @@ enum DebugLaunchRoute {
         case "settings": router.tab = .settings
         case "settings-sounds":
             settingsSounds = true
+            router.tab = .settings
+        case "journal-lock-pattern":
+            JournalLock.enable(.pattern, secret: "0-3-6-7-8")
+            router.open(.journal)
+        case "journal-lock-passcode":
+            JournalLock.enable(.passcode, secret: "2580")
+            router.open(.journal)
+        case "settings-lock":
+            JournalLock.enable(.pattern, secret: "0-3-6-7-8")
+            settingsLock = true
+            router.tab = .settings
+        case "settings-lock-choose":
+            settingsLockChoose = true
             router.tab = .settings
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)

@@ -11,6 +11,14 @@ enum Prefs {
     /// Settings → Sounds & Haptics → Task Completion Sound.
     static let taskCompletionSound = "taskCompletionSoundOn"
     static let journalLock = "journalLockEnabled"
+    /// How the journal is unlocked: a `JournalLockMethod` raw value (Face ID when unset).
+    static let journalLockMethod = "journalLockMethod"
+    /// The number of digits in the journal passcode (4 or 6).
+    static let journalPasscodeLength = "journalPasscodeLength"
+    /// Wrong pattern or passcode tries in a row, and when the next try is allowed after too
+    /// many (seconds since 1970).
+    static let journalLockFailures = "journalLockFailures"
+    static let journalLockWaitUntil = "journalLockWaitUntil"
     static let morningOn = "morningReminderOn"
     static let morningTime = "morningReminderSeconds"
     static let eveningOn = "eveningReminderOn"

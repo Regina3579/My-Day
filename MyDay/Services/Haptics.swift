@@ -25,4 +25,10 @@ enum Haptics {
         guard isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
+
+    /// A wrong pattern or passcode.
+    static func error() {
+        guard isEnabled else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.error)
+    }
 }

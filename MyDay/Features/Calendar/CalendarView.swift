@@ -207,7 +207,7 @@ struct CalendarView: View {
     }
 
     private var journalNote: String {
-        if isJournalLocked { return "Locked with \(JournalLock.methodName)." }
+        if isJournalLocked { return "Locked with \(JournalLock.currentMethodName)." }
         switch dayEntries.count {
         case 0: return "No journal entry for this day."
         case 1: return "1 page"
