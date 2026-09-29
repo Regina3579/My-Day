@@ -27,20 +27,20 @@ struct MoodChooserSheet: View {
         VStack(spacing: 0) {
             header
             ScrollView {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount),
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: columnCount),
                           spacing: 8) {
                     ForEach(Mood.chooserMoods) { option in
                         tile(option)
                     }
                 }
-                .padding(10)
+                .padding(8)
                 .background(
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
                         .fill(Color.white.opacity(0.6))
                         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .strokeBorder(Color.white, lineWidth: 1.5))
                 )
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.bottom, 12)
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -63,7 +63,7 @@ struct MoodChooserSheet: View {
             Image("MoodChooserStar")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 84)
+                .frame(width: 94)
                 .accessibilityHidden(true)
             VStack(spacing: 6) {
                 Text("Choose your mood")
@@ -126,7 +126,7 @@ struct MoodChooserSheet: View {
                     .font(.system(size: 17))
                     .foregroundStyle(MoodChooserStyle.heart)
                     .rotationEffect(.degrees(-12))
-                    .position(x: w * 0.78, y: h * 0.42)
+                    .position(x: w * 0.95, y: h * 0.6)
                 Image(systemName: "heart.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(MoodChooserStyle.heart.opacity(0.8))
@@ -138,7 +138,7 @@ struct MoodChooserSheet: View {
                 Image(systemName: "sparkle")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.white)
-                    .position(x: w * 0.72, y: h * 0.22)
+                    .position(x: w * 0.3, y: h * 0.12)
             }
         }
         .allowsHitTesting(false)
@@ -177,13 +177,14 @@ struct MoodChooserSheet: View {
                     .scaleEffect(isOn ? 1.08 : 1)
                 Text(option.label)
                     .font(.rounded(.footnote, weight: .bold))
+                    .tracking(-0.2)
                     .foregroundStyle(colors.label)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
             .padding(.top, 8)
             .padding(.bottom, 7)
-            .padding(.horizontal, 3)
+            .padding(.horizontal, 1)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
