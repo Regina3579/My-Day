@@ -98,16 +98,27 @@ final class JournalPhoto {
 
 enum Mood: String, CaseIterable, Identifiable, Codable {
     case happy, loved, excited, calm, grateful, tired, sad, stressed, amazing
+    case grumpy, bored, anxious, overwhelmed, motivated, confident, peaceful, lonely, hopeful
+    case energetic, creative, confused, emotional, proud, relaxed, blissful, angry, frustrated
+    case content, melancholy, playful
 
     var id: String { rawValue }
 
-    /// The moods offered when writing a page, each with its little star.
+    /// The six moods always shown when writing a page.
     static let pickerMoods: [Mood] = [.amazing, .happy, .calm, .sad, .stressed, .tired]
 
-    /// The star picture for the moods offered when writing (nil for the older moods).
-    var artName: String? {
-        Self.pickerMoods.contains(self) ? "Mood" + rawValue.capitalized : nil
-    }
+    /// Every mood, in the order of "Choose your mood" (the ＋ beside the six).
+    static let chooserMoods: [Mood] = [
+        .amazing, .happy, .calm, .loved, .excited,
+        .sad, .stressed, .tired, .grumpy, .bored,
+        .anxious, .overwhelmed, .motivated, .confident, .peaceful,
+        .lonely, .hopeful, .grateful, .energetic, .creative,
+        .confused, .emotional, .proud, .relaxed, .blissful,
+        .angry, .frustrated, .content, .melancholy, .playful,
+    ]
+
+    /// The mood's little star.
+    var artName: String { "Mood" + rawValue.capitalized }
 
     var emoji: String {
         switch self {
@@ -120,6 +131,27 @@ enum Mood: String, CaseIterable, Identifiable, Codable {
         case .tired: "😴"
         case .sad: "😢"
         case .stressed: "😣"
+        case .grumpy: "😒"
+        case .bored: "😑"
+        case .anxious: "😟"
+        case .overwhelmed: "😵‍💫"
+        case .motivated: "💪"
+        case .confident: "😎"
+        case .peaceful: "🕊️"
+        case .lonely: "🥺"
+        case .hopeful: "🌱"
+        case .energetic: "⚡️"
+        case .creative: "🎨"
+        case .confused: "😕"
+        case .emotional: "😭"
+        case .proud: "👑"
+        case .relaxed: "🧘"
+        case .blissful: "😇"
+        case .angry: "😠"
+        case .frustrated: "😤"
+        case .content: "🙂"
+        case .melancholy: "🌧️"
+        case .playful: "😜"
         }
     }
 
@@ -132,11 +164,32 @@ enum Mood: String, CaseIterable, Identifiable, Codable {
         case .happy: "A smiley day"
         case .loved: "A lovely day"
         case .excited: "An exciting day"
-        case .calm: "A peaceful day"
+        case .calm: "A calm, easy day"
         case .grateful: "A thankful day"
         case .tired: "A slow, cozy day"
         case .sad: "A gentle day"
         case .stressed: "A brave day"
+        case .grumpy: "A grumpy little day"
+        case .bored: "A quiet day"
+        case .anxious: "A day to breathe"
+        case .overwhelmed: "A busy, full day"
+        case .motivated: "A go-getter day"
+        case .confident: "A shining day"
+        case .peaceful: "A peaceful day"
+        case .lonely: "A day for a hug"
+        case .hopeful: "A hopeful day"
+        case .energetic: "A day full of energy"
+        case .creative: "A creative day"
+        case .confused: "A puzzling day"
+        case .emotional: "A tender day"
+        case .proud: "A proud day"
+        case .relaxed: "A relaxed day"
+        case .blissful: "A blissful day"
+        case .angry: "A stormy day"
+        case .frustrated: "A tough day"
+        case .content: "A content day"
+        case .melancholy: "A cloudy day"
+        case .playful: "A playful day"
         }
     }
 }

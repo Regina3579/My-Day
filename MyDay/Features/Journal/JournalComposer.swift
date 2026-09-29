@@ -107,7 +107,7 @@ struct JournalPanel: View {
 // MARK: - Composer
 
 /// Writing a journal page, as in the design: the day and its weather, "How are you feeling
-/// today?", "Write about your day…" (a heading, a line with a heart, then the writing), the
+/// today?" (six moods, and ＋ for all thirty), "Write about your day…" (a heading, a line with a heart, then the writing), the
 /// extras (photos, stickers, a voice note, the place, the weather and tags), what you're
 /// grateful for, the day's highlight, what you look forward to, your little win, and Save
 /// Journal Entry. It is the journal's opening page (`.page`) and the new-page and edit-page
@@ -127,7 +127,7 @@ struct JournalComposer: View {
     }
 
     private enum Extra: String, Identifiable {
-        case date, sticker, voice, place, weather, tags
+        case date, moods, sticker, voice, place, weather, tags
         var id: String { rawValue }
     }
 
@@ -263,6 +263,10 @@ struct JournalComposer: View {
                 scroller(proxy)
                 #if DEBUG
                     .task {
+                        if DebugLaunchRoute.takeJournalMoods() {
+                            try? await Task.sleep(for: .seconds(1))
+                            extra = .moods
+                        }
                         guard let anchor = DebugLaunchRoute.takeJournalAnchor() else { return }
                         try? await Task.sleep(for: .seconds(1))
                         reader.scrollTo(anchor, anchor: anchor == "save" ? .bottom : .top)
@@ -330,6 +334,7 @@ struct JournalComposer: View {
         VStack(spacing: 16) {
             dayRow
             moodCard
+                .id("mood")
             writeCard
                 .id("write")
             extrasCard
@@ -428,17 +433,72 @@ struct JournalComposer: View {
 
     // MARK: Mood
 
+    /// The six everyday moods, always shown; ＋ opens "Choose your mood" with all thirty.
     private var moodCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            cardTitle(date.isToday ? "How are you feeling today?" : "How were you feeling?", color: JournalStyle.plum)
+            HStack(spacing: 8) {
+                cardTitle(date.isToday ? "How are you feeling today?" : "How were you feeling?", color: JournalStyle.plum)
+                Spacer(minLength: 4)
+                Button {
+                    extra = .moods
+                } label: {
+                    PlusBubble(diameter: 38)
+                }
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel("More moods")
+                .accessibilityHint("Choose from all the moods")
+            }
             // Two rows of three, so the stars and their names can be big.
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(Mood.pickerMoods) { option in
                     moodButton(option)
                 }
             }
+            if moodPicked, !Mood.pickerMoods.contains(mood) {
+                chosenMood
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
         }
         .journalCard()
+    }
+
+    /// A mood picked with ＋ (one of the six shows as selected in the grid instead).
+    private var chosenMood: some View {
+        Button {
+            extra = .moods
+        } label: {
+            HStack(spacing: 12) {
+                Image(mood.artName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 62, height: 54)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Feeling \(mood.label)")
+                        .font(.rounded(.title3, weight: .heavy))
+                        .foregroundStyle(mood.chooserColors.label)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text("Tap to change")
+                        .font(.rounded(.subheadline, weight: .semibold))
+                        .foregroundStyle(JournalStyle.soft)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 26))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(Color.white, JournalStyle.selectedMoodEdge)
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(JournalStyle.selectedMoodFill))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(JournalStyle.selectedMoodEdge, lineWidth: 2))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.98))
+        .accessibilityLabel("Feeling \(mood.label)")
+        .accessibilityHint("Choose another mood")
+        .accessibilityAddTraits(.isSelected)
     }
 
     private func moodButton(_ option: Mood) -> some View {
@@ -451,7 +511,7 @@ struct JournalComposer: View {
             Haptics.tap()
         } label: {
             VStack(spacing: 6) {
-                Image(option.artName ?? "MoodHappy")
+                Image(option.artName)
                     .resizable()
                     .scaledToFit()
                     .frame(height: 62)
@@ -851,6 +911,7 @@ struct JournalComposer: View {
     private func extraSheet(_ extra: Extra) -> some View {
         switch extra {
         case .date: JournalDateSheet(date: $date)
+        case .moods: MoodChooserSheet(mood: $mood, moodPicked: $moodPicked, isToday: date.isToday)
         case .sticker: StickerPickerSheet(stickers: $stickers)
         case .voice: VoiceNoteSheet(voiceNote: $voiceNote)
         case .place: PlaceSheet(place: $place)

@@ -56,8 +56,11 @@ enum DebugLaunchRoute {
     @MainActor private static var journalPage = false
     /// Show every journal page once the journal appears ("journal-pages").
     @MainActor private static var journalPages = false
-    /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save).
+    /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save,
+    /// "journal-proud": the moods).
     @MainActor private static var journalAnchor: String?
+    /// Open "Choose your mood" once the journal appears ("journal-moods").
+    @MainActor private static var journalMoods = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Days from today that the calendar selects when it appears ("calendar-tomorrow").
@@ -82,6 +85,12 @@ enum DebugLaunchRoute {
     static func takeJournalAnchor() -> String? {
         defer { journalAnchor = nil }
         return journalAnchor
+    }
+
+    @MainActor
+    static func takeJournalMoods() -> Bool {
+        defer { journalMoods = false }
+        return journalMoods
     }
 
     @MainActor
@@ -148,6 +157,20 @@ enum DebugLaunchRoute {
             router.open(.journal)
         case "journal-bottom":
             journalAnchor = "save"
+            router.open(.journal)
+        case "journal-proud":
+            // One of the last routes: today's page is felt "Proud", a mood picked with ＋.
+            let start = today.startOfDay
+            let end = start.nextDay
+            let pages = (try? context.fetch(FetchDescriptor<JournalEntry>(
+                predicate: #Predicate { $0.date >= start && $0.date < end }))) ?? []
+            for page in pages {
+                page.mood = .proud
+            }
+            journalAnchor = "mood"
+            router.open(.journal)
+        case "journal-moods":
+            journalMoods = true
             router.open(.journal)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":
