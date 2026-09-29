@@ -400,7 +400,7 @@ struct TodayToDosView: View {
         }
         if isFinishing {
             // Let the tick and its hearts show, then move it down to the finished ones.
-            let settle = Self.settleDelay
+            let settle = TickPop.settleDelay
             Task {
                 try? await Task.sleep(for: .seconds(settle))
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
@@ -411,16 +411,6 @@ struct TodayToDosView: View {
         if task.isCompleted, !tasks.isEmpty, tasks.allSatisfy(\.isCompleted) {
             celebrate()
         }
-    }
-
-    /// Seconds a just-ticked to-do stays in place (longer in a screenshot run, so its hearts
-    /// can be captured).
-    @MainActor
-    private static var settleDelay: Double {
-        #if DEBUG
-        if DebugLaunchRoute.holdsTickPop { return 4.5 }
-        #endif
-        return 0.9
     }
 
     /// ☆ / ★: important to-dos move to the top of the list.

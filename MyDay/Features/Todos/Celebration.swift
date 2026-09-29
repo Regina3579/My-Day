@@ -254,4 +254,14 @@ struct TickPop: View {
         #endif
         return 0.6
     }
+
+    /// Seconds a just-ticked to-do or priority stays in place, so its hearts can pop, before
+    /// it moves down to Completed (longer in a screenshot run, so they can be captured).
+    @MainActor
+    static var settleDelay: Double {
+        #if DEBUG
+        if DebugLaunchRoute.holdsTickPop { return 4.5 }
+        #endif
+        return 0.9
+    }
 }

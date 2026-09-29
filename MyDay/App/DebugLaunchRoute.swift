@@ -9,7 +9,7 @@ enum DebugLaunchRoute {
         ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
     }
 
-    /// Screenshot runs only: adds demo to-dos, a priority and a journal page once, so the
+    /// Screenshot runs only: adds demo to-dos, priorities and a journal page once, so the
     /// screenshots have something to show. Every other launch, even of a Debug build, starts empty.
     @MainActor
     static func addDemoData(in context: ModelContext) {
@@ -30,6 +30,10 @@ enum DebugLaunchRoute {
         context.insert(plants)
         plants.customCategory = home
         context.insert(Priority(title: "Finish the project report ⭐", date: today, order: 0))
+        context.insert(Priority(title: "Call Mom 💕", date: today, order: 1))
+        let yoga = Priority(title: "Morning yoga 🧘‍♀️", date: today, order: 2)
+        yoga.toggleCompleted()
+        context.insert(yoga)
         let page = JournalEntry(
             date: today,
             title: "A calm, happy day 💖",

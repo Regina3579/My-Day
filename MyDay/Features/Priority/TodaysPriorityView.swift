@@ -4,11 +4,14 @@ import UIKit
 
 /// "Today's Priority": the illustrated scene fills the top of the screen and a soft pink panel
 /// holds "Add today's priority…" and the day's priorities (a little star until there is one).
-/// The page is full screen: the status bar and the tab bar hide while it is open.
+/// A ticked priority moves down to "Completed", as on To-Dos. The page is full screen: the
+/// status bar and the tab bar hide while it is open.
 struct TodaysPriorityView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(\.hostTab) private var hostTab
+    /// Whether the Completed list is open.
+    @AppStorage(Prefs.showCompletedPriorities) private var showCompleted = false
     @Query private var priorities: [Priority]
     @Query private var tasks: [TaskItem]
     @State private var draft = ""
@@ -16,6 +19,9 @@ struct TodaysPriorityView: View {
     @State private var heroIsVisible = true
     /// Height of the scene and the add field, so the empty card can fill the rest of the screen.
     @State private var headerHeight: CGFloat = 0
+    /// Just-ticked priorities stay in place for a moment (so their hearts can pop) before
+    /// they move down to Completed.
+    @State private var settling: Set<PersistentIdentifier> = []
     @FocusState private var draftFocused: Bool
     private let day: Date
 
@@ -36,6 +42,19 @@ struct TodaysPriorityView: View {
     private var title: String { day.isToday ? "Today's Priority" : "Priorities" }
 
     private var doneCount: Int { priorities.filter(\.isCompleted).count }
+
+    /// Priorities still to do, in the person's order. One ticked a moment ago still sits
+    /// here until it slides into Completed.
+    private var openRows: [Priority] {
+        priorities.filter { !$0.isCompleted || settling.contains($0.persistentModelID) }
+    }
+
+    /// Finished priorities, in the order they were ticked: listed under "Completed" when it
+    /// is open.
+    private var doneRows: [Priority] {
+        priorities.filter { $0.isCompleted && !settling.contains($0.persistentModelID) }
+            .sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
+    }
 
     /// Open to-dos that are not already priorities, offered in the ⋮ menu.
     private var suggestions: [TaskItem] {
@@ -239,21 +258,60 @@ struct TodaysPriorityView: View {
         }
     }
 
+    /// The open priorities, numbered, then "› Completed" with the finished ones under it
+    /// while it is open.
+    @ViewBuilder
     private var priorityRows: some View {
-        ForEach(Array(priorities.enumerated()), id: \.element.persistentModelID) { index, priority in
-            PriorityCard(rank: index + 1, priority: priority,
-                         onToggle: { toggle(priority) },
-                         onOpen: { editing = priority })
-                .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        delete(priority)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
+        let open = openRows
+        let done = doneRows
+        ForEach(Array(open.enumerated()), id: \.element.persistentModelID) { index, priority in
+            row(priority, rank: index + 1)
         }
-        .onMove { move(from: $0, to: $1) }
+        .onMove { source, destination in
+            move(from: source, to: destination, in: open)
+        }
+        if open.isEmpty {
+            allDoneNote
+                .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+        }
+        if !done.isEmpty {
+            CompletedHeader(count: done.count, isOpen: showCompleted, items: "priorities") {
+                withAnimation(.snappy) { showCompleted.toggle() }
+            }
+            .plainListRow(EdgeInsets(top: open.isEmpty ? 4 : 10, leading: 16, bottom: 4, trailing: 16))
+            if showCompleted {
+                ForEach(done, id: \.persistentModelID) { priority in
+                    row(priority, rank: nil)
+                }
+            }
+        }
+    }
+
+    /// One priority. Swipe left to delete it; press and hold an open one to drag it to a new place.
+    private func row(_ priority: Priority, rank: Int?) -> some View {
+        PriorityCard(rank: rank, priority: priority,
+                     onToggle: { toggle(priority) },
+                     onOpen: { editing = priority })
+            .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    delete(priority)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .moveDisabled(priority.isCompleted)
+    }
+
+    /// Every priority of the day is ticked.
+    private var allDoneNote: some View {
+        Label(day.isToday ? "All of today's priorities are done. Well done! 🎉"
+                          : "All of this day's priorities are done 🎉",
+              systemImage: "star.circle.fill")
+            .font(.rounded(.subheadline, weight: .bold))
+            .foregroundStyle(Palette.cocoa)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .cuteCard(tint: Palette.honey, padding: 14)
     }
 
     /// The day's gentle focus quote, with the heart divider.
@@ -295,8 +353,27 @@ struct TodaysPriorityView: View {
     }
 
     private func toggle(_ priority: Priority) {
-        withAnimation(.snappy) { priority.toggleCompleted() }
-        if priority.isCompleted { Haptics.success() } else { Haptics.tap() }
+        let id = priority.persistentModelID
+        let isFinishing = !priority.isCompleted
+        if isFinishing {
+            settling.insert(id)
+        } else {
+            settling.remove(id)
+        }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { priority.toggleCompleted() }
+        guard isFinishing else {
+            Haptics.tap()
+            return
+        }
+        Haptics.success()
+        // Let the tick and its hearts show, then move it down to Completed.
+        let settle = TickPop.settleDelay
+        Task {
+            try? await Task.sleep(for: .seconds(settle))
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                _ = settling.remove(id)
+            }
+        }
     }
 
     private func delete(_ priority: Priority) {
@@ -312,12 +389,17 @@ struct TodaysPriorityView: View {
         Haptics.success()
     }
 
-    private func move(from source: IndexSet, to destination: Int) {
-        var reordered = priorities
+    /// Press-and-hold reordering of the open priorities; the finished ones keep their order
+    /// after them.
+    private func move(from source: IndexSet, to destination: Int, in rows: [Priority]) {
+        var reordered = rows
         reordered.move(fromOffsets: source, toOffset: destination)
-        for (index, priority) in reordered.enumerated() {
+        let open = reordered.filter { !$0.isCompleted }
+        let finished = priorities.filter(\.isCompleted)
+        for (index, priority) in (open + finished).enumerated() {
             priority.order = index
         }
+        Haptics.tap()
     }
 }
 
@@ -509,9 +591,11 @@ enum PriorityMoreSymbol {
     }()
 }
 
-/// A numbered golden card for one priority. Ticking it pops two little pink hearts.
+/// A numbered golden card for one priority (a star instead of the number once it is
+/// finished). Ticking it pops two little pink hearts.
 struct PriorityCard: View {
-    let rank: Int
+    /// Its place among the open priorities (nil under Completed).
+    let rank: Int?
     let priority: Priority
     let onToggle: () -> Void
     let onOpen: () -> Void
@@ -522,15 +606,22 @@ struct PriorityCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Text("\(rank)")
-                .font(.rounded(.title3, weight: .heavy))
-                .foregroundStyle(Color.white)
-                .frame(width: 44, height: 44)
-                .background(
-                    Circle().fill(LinearGradient(colors: [Color(hex: 0xFFE27A), Palette.honey],
-                                                 startPoint: .top, endPoint: .bottom))
-                )
-                .shadow(color: Palette.honey.opacity(0.4), radius: 6, x: 0, y: 3)
+            Group {
+                if let rank {
+                    Text("\(rank)")
+                } else {
+                    Image(systemName: "star.fill")
+                        .accessibilityHidden(true)
+                }
+            }
+            .font(.rounded(.title3, weight: .heavy))
+            .foregroundStyle(Color.white)
+            .frame(width: 44, height: 44)
+            .background(
+                Circle().fill(LinearGradient(colors: [Color(hex: 0xFFE27A), Palette.honey],
+                                             startPoint: .top, endPoint: .bottom))
+            )
+            .shadow(color: Palette.honey.opacity(0.4), radius: 6, x: 0, y: 3)
 
             Text(priority.title)
                 .font(.rounded(.headline, weight: .bold))

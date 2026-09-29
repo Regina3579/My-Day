@@ -5,6 +5,8 @@ enum Prefs {
     static let userName = "userName"
     static let carryOver = "carryOverUnfinishedTasks"
     static let showCompleted = "showCompletedTasks"
+    /// Whether Today's Priority's Completed list is open.
+    static let showCompletedPriorities = "showCompletedPriorities"
     static let haptics = "hapticsEnabled"
     static let journalLock = "journalLockEnabled"
     static let morningOn = "morningReminderOn"

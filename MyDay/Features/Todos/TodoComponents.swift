@@ -1129,10 +1129,13 @@ struct Scallop: Shape {
 
 // MARK: - Completed
 
-/// "› Completed  4": finished to-dos wait under this button; tap it to show or hide them.
+/// "› Completed  4": finished to-dos (or priorities) wait under this button; tap it to show
+/// or hide them.
 struct CompletedHeader: View {
     let count: Int
     let isOpen: Bool
+    /// What is listed under it, for VoiceOver ("to-dos", "priorities").
+    var items = "to-dos"
     let action: () -> Void
 
     private static let fill = LinearGradient(colors: [Color(hex: 0xFFE1EF), Color(hex: 0xECE3FF)],
@@ -1175,7 +1178,7 @@ struct CompletedHeader: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.7), value: count)
         .accessibilityLabel("Completed, \(count)")
         .accessibilityValue(isOpen ? "Shown" : "Hidden")
-        .accessibilityHint(isOpen ? "Hides the finished to-dos" : "Shows the finished to-dos")
+        .accessibilityHint(isOpen ? "Hides the finished \(items)" : "Shows the finished \(items)")
     }
 }
 
