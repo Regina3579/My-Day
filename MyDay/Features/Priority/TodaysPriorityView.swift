@@ -507,12 +507,15 @@ struct PriorityPanel: View {
     }
 }
 
-/// "＋ Add today's priority…": a pale pill with a glowing pink edge and a round pink ＋.
+/// "＋ Add today's priority…": a pale pill with a glowing pink edge, a round pink ＋ and a
+/// 🎙 that types what you say into it.
 struct PriorityAddField: View {
     @Binding var text: String
     let placeholder: String
     var focus: FocusState<Bool>.Binding
     let onAdd: () -> Void
+
+    @State private var isListening = false
 
     private static let edge = LinearGradient(colors: [Color(hex: 0xF76BC8), Color(hex: 0xE58BF0)],
                                              startPoint: .leading, endPoint: .trailing)
@@ -525,16 +528,21 @@ struct PriorityAddField: View {
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel(text.trimmed.isEmpty ? "Type a priority" : "Add priority")
 
+            let prompt = isListening ? "Listening… say your priority" : placeholder
             TextField(placeholder, text: $text,
-                      prompt: Text(placeholder).foregroundStyle(Color(hex: 0x916D90)))
+                      prompt: Text(prompt).foregroundStyle(Color(hex: 0x916D90)))
                 .font(.rounded(.title3, weight: .medium))
                 .foregroundStyle(Palette.ink)
                 .submitLabel(.done)
                 .focused(focus)
                 .onSubmit(onAdd)
+
+            DictationButton(text: $text, diameter: 38, isListening: $isListening) {
+                focus.wrappedValue = false
+            }
         }
         .padding(.leading, 7)
-        .padding(.trailing, 16)
+        .padding(.trailing, 10)
         .frame(minHeight: 58)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color(hex: 0xFFF8FB)))
         .overlay(

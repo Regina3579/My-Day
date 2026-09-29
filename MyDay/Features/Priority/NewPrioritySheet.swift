@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Create a new priority, or edit an existing one.
+/// Create a new priority, or edit an existing one (type it, or tap 🎙 and say it).
 struct NewPrioritySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
@@ -9,6 +9,7 @@ struct NewPrioritySheet: View {
     @State private var title: String
     @State private var date: Date
     @State private var confirmDelete = false
+    @State private var isListening = false
     @FocusState private var titleFocused: Bool
 
     init(date: Date) {
@@ -27,9 +28,15 @@ struct NewPrioritySheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("What matters most?", text: $title, axis: .vertical)
-                        .font(.rounded(.title3, weight: .semibold))
-                        .focused($titleFocused)
+                    HStack(alignment: .top, spacing: 10) {
+                        TextField(isListening ? "Listening… say your priority" : "What matters most?",
+                                  text: $title, axis: .vertical)
+                            .font(.rounded(.title3, weight: .semibold))
+                            .focused($titleFocused)
+                        DictationButton(text: $title, diameter: 36, isListening: $isListening) {
+                            titleFocused = false
+                        }
+                    }
                 } footer: {
                     Text("Tip: pick one to three priorities a day. ⭐")
                 }
