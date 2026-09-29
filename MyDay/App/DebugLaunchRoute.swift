@@ -63,6 +63,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalMoods = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
+    /// Tick every priority left once Today's Priority appears ("priority-alldone").
+    @MainActor private static var priorityAllDone = false
     /// Days from today that the calendar selects when it appears ("calendar-tomorrow").
     @MainActor private static var calendarDayOffset = 0
     /// "todos-hearts" and "priority-hearts": keep a tick's two hearts (and a to-do's place) a
@@ -100,6 +102,12 @@ enum DebugLaunchRoute {
     }
 
     @MainActor
+    static func takePriorityAllDone() -> Bool {
+        defer { priorityAllDone = false }
+        return priorityAllDone
+    }
+
+    @MainActor
     static func takePriorityTick() -> Bool {
         defer { priorityTick = false }
         return priorityTick
@@ -134,6 +142,10 @@ enum DebugLaunchRoute {
         case "priority-hearts":
             priorityTick = true
             holdsTickPop = true
+            router.open(.priority(today))
+        case "priority-alldone":
+            // After priority-hearts: ticks the rest, so the all-done card and confetti show.
+            priorityAllDone = true
             router.open(.priority(today))
         case "priority-empty":
             // The last route: clears the day's demo priority to show the empty page.

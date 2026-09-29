@@ -4,12 +4,14 @@ import UIKit
 
 /// "Today's Priority": the illustrated scene fills the top of the screen and a soft pink panel
 /// holds "Add today's priority…" and the day's priorities (a little star until there is one).
-/// A ticked priority moves down to "Completed", as on To-Dos. The page is full screen: the
-/// status bar and the tab bar hide while it is open.
+/// A ticked priority moves down to "Completed", as on To-Dos; when all are done, the design's
+/// "All of today's priorities are done!" card shows and confetti flies. The page is full
+/// screen: the status bar and the tab bar hide while it is open.
 struct TodaysPriorityView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(\.hostTab) private var hostTab
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the Completed list is open.
     @AppStorage(Prefs.showCompletedPriorities) private var showCompleted = false
     @Query private var priorities: [Priority]
@@ -22,6 +24,9 @@ struct TodaysPriorityView: View {
     /// Just-ticked priorities stay in place for a moment (so their hearts can pop) before
     /// they move down to Completed.
     @State private var settling: Set<PersistentIdentifier> = []
+    /// Goes up each time the day's last priority is ticked; each change plays the confetti.
+    @State private var celebration = 0
+    @State private var showsConfetti = false
     @FocusState private var draftFocused: Bool
     private let day: Date
 
@@ -67,6 +72,13 @@ struct TodaysPriorityView: View {
             page(width: proxy.size.width, safeTop: proxy.safeAreaInsets.top,
                  visibleHeight: proxy.size.height + proxy.safeAreaInsets.top)
         }
+        .overlay {
+            if showsConfetti {
+                ConfettiCelebration()
+                    .id(celebration)
+                    .ignoresSafeArea()
+            }
+        }
         .background(PriorityPanel.base.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -91,8 +103,16 @@ struct TodaysPriorityView: View {
 
     #if DEBUG
     /// `priority-hearts`: ticks the first priority about when the screenshot is taken
-    /// (10 seconds after the app is ready), so its hearts show.
+    /// (10 seconds after the app is ready), so its hearts show. `priority-alldone` ticks the
+    /// rest a little earlier, so the all-done card is in place and the confetti is flying.
     private func tickForScreenshot() async {
+        if DebugLaunchRoute.takePriorityAllDone() {
+            try? await Task.sleep(for: .seconds(8.2))
+            for priority in priorities where !priority.isCompleted {
+                toggle(priority)
+            }
+            return
+        }
         guard DebugLaunchRoute.takePriorityTick() else { return }
         try? await Task.sleep(for: .seconds(9.4))
         if let first = priorities.first(where: { !$0.isCompleted }) {
@@ -119,10 +139,12 @@ struct TodaysPriorityView: View {
                                   minHeight: max(300, visibleHeight - headerHeight - 30))
                     .plainListRow(EdgeInsets(top: 12, leading: 16, bottom: 18, trailing: 16))
             } else {
-                listHeading
-                    .plainListRow(EdgeInsets(top: 14, leading: 20, bottom: 4, trailing: 20))
+                if !openRows.isEmpty {
+                    listHeading
+                        .plainListRow(EdgeInsets(top: 14, leading: 20, bottom: 4, trailing: 20))
+                }
                 priorityRows
-                if priorities.count > 3 {
+                if openRows.count > 3 {
                     Label("Tip: keep it to three — focus is a superpower ✨", systemImage: "lightbulb.fill")
                         .font(.rounded(.footnote, weight: .semibold))
                         .foregroundStyle(Palette.cocoa)
@@ -271,8 +293,9 @@ struct TodaysPriorityView: View {
             move(from: source, to: destination, in: open)
         }
         if open.isEmpty {
-            allDoneNote
-                .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            PriorityAllDoneCard(isToday: day.isToday)
+                .plainListRow(EdgeInsets(top: 14, leading: 16, bottom: 6, trailing: 16))
+                .transition(.scale(scale: 0.92).combined(with: .opacity))
         }
         if !done.isEmpty {
             CompletedHeader(count: done.count, isOpen: showCompleted, items: "priorities") {
@@ -301,17 +324,6 @@ struct TodaysPriorityView: View {
                 }
             }
             .moveDisabled(priority.isCompleted)
-    }
-
-    /// Every priority of the day is ticked.
-    private var allDoneNote: some View {
-        Label(day.isToday ? "All of today's priorities are done. Well done! 🎉"
-                          : "All of this day's priorities are done 🎉",
-              systemImage: "star.circle.fill")
-            .font(.rounded(.subheadline, weight: .bold))
-            .foregroundStyle(Palette.cocoa)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .cuteCard(tint: Palette.honey, padding: 14)
     }
 
     /// The day's gentle focus quote, with the heart divider.
@@ -366,12 +378,33 @@ struct TodaysPriorityView: View {
             return
         }
         Haptics.success()
+        if priorities.allSatisfy(\.isCompleted) {
+            celebrate()
+        }
         // Let the tick and its hearts show, then move it down to Completed.
         let settle = TickPop.settleDelay
         Task {
             try? await Task.sleep(for: .seconds(settle))
             withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
                 _ = settling.remove(id)
+            }
+        }
+    }
+
+    /// The last priority is done: the finished ones are listed, and the confetti flies.
+    private func celebrate() {
+        celebration += 1
+        withAnimation(.snappy) { showCompleted = true }
+        let message = day.isToday ? "All of today's priorities are done! Well done!"
+                                  : "All priorities are done! Well done!"
+        AccessibilityNotification.Announcement(message).post()
+        guard !reduceMotion else { return }
+        showsConfetti = true
+        let run = celebration
+        Task {
+            try? await Task.sleep(for: .seconds(ConfettiCelebration.duration + 0.2))
+            if celebration == run {
+                showsConfetti = false
             }
         }
     }
@@ -406,12 +439,13 @@ struct TodaysPriorityView: View {
 // MARK: - Scene
 
 /// The picture at the top of Today's Priority, with its "Today's Priority — Focus on what
-/// matters most" title. Its first 150 rows are soft curtains that sit behind the status bar.
+/// matters most" title and the girl in her yellow frock. Its first 150 rows are soft curtains
+/// that sit behind the status bar.
 enum PriorityScene {
-    static let imageSize = CGSize(width: 941, height: 792)
+    static let imageSize = CGSize(width: 853, height: 678)
     /// The row (px) where the design's back and ⋮ buttons sit: it lines up with the
     /// navigation bar's buttons.
-    static let buttonsRow: CGFloat = 216
+    static let buttonsRow: CGFloat = 221
     /// The panel covers the picture's last 44 rows.
     static let overlapRows: CGFloat = 44
 
@@ -567,6 +601,49 @@ struct PriorityEmptyCard: View {
                 .strokeBorder(Color(hex: 0xEBBCD2), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
         )
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Every priority of the day is done: the design's card, with the girl, the puppy and the
+/// kitten cheering among balloons and stars, "All of today's priorities are done! Well done!
+/// You showed up, stayed focused and made it happen!" On another day the ribbon says "All
+/// priorities are done!".
+struct PriorityAllDoneCard: View {
+    let isToday: Bool
+
+    /// The picture's width over its height.
+    private static let aspectRatio: CGFloat = 789.0 / 503.0
+    private static let ribbonText = Color(hex: 0x5A1470)
+
+    var body: some View {
+        Image(isToday ? "PriorityAllDone" : "PriorityAllDoneBlank")
+            .resizable()
+            .aspectRatio(Self.aspectRatio, contentMode: .fit)
+            .overlay {
+                if !isToday {
+                    // On the ribbon, where the design says "All of today's priorities are done!".
+                    GeometryReader { proxy in
+                        Text("All priorities\nare done!")
+                            .font(.system(size: proxy.size.width * 0.06, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Self.ribbonText)
+                            .multilineTextAlignment(.center)
+                            .position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.575)
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 25, style: .continuous)
+                    .strokeBorder(Color.white, lineWidth: 2)
+            )
+            .shadow(color: Palette.hotPink.opacity(0.16), radius: 10, x: 0, y: 4)
+            .accessibilityElement()
+            .accessibilityLabel(spokenText)
+    }
+
+    private var spokenText: String {
+        let title = isToday ? "All of today's priorities are done!" : "All priorities are done!"
+        return title + " Well done! You showed up, stayed focused and made it happen!"
     }
 }
 
