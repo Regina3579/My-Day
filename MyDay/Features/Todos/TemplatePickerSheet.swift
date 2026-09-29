@@ -1,7 +1,8 @@
 import SwiftData
 import SwiftUI
 
-/// ▦ Templates: ready-made lists (plus the person's own) to add in one go.
+/// ▦ Templates: ready-made lists (the starters and the person's own) to add in one go. Every
+/// template has ⋯ with Edit and Delete; the starters can be brought back if deleted.
 struct TemplatePickerSheet: View {
     let day: Date
     /// Titles of the day's to-dos, offered when saving a new template.
@@ -11,13 +12,9 @@ struct TemplatePickerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
-    @Query(sort: \TaskTemplate.createdAt) private var saved: [TaskTemplate]
+    @Query(sort: \TaskTemplate.createdAt) private var templates: [TaskTemplate]
     @State private var path: [TemplateRoute] = []
-    @State private var pendingDelete: TemplateBlueprint?
-
-    private var blueprints: [TemplateBlueprint] {
-        TemplateBlueprint.starters + saved.map { TemplateBlueprint($0) }
-    }
+    @State private var pendingDelete: TaskTemplate?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -29,20 +26,8 @@ struct TemplatePickerSheet: View {
 
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                               spacing: 12) {
-                        ForEach(Array(blueprints.enumerated()), id: \.element.id) { index, blueprint in
-                            Button {
-                                path.append(.detail(blueprint))
-                            } label: {
-                                TemplateCard(blueprint: blueprint, tint: RowTint.at(index))
-                            }
-                            .buttonStyle(PressScaleStyle())
-                            .contextMenu {
-                                if blueprint.customID != nil {
-                                    Button("Delete Template", systemImage: "trash", role: .destructive) {
-                                        pendingDelete = blueprint
-                                    }
-                                }
-                            }
+                        ForEach(Array(templates.enumerated()), id: \.element.persistentModelID) { index, template in
+                            card(template, tint: RowTint.at(index))
                         }
 
                         Button {
@@ -51,6 +36,18 @@ struct TemplatePickerSheet: View {
                             NewTemplateCard()
                         }
                         .buttonStyle(PressScaleStyle())
+                    }
+
+                    if TemplateLibrary.isMissingStarters(among: templates) {
+                        Button {
+                            withAnimation(.snappy) { TemplateLibrary.restoreStarters(in: context) }
+                            Haptics.tap()
+                        } label: {
+                            Label("Bring back the starter templates", systemImage: "arrow.counterclockwise")
+                                .font(.rounded(.subheadline, weight: .bold))
+                                .foregroundStyle(Palette.grape)
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -64,19 +61,24 @@ struct TemplatePickerSheet: View {
                 }
             }
             .navigationDestination(for: TemplateRoute.self) { route in
-                switch route {
-                case .detail(let blueprint):
-                    TemplateDetailView(blueprint: blueprint, day: day,
-                                       onAdd: { titles in add(titles, from: blueprint) },
-                                       onDelete: { delete(blueprint) })
-                case .create:
-                    SaveTemplateView(currentTitles: currentTitles) { path.removeLast() }
-                }
+                destination(route)
             }
             .confirmationDialog("Delete this template?", isPresented: deleteBinding, titleVisibility: .visible,
-                                presenting: pendingDelete) { blueprint in
-                Button("Delete “\(blueprint.name)”", role: .destructive) { delete(blueprint) }
+                                presenting: pendingDelete) { template in
+                Button("Delete “\(template.name)”", role: .destructive) { delete(template) }
+            } message: { template in
+                Text(template.starterID.isEmpty
+                     ? "This can't be undone."
+                     : "You can bring the starter templates back at the bottom of the list.")
             }
+            #if DEBUG
+            .task {
+                // `todos-template-edit`: opens the first template's editor for the screenshot.
+                guard DebugLaunchRoute.takeTemplateEdit() else { return }
+                try? await Task.sleep(for: .seconds(0.5))
+                if let first = templates.first { path = [.edit(first.id)] }
+            }
+            #endif
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
@@ -86,56 +88,112 @@ struct TemplatePickerSheet: View {
         )
     }
 
+    /// A template's card: tap it to see its to-dos; ⋯ (or press and hold) to edit or delete it.
+    private func card(_ template: TaskTemplate, tint: RowTint) -> some View {
+        Button {
+            path.append(.detail(template.id))
+        } label: {
+            TemplateCard(template: template, tint: tint)
+        }
+        .buttonStyle(PressScaleStyle())
+        .overlay(alignment: .topTrailing) {
+            Menu {
+                actions(for: template)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(Palette.berry)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.white.opacity(0.92)))
+                    .shadow(color: tint.edge.opacity(0.6), radius: 3, x: 0, y: 1)
+                    .padding(8)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Edit or delete \(template.name)")
+        }
+        .contextMenu {
+            actions(for: template)
+        }
+    }
+
+    @ViewBuilder
+    private func actions(for template: TaskTemplate) -> some View {
+        Button("Edit Template", systemImage: "pencil") {
+            path.append(.edit(template.id))
+        }
+        Button("Delete Template", systemImage: "trash", role: .destructive) {
+            pendingDelete = template
+        }
+    }
+
+    @ViewBuilder
+    private func destination(_ route: TemplateRoute) -> some View {
+        switch route {
+        case .detail(let id):
+            if let template = templates.first(where: { $0.id == id }) {
+                TemplateDetailView(template: template,
+                                   onAdd: { titles in add(titles, from: template) },
+                                   onEdit: { path.append(.edit(id)) },
+                                   onDelete: { delete(template) })
+            }
+        case .edit(let id):
+            if let template = templates.first(where: { $0.id == id }) {
+                TemplateEditorView(template: template) { path.removeLast() }
+            }
+        case .create:
+            TemplateEditorView(currentTitles: currentTitles) { path.removeLast() }
+        }
+    }
+
     private var deleteBinding: Binding<Bool> {
         Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
     }
 
-    private func add(_ titles: [String], from blueprint: TemplateBlueprint) {
+    private func add(_ titles: [String], from template: TaskTemplate) {
         guard !titles.isEmpty else { return }
-        TaskActions.add(titles: titles, category: blueprint.category, to: day, in: context)
+        TaskActions.add(titles: titles, category: template.category, to: day, in: context)
         Haptics.success()
         onAdded(titles.count)
         dismiss()
     }
 
-    private func delete(_ blueprint: TemplateBlueprint) {
-        guard let id = blueprint.customID, let template = saved.first(where: { $0.id == id }) else { return }
-        if path.last == .detail(blueprint) {
-            path.removeLast()
-        }
-        context.delete(template)
+    private func delete(_ template: TaskTemplate) {
+        let id = template.id
+        path.removeAll { $0 == .detail(id) || $0 == .edit(id) }
+        withAnimation(.snappy) { context.delete(template) }
         Haptics.tap()
     }
 }
 
 enum TemplateRoute: Hashable {
-    case detail(TemplateBlueprint)
+    case detail(UUID)
+    case edit(UUID)
     case create
 }
 
 // MARK: - Cards
 
 private struct TemplateCard: View {
-    let blueprint: TemplateBlueprint
+    let template: TaskTemplate
     let tint: RowTint
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(blueprint.emoji)
+            Text(template.emoji)
                 .font(.system(size: 34))
                 .frame(width: 58, height: 58)
                 .background(Circle().fill(Color.white.opacity(0.8)))
                 .accessibilityHidden(true)
-            Text(blueprint.name)
+            Text(template.name)
                 .font(.rounded(.headline, weight: .heavy))
                 .foregroundStyle(Palette.ink)
                 .multilineTextAlignment(.leading)
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
-            Text("\(blueprint.items.count) to-dos · \(blueprint.category.label)")
+            Text("\(template.items.count) to-dos · \(template.category.label)")
                 .font(.rounded(.caption, weight: .semibold))
                 .foregroundStyle(tint.accent)
-            if blueprint.customID != nil {
+            if template.starterID.isEmpty {
                 Text("My template")
                     .font(.rounded(.caption2, weight: .bold))
                     .foregroundStyle(Color.white)
@@ -194,56 +252,58 @@ private struct NewTemplateCard: View {
 // MARK: - Checklist
 
 /// A template's to-dos, each ticked on by default. Untick what you don't need, then add.
+/// Edit and Delete sit at the top.
 private struct TemplateDetailView: View {
-    let blueprint: TemplateBlueprint
-    let day: Date
+    let template: TaskTemplate
     let onAdd: ([String]) -> Void
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     @State private var selected: Set<Int>
     @State private var confirmDelete = false
 
-    init(blueprint: TemplateBlueprint, day: Date, onAdd: @escaping ([String]) -> Void, onDelete: @escaping () -> Void) {
-        self.blueprint = blueprint
-        self.day = day
+    init(template: TaskTemplate, onAdd: @escaping ([String]) -> Void, onEdit: @escaping () -> Void,
+         onDelete: @escaping () -> Void) {
+        self.template = template
         self.onAdd = onAdd
+        self.onEdit = onEdit
         self.onDelete = onDelete
-        _selected = State(initialValue: Set(blueprint.items.indices))
+        _selected = State(initialValue: Set(template.items.indices))
     }
 
     private var chosenTitles: [String] {
-        blueprint.items.indices.filter { selected.contains($0) }.map { blueprint.items[$0] }
+        template.items.indices.filter { selected.contains($0) }.map { template.items[$0] }
     }
 
-    private var allSelected: Bool { selected.count == blueprint.items.count }
+    private var allSelected: Bool { selected.count == template.items.count }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 12) {
-                    Text(blueprint.emoji)
+                    Text(template.emoji)
                         .font(.system(size: 40))
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(blueprint.name)
+                        Text(template.name)
                             .font(.rounded(.title2, weight: .heavy))
                             .foregroundStyle(Palette.ink)
-                        Text("\(blueprint.category.emoji) \(blueprint.category.label)")
+                        Text("\(template.category.emoji) \(template.category.label)")
                             .font(.rounded(.subheadline, weight: .semibold))
-                            .foregroundStyle(blueprint.category.color)
+                            .foregroundStyle(template.category.color)
                     }
                 }
                 .padding(.bottom, 6)
 
                 HStack {
-                    Text("\(selected.count) of \(blueprint.items.count) selected")
+                    Text("\(selected.count) of \(template.items.count) selected")
                         .font(.rounded(.subheadline, weight: .semibold))
                         .foregroundStyle(Palette.inkSoft)
                     Spacer()
                     Button(allSelected ? "Select None" : "Select All") {
                         Haptics.tap()
                         withAnimation(.snappy) {
-                            selected = allSelected ? [] : Set(blueprint.items.indices)
+                            selected = allSelected ? [] : Set(template.items.indices)
                         }
                     }
                     .font(.rounded(.subheadline, weight: .bold))
@@ -251,7 +311,7 @@ private struct TemplateDetailView: View {
                     .frame(minHeight: 44)
                 }
 
-                ForEach(Array(blueprint.items.enumerated()), id: \.offset) { index, item in
+                ForEach(Array(template.items.enumerated()), id: \.offset) { index, item in
                     let isOn = selected.contains(index)
                     let tint = RowTint.at(index)
                     Button {
@@ -301,45 +361,95 @@ private struct TemplateDetailView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
         }
-        .navigationTitle(blueprint.name)
+        .navigationTitle(template.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if blueprint.customID != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Delete Template", systemImage: "trash", role: .destructive) {
-                        confirmDelete = true
-                    }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Edit Template", systemImage: "pencil", action: onEdit)
+                Button("Delete Template", systemImage: "trash", role: .destructive) {
+                    confirmDelete = true
                 }
             }
         }
+        // After an edit, every to-do starts ticked again.
+        .onChange(of: template.items) { _, items in
+            selected = Set(items.indices)
+        }
         .confirmationDialog("Delete this template?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete", role: .destructive, action: onDelete)
+            Button("Delete “\(template.name)”", role: .destructive, action: onDelete)
+        } message: {
+            Text(template.starterID.isEmpty
+                 ? "This can't be undone."
+                 : "You can bring the starter templates back at the bottom of the list.")
         }
     }
 }
 
-// MARK: - Save as Template
+// MARK: - Make or edit a template
 
-/// Make a template: a name, an emoji, a category and its to-dos.
-private struct SaveTemplateView: View {
+/// Make a template, or edit one: its name, emoji, category and to-dos (each can be
+/// rewritten, removed or added).
+private struct TemplateEditorView: View {
+    /// The template being edited (nil when making a new one).
+    let template: TaskTemplate?
     let currentTitles: [String]
-    let onSaved: () -> Void
+    let onDone: () -> Void
 
     @Environment(\.modelContext) private var context
-    @State private var name = ""
-    @State private var emoji = "✨"
-    @State private var category: TaskCategory = .personal
-    @State private var items: [String] = []
+    @State private var name: String
+    @State private var emoji: String
+    @State private var category: TaskCategory
+    @State private var items: [Item]
     @State private var newItem = ""
     @FocusState private var focus: Field?
 
-    private enum Field: Hashable {
-        case name, newItem
+    private struct Item: Identifiable {
+        let id = UUID()
+        var text: String
     }
 
-    private static let emojis = ["✨", "🌸", "☀️", "🏃‍♀️", "🧺", "🛒", "📚", "💼", "🧳", "🍳", "🐶", "💖"]
+    private enum Field: Hashable {
+        case name, item(UUID), newItem
+    }
 
-    private var canSave: Bool { !name.trimmed.isEmpty && !items.isEmpty }
+    private static let emojis = ["✨", "🌸", "☀️", "🌅", "🏃‍♀️", "🏋️", "🧺", "🧹", "🛒", "📚", "💼", "🧳",
+                                 "✈️", "🍳", "🐶", "💖"]
+
+    /// Makes a new template (today's to-dos can be copied in).
+    init(currentTitles: [String], onDone: @escaping () -> Void) {
+        template = nil
+        self.currentTitles = currentTitles
+        self.onDone = onDone
+        _name = State(initialValue: "")
+        _emoji = State(initialValue: "✨")
+        _category = State(initialValue: .personal)
+        _items = State(initialValue: [])
+    }
+
+    /// Edits `template`.
+    init(template: TaskTemplate, onDone: @escaping () -> Void) {
+        self.template = template
+        currentTitles = []
+        self.onDone = onDone
+        _name = State(initialValue: template.name)
+        _emoji = State(initialValue: template.emoji)
+        _category = State(initialValue: template.category)
+        _items = State(initialValue: template.items.map { Item(text: $0) })
+    }
+
+    private var isEditing: Bool { template != nil }
+
+    /// The emojis to pick from, with the template's own first when it isn't one of them.
+    private var emojiOptions: [String] {
+        guard let current = template?.emoji, !Self.emojis.contains(current) else { return Self.emojis }
+        return [current] + Self.emojis
+    }
+
+    private var cleanItems: [String] {
+        (items.map(\.text) + [newItem]).map(\.trimmed).filter { !$0.isEmpty }
+    }
+
+    private var canSave: Bool { !name.trimmed.isEmpty && !cleanItems.isEmpty }
 
     var body: some View {
         ScrollView {
@@ -359,7 +469,7 @@ private struct SaveTemplateView: View {
                 field(label: "Emoji") {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(Self.emojis, id: \.self) { option in
+                            ForEach(emojiOptions, id: \.self) { option in
                                 Button {
                                     Haptics.tap()
                                     emoji = option
@@ -385,24 +495,27 @@ private struct SaveTemplateView: View {
 
                 field(label: "To-dos") {
                     VStack(spacing: 8) {
-                        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                        ForEach($items) { $item in
                             HStack(spacing: 10) {
                                 Text("•")
                                     .foregroundStyle(Palette.hotPink)
                                     .accessibilityHidden(true)
-                                Text(item)
+                                TextField("To-do", text: $item.text, axis: .vertical)
                                     .font(.rounded(.body, weight: .medium))
                                     .foregroundStyle(Palette.ink)
-                                Spacer(minLength: 0)
+                                    .focused($focus, equals: .item(item.id))
+                                    .padding(.vertical, 12)
                                 Button {
-                                    withAnimation(.snappy) { _ = items.remove(at: index) }
+                                    let id = item.id
+                                    focus = nil
+                                    withAnimation(.snappy) { items.removeAll { $0.id == id } }
                                 } label: {
                                     Image(systemName: "minus.circle.fill")
                                         .font(.system(size: 20))
                                         .foregroundStyle(Color(hex: 0xE26D6D))
                                         .frame(width: 44, height: 44)
                                 }
-                                .accessibilityLabel("Remove \(item)")
+                                .accessibilityLabel("Remove \(item.text)")
                             }
                             .padding(.leading, 14)
                             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(0.8)))
@@ -435,8 +548,9 @@ private struct SaveTemplateView: View {
                             Button {
                                 Haptics.tap()
                                 withAnimation(.snappy) {
-                                    for title in currentTitles where !items.contains(title) {
-                                        items.append(title)
+                                    let present = Set(items.map(\.text))
+                                    for title in currentTitles where !present.contains(title) {
+                                        items.append(Item(text: title))
                                     }
                                 }
                             } label: {
@@ -454,16 +568,18 @@ private struct SaveTemplateView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Button("Save Template 💾", action: save)
+            Button(isEditing ? "Save Changes 💾" : "Save Template 💾", action: save)
                 .buttonStyle(PillButtonStyle())
                 .disabled(!canSave)
                 .opacity(canSave ? 1 : 0.6)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
         }
-        .navigationTitle("Save as Template")
+        .navigationTitle(isEditing ? "Edit Template" : "Save as Template")
         .navigationBarTitleDisplayMode(.inline)
-        .task { focus = .name }
+        .task {
+            if !isEditing { focus = .name }
+        }
     }
 
     private func field<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
@@ -480,17 +596,23 @@ private struct SaveTemplateView: View {
     private func addItem() {
         let clean = newItem.trimmed
         guard !clean.isEmpty else { return }
-        withAnimation(.snappy) { items.append(clean) }
+        withAnimation(.snappy) { items.append(Item(text: clean)) }
         newItem = ""
         focus = .newItem
     }
 
     private func save() {
-        let pending = newItem.trimmed
-        if !pending.isEmpty { items.append(pending) }
         guard canSave else { return }
-        context.insert(TaskTemplate(name: name.trimmed, emoji: emoji, category: category, items: items))
+        let titles = cleanItems
+        if let template {
+            template.name = name.trimmed
+            template.emoji = emoji
+            template.category = category
+            template.items = titles
+        } else {
+            context.insert(TaskTemplate(name: name.trimmed, emoji: emoji, category: category, items: titles))
+        }
         Haptics.success()
-        onSaved()
+        onDone()
     }
 }

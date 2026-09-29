@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-/// A reusable to-do list the person saved themselves.
+/// A reusable to-do list: a starter (see `TemplateBlueprint`) or one the person made. Every
+/// template can be edited and deleted.
 @Model
 final class TaskTemplate {
     var id: UUID = UUID()
@@ -10,6 +11,8 @@ final class TaskTemplate {
     var categoryRaw: String = "personal"
     var items: [String] = []
     var createdAt: Date = Date()
+    /// Which starter template this began as ("" for one the person made).
+    var starterID: String = ""
 
     init(name: String, emoji: String, category: TaskCategory, items: [String]) {
         self.id = UUID()
@@ -26,29 +29,14 @@ final class TaskTemplate {
     }
 }
 
-/// A template as shown in the picker: a built-in starter or a saved `TaskTemplate`.
-struct TemplateBlueprint: Identifiable, Hashable {
+/// One of the six starter templates. They are copied into the store once (see
+/// `TemplateLibrary`), so they can be edited and deleted like the person's own.
+struct TemplateBlueprint {
     let id: String
     let name: String
     let emoji: String
     let category: TaskCategory
     let items: [String]
-    /// Set for templates the person made, so they can be deleted.
-    var customID: UUID?
-
-    init(id: String, name: String, emoji: String, category: TaskCategory, items: [String], customID: UUID? = nil) {
-        self.id = id
-        self.name = name
-        self.emoji = emoji
-        self.category = category
-        self.items = items
-        self.customID = customID
-    }
-
-    init(_ template: TaskTemplate) {
-        self.init(id: template.id.uuidString, name: template.name, emoji: template.emoji,
-                  category: template.category, items: template.items, customID: template.id)
-    }
 
     static let starters: [TemplateBlueprint] = [
         TemplateBlueprint(id: "morning", name: "Morning Routine", emoji: "🌅", category: .personal,
@@ -69,4 +57,34 @@ struct TemplateBlueprint: Identifiable, Hashable {
                           items: ["Review my notes", "Read one chapter", "Practice questions",
                                   "Make flashcards", "Take a short break"])
     ]
+}
+
+/// The starter templates in the store: added once, and brought back on request.
+@MainActor
+enum TemplateLibrary {
+    /// Adds the starters the first time (one deleted later stays deleted).
+    static func seedIfNeeded(in context: ModelContext) {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Prefs.didSeedTemplates) else { return }
+        defaults.set(true, forKey: Prefs.didSeedTemplates)
+        restoreStarters(in: context)
+    }
+
+    /// Adds back any starter that isn't there (edited ones are kept as they are).
+    static func restoreStarters(in context: ModelContext) {
+        let present = Set(((try? context.fetch(FetchDescriptor<TaskTemplate>())) ?? []).map(\.starterID))
+        for (index, starter) in TemplateBlueprint.starters.enumerated() where !present.contains(starter.id) {
+            let template = TaskTemplate(name: starter.name, emoji: starter.emoji, category: starter.category,
+                                        items: starter.items)
+            template.starterID = starter.id
+            // Listed first, in their usual order, before the person's own.
+            template.createdAt = Date(timeIntervalSinceReferenceDate: Double(index))
+            context.insert(template)
+        }
+    }
+
+    static func isMissingStarters(among templates: [TaskTemplate]) -> Bool {
+        let present = Set(templates.map(\.starterID))
+        return TemplateBlueprint.starters.contains { !present.contains($0.id) }
+    }
 }

@@ -17,6 +17,8 @@ enum Prefs {
     static let eveningTime = "eveningReminderSeconds"
     /// Set by earlier versions, which added example to-dos, a priority and a journal page.
     static let didSeedWelcome = "didSeedWelcomeContent"
+    /// Set once the starter templates have been added to the store (see `TemplateLibrary`).
+    static let didSeedTemplates = "didSeedStarterTemplates"
     /// Set once those examples have been removed (see `SampleContent`).
     static let didRemoveSamples = "didRemoveSampleContent"
 }

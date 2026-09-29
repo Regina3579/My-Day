@@ -72,6 +72,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalVoice = false
     /// Scroll Settings to Sounds & Haptics ("settings-sounds").
     @MainActor private static var settingsSounds = false
+    /// Open the first template's editor in Templates ("todos-template-edit").
+    @MainActor private static var templateEdit = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Tick every priority left once Today's Priority appears ("priority-alldone").
@@ -98,6 +100,12 @@ enum DebugLaunchRoute {
     static func takeJournalAnchor() -> String? {
         defer { journalAnchor = nil }
         return journalAnchor
+    }
+
+    @MainActor
+    static func takeTemplateEdit() -> Bool {
+        defer { templateEdit = false }
+        return templateEdit
     }
 
     @MainActor
@@ -224,6 +232,7 @@ enum DebugLaunchRoute {
         case let route where route.hasPrefix("todos-"):
             todosSheet = String(route.dropFirst("todos-".count))
             holdsTickPop = route == "todos-hearts"
+            templateEdit = route == "todos-template-edit"
             router.open(.todos(today))
         default: break
         }
