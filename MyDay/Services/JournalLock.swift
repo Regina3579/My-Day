@@ -151,21 +151,24 @@ enum JournalLock {
     }
 
     /// Turns the lock on with `method`, keeping `secret` for a pattern or passcode and
-    /// forgetting any other.
-    static func enable(_ method: JournalLockMethod, secret: String? = nil) {
+    /// forgetting any other. Returns false, changing nothing, when the pattern or passcode
+    /// couldn't be kept.
+    @discardableResult
+    static func enable(_ method: JournalLockMethod, secret: String? = nil) -> Bool {
         let defaults = UserDefaults.standard
-        for other in JournalLockMethod.allCases where other.usesSecret && other != method {
-            JournalSecretStore.remove(for: other)
-        }
-        if let secret, method.usesSecret {
-            JournalSecretStore.save(secret, for: method)
+        if method.usesSecret {
+            guard let secret, JournalSecretStore.save(secret, for: method) else { return false }
             if method == .passcode {
                 defaults.set(secret.count, forKey: Prefs.journalPasscodeLength)
             }
         }
+        for other in JournalLockMethod.allCases where other.usesSecret && other != method {
+            JournalSecretStore.remove(for: other)
+        }
         defaults.set(method.rawValue, forKey: Prefs.journalLockMethod)
         defaults.set(true, forKey: Prefs.journalLock)
         resetTries()
+        return true
     }
 
     /// Turns the lock off and forgets the pattern and passcode.
@@ -197,6 +200,12 @@ enum JournalSecretStore {
         read(account: method.rawValue) != nil
     }
 
+    #if DEBUG
+    /// Screenshot runs only: CI builds the app unsigned, and an unsigned app has no Keychain
+    /// in the simulator, so the demo pattern and passcode are kept in memory there.
+    private static var screenshotRecords: [String: Data] = [:]
+    #endif
+
     @discardableResult
     static func save(_ secret: String, for method: JournalLockMethod) -> Bool {
         let salt = Data((0..<saltLength).map { _ in UInt8.random(in: .min ... .max) })
@@ -205,7 +214,14 @@ enum JournalSecretStore {
         var item = query(account: method.rawValue)
         item[kSecValueData as String] = record
         item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
+        let status = SecItemAdd(item as CFDictionary, nil)
+        #if DEBUG
+        if status == errSecMissingEntitlement && DebugLaunchRoute.isScreenshotRun {
+            screenshotRecords[method.rawValue] = record
+            return true
+        }
+        #endif
+        return status == errSecSuccess
     }
 
     static func matches(_ secret: String, for method: JournalLockMethod) -> Bool {
@@ -220,6 +236,9 @@ enum JournalSecretStore {
 
     static func remove(for method: JournalLockMethod) {
         SecItemDelete(query(account: method.rawValue) as CFDictionary)
+        #if DEBUG
+        screenshotRecords[method.rawValue] = nil
+        #endif
     }
 
     private static func digest(_ secret: String, salt: Data) -> Data {
@@ -239,6 +258,9 @@ enum JournalSecretStore {
     }
 
     private static func read(account: String) -> Data? {
+        #if DEBUG
+        if let record = screenshotRecords[account] { return record }
+        #endif
         var item = query(account: account)
         item[kSecReturnData as String] = true
         item[kSecMatchLimit as String] = kSecMatchLimitOne

@@ -280,6 +280,8 @@ struct FeelingsSummary: View {
         }
         let moods = ranked.map(\.key)
         let most = ranked.first?.value ?? 0
+        // "Mostly Happy" only when one mood really was felt most.
+        let isMix = ranked.count > 1 && ranked[1].value == most
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("How I've been feeling")
@@ -299,10 +301,13 @@ struct FeelingsSummary: View {
                         .frame(width: 70, height: 64)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Mostly \(top.label)")
+                        Text(isMix ? "A mix of feelings" : "Mostly \(top.label)")
                             .font(.rounded(.title2, weight: .heavy))
-                            .foregroundStyle(top.chooserColors.label)
-                        Text("\(most) of \(entries.count) \(entries.count == 1 ? "page" : "pages")")
+                            .foregroundStyle(isMix ? JournalStyle.plum : top.chooserColors.label)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                        Text(isMix ? "\(moods.count) moods on \(entries.count) pages"
+                                   : "\(most) of \(entries.count) \(entries.count == 1 ? "page" : "pages")")
                             .font(.rounded(.subheadline, weight: .semibold))
                             .foregroundStyle(JournalStyle.soft)
                     }

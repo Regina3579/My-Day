@@ -261,12 +261,13 @@ struct JournalTabsGrid: View {
                     .foregroundStyle(shelf.color.gradient)
                     .frame(width: 40, height: 40)
                     .background(Circle().fill(isOn ? Color.white : shelf.color.opacity(0.13)))
+                // One word stays on one line (shrinking a little if it must), never "Tem-plates".
                 Text(shelf.tileTitle)
                     .font(.rounded(.footnote, weight: .bold))
                     .foregroundStyle(isOn ? Color.white : JournalPagesStyle.heading)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
+                    .lineLimit(shelf.tileTitle.contains("\n") ? 2 : 1)
+                    .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, minHeight: 34)
             }
             .padding(.top, 9)
@@ -696,13 +697,13 @@ struct JournalSearchBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(JournalStyle.plum)
                     .accessibilityHidden(true)
                 TextField("Search your journal…", text: $text)
-                    .font(.rounded(.body, weight: .medium))
+                    .font(.rounded(.callout, weight: .medium))
                     .foregroundStyle(JournalStyle.ink)
                     .focused(focused)
                     .submitLabel(.search)
@@ -723,22 +724,22 @@ struct JournalSearchBar: View {
                     .accessibilityLabel("Clear search")
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .frame(minHeight: 56)
             .background(Capsule().fill(Color.white.opacity(0.97)))
             .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
             .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
 
             Button(action: onFilter) {
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(JournalStyle.pink)
                     Text("Filter")
-                        .font(.rounded(.body, weight: .bold))
+                        .font(.rounded(.callout, weight: .bold))
                         .foregroundStyle(JournalStyle.plum)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 14)
                 .frame(minHeight: 56)
                 .background(Capsule().fill(Color.white.opacity(0.97)))
                 .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))

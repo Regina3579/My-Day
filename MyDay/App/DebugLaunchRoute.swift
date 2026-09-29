@@ -6,7 +6,7 @@ import UIKit
 /// Debug builds only: `-screenshotRoute <name>` opens a screen at launch,
 /// so `scripts/screenshots.sh` can capture every screen in the simulator.
 enum DebugLaunchRoute {
-    private static var isScreenshotRun: Bool {
+    static var isScreenshotRun: Bool {
         ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
     }
 

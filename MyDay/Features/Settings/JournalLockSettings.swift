@@ -316,7 +316,11 @@ struct JournalLockSetupSheet: View {
     }
 
     private func finish(_ method: JournalLockMethod, secret: String?) {
-        JournalLock.enable(method, secret: secret)
+        guard JournalLock.enable(method, secret: secret) else {
+            problem = "Your \(method == .pattern ? "pattern" : "passcode") couldn't be saved on this iPhone, so nothing was changed. Please try again."
+            withAnimation(.snappy) { step = .create(method) }
+            return
+        }
         appState.isJournalUnlocked = true
         Haptics.success()
         dismiss()
