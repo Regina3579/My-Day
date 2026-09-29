@@ -3,14 +3,16 @@ import SwiftData
 
 /// Reading one journal page.
 struct JournalDetailView: View {
-    @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     let entry: JournalEntry
+    /// The page was just written: "Saved to your journal 💖" shows for a moment.
+    var justSaved = false
     @State private var images: [UIImage] = []
     @State private var isEditing = false
     @State private var confirmDelete = false
+    @State private var showsSaved = false
 
     var body: some View {
         Group {
@@ -18,6 +20,20 @@ struct JournalDetailView: View {
                 JournalLockView()
             } else {
                 page
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if showsSaved {
+                Label("Saved to your journal 💖", systemImage: "checkmark.circle.fill")
+                    .font(.rounded(.headline, weight: .heavy))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .background(Capsule().fill(JournalStyle.pinkGradient))
+                    .shadow(color: JournalStyle.pink.opacity(0.35), radius: 10, x: 0, y: 5)
+                    .padding(.bottom, 16)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .allowsHitTesting(false)
             }
         }
         .tabBarSafeArea()
@@ -43,7 +59,7 @@ struct JournalDetailView: View {
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
-                        Label("Delete Page", systemImage: "trash")
+                        Label("Move to Trash", systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -54,12 +70,20 @@ struct JournalDetailView: View {
         .sheet(isPresented: $isEditing, onDismiss: { loadImages() }) {
             NewJournalEntrySheet(entry: entry)
         }
-        .confirmationDialog("Delete this page?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete Page", role: .destructive, action: deleteEntry)
+        .confirmationDialog("Move this page to Trash?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Move to Trash", role: .destructive, action: moveToTrash)
         } message: {
-            Text("This can't be undone.")
+            Text("You can restore it from Trash for \(JournalTrash.keepDays) days.")
         }
         .task { loadImages() }
+        .task {
+            guard justSaved else { return }
+            try? await Task.sleep(for: .seconds(0.35))
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { showsSaved = true }
+            UIAccessibility.post(notification: .announcement, argument: "Saved to your journal")
+            try? await Task.sleep(for: .seconds(2.4))
+            withAnimation(.easeInOut(duration: 0.3)) { showsSaved = false }
+        }
     }
 
     private var page: some View {
@@ -117,12 +141,10 @@ struct JournalDetailView: View {
         images = entry.sortedPhotos.compactMap { UIImage(data: $0.imageData) }
     }
 
-    private func deleteEntry() {
+    private func moveToTrash() {
+        JournalTrash.moveToTrash(entry)
+        Haptics.tap()
         dismiss()
-        // Delete after the pop animation, so no view reads the removed model.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            context.delete(entry)
-        }
     }
 }
 

@@ -14,7 +14,7 @@ enum JournalPresets {
 
     static let tags = [
         "Good Vibes", "Happy Thoughts", "Better Me", "Grateful", "Self-Care", "Family",
-        "Friends", "Love", "Cozy", "Proud", "Adventure", "Learning", "Work", "Health"
+        "Friends", "Love", "Cozy", "Proud", "Adventure", "Learning", "Work", "Health", "Dreams"
     ]
 
     static let prompts = [

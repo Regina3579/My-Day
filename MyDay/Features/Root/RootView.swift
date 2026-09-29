@@ -73,6 +73,7 @@ struct RootView: View {
         .task {
             SampleContent.removeIfNeeded(in: modelContext)
             TemplateLibrary.seedIfNeeded(in: modelContext)
+            JournalTrash.purgeExpired(in: modelContext)
             #if DEBUG
             DebugLaunchRoute.addDemoData(in: modelContext)
             #endif

@@ -11,7 +11,8 @@ struct CalendarView: View {
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     @Query(sort: \TaskItem.sortOrder) private var tasks: [TaskItem]
     @Query(sort: \Priority.order) private var priorities: [Priority]
-    @Query(sort: \JournalEntry.date) private var entries: [JournalEntry]
+    @Query(filter: #Predicate<JournalEntry> { $0.deletedAt == nil }, sort: \JournalEntry.date)
+    private var entries: [JournalEntry]
     @State private var month = Date.now.startOfMonth
     @State private var selected = Date.now.startOfDay
 

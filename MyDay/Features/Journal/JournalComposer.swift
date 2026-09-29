@@ -36,50 +36,74 @@ extension View {
 
 // MARK: - Scene
 
-/// The picture at the top of the journal: the "My Journal — A safe space for your thoughts,
-/// feelings and beautiful moments" sign, the girl, the puppy, the kitten and the books.
-/// Its first 100 rows are soft curtains for the status bar.
-enum JournalScene {
-    static let imageSize = CGSize(width: 854, height: 563)
+/// A picture at the top of a journal screen. Its first rows are soft curtains for the status
+/// bar, and the panel below covers its last rows.
+struct JournalScene {
+    let imageName: String
+    let imageSize: CGSize
     /// The row (px) where the design's back and ⋮ buttons sit: it lines up with the
     /// navigation bar's buttons.
-    static let buttonsRow: CGFloat = 225
-    /// The panel covers the picture's last 40 rows.
-    static let overlapRows: CGFloat = 40
+    let buttonsRow: CGFloat
+    /// The rows the panel covers.
+    let overlapRows: CGFloat
+    let accessibilityLabel: String
 
-    static func scale(width: CGFloat) -> CGFloat {
+    /// Writing a page: the "My Journal — A safe space for your thoughts, feelings and
+    /// beautiful moments" sign, the girl, the puppy, the kitten and the books.
+    static let composer = JournalScene(
+        imageName: "JournalScene", imageSize: CGSize(width: 854, height: 563), buttonsRow: 225, overlapRows: 40,
+        accessibilityLabel: "My Journal. A safe space for your thoughts, feelings and beautiful moments.")
+
+    /// My Journal Pages: its title, the girl and her puppy, the books and "A Happier Me
+    /// Everyday".
+    static let pages = JournalScene(
+        imageName: "JournalPagesScene", imageSize: CGSize(width: 853, height: 570), buttonsRow: 213, overlapRows: 36,
+        accessibilityLabel: "My Journal Pages. Every thought and beautiful moment belongs here.")
+
+    func scale(width: CGFloat) -> CGFloat {
         width / imageSize.width
     }
 
-    static func topRow(width: CGFloat, statusBar: CGFloat) -> CGFloat {
+    func topRow(width: CGFloat, statusBar: CGFloat) -> CGFloat {
         max(0, buttonsRow - (statusBar + 22) / scale(width: width))
     }
 
-    static func height(width: CGFloat, statusBar: CGFloat) -> CGFloat {
+    func height(width: CGFloat, statusBar: CGFloat) -> CGFloat {
         (imageSize.height - topRow(width: width, statusBar: statusBar)) * scale(width: width)
     }
 
-    static func overlap(width: CGFloat) -> CGFloat {
+    func overlap(width: CGFloat) -> CGFloat {
         overlapRows * scale(width: width)
+    }
+
+    /// The height of the status bar (and the Dynamic Island), from the app's window.
+    @MainActor
+    static func windowStatusBar(fallback: CGFloat) -> CGFloat {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+        return window?.safeAreaInsets.top ?? fallback
     }
 }
 
 struct JournalHero: View {
+    var scene: JournalScene = .composer
     let width: CGFloat
     /// Height of the status bar (0 in a sheet).
     let statusBar: CGFloat
 
     var body: some View {
-        let scale = JournalScene.scale(width: width)
-        let top = JournalScene.topRow(width: width, statusBar: statusBar)
-        Image("JournalScene")
+        let scale = scene.scale(width: width)
+        let top = scene.topRow(width: width, statusBar: statusBar)
+        Image(scene.imageName)
             .resizable()
-            .frame(width: width, height: JournalScene.imageSize.height * scale)
+            .frame(width: width, height: scene.imageSize.height * scale)
             .offset(y: -top * scale)
-            .frame(width: width, height: JournalScene.height(width: width, statusBar: statusBar), alignment: .top)
+            .frame(width: width, height: scene.height(width: width, statusBar: statusBar), alignment: .top)
             .clipped()
             .accessibilityElement()
-            .accessibilityLabel("My Journal. A safe space for your thoughts, feelings and beautiful moments.")
+            .accessibilityLabel(scene.accessibilityLabel)
             .accessibilityAddTraits(.isHeader)
     }
 }
@@ -110,8 +134,8 @@ struct JournalPanel: View {
 /// today?" (six moods, and ＋ for all thirty), "Write about your day…" (a heading, a line with a heart, then the writing), the
 /// extras (photos, stickers, a voice note, the place, the weather and tags), what you're
 /// grateful for, the day's highlight, what you look forward to, your little win, and Save
-/// Journal Entry. It is the journal's opening page (`.page`) and the new-page and edit-page
-/// sheet (`.sheet`).
+/// Journal Entry. It is the full page behind "Write a new page" (`.page`: once saved, the
+/// written page takes its place) and the edit-page sheet (`.sheet`).
 struct JournalComposer: View {
     enum Presentation {
         case page, sheet
@@ -173,13 +197,14 @@ struct JournalComposer: View {
     @FocusState private var headingFocused: Bool
     @FocusState private var textFocused: Bool
 
-    /// Edits `entry`, or starts a new page dated `date` when it is nil.
-    init(entry: JournalEntry?, date: Date, presentation: Presentation) {
+    /// Edits `entry`, or starts a new page dated `date` when it is nil (from `template`'s
+    /// heading, prompts and tags when one is given).
+    init(entry: JournalEntry?, date: Date, presentation: Presentation, template: JournalPageTemplate? = nil) {
         self.presentation = presentation
         _entry = State(initialValue: entry)
         _date = State(initialValue: entry?.date ?? date)
-        _title = State(initialValue: entry?.title ?? "")
-        _text = State(initialValue: entry?.body ?? "")
+        _title = State(initialValue: entry?.title ?? template?.heading ?? "")
+        _text = State(initialValue: entry?.body ?? template?.starter ?? "")
         _mood = State(initialValue: entry?.mood ?? .happy)
         _moodPicked = State(initialValue: entry != nil)
         _isFavorite = State(initialValue: entry?.isFavorite ?? false)
@@ -188,7 +213,7 @@ struct JournalComposer: View {
         _highlight = State(initialValue: entry?.highlight ?? "")
         _lookingForward = State(initialValue: entry?.lookingForward ?? "")
         _stickers = State(initialValue: entry?.stickers ?? "")
-        _tags = State(initialValue: entry?.tags ?? [])
+        _tags = State(initialValue: entry?.tags ?? template?.tags ?? [])
         _place = State(initialValue: entry?.place ?? "")
         _weather = State(initialValue: entry?.weather)
         _temperature = State(initialValue: entry?.temperature ?? "")
@@ -315,7 +340,7 @@ struct JournalComposer: View {
                     .background(alignment: .top) {
                         JournalPanel()
                     }
-                    .padding(.top, -JournalScene.overlap(width: proxy.size.width))
+                    .padding(.top, -JournalScene.composer.overlap(width: proxy.size.width))
             }
         }
         .scrollDismissesKeyboard(.interactively)
@@ -323,17 +348,7 @@ struct JournalComposer: View {
     }
 
     private func statusBar(safeTop: CGFloat) -> CGFloat {
-        presentation == .sheet ? 0 : Self.windowStatusBar(fallback: max(0, safeTop - 44))
-    }
-
-    /// The height of the status bar (and the Dynamic Island), from the app's window.
-    @MainActor
-    private static func windowStatusBar(fallback: CGFloat) -> CGFloat {
-        let window = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow)
-        return window?.safeAreaInsets.top ?? fallback
+        presentation == .sheet ? 0 : JournalScene.windowStatusBar(fallback: max(0, safeTop - 44))
     }
 
     private var cards: some View {
@@ -357,14 +372,6 @@ struct JournalComposer: View {
             saveButton
                 .padding(.top, 6)
                 .id("save")
-            if presentation == .page {
-                NavigationLink(value: AppRoute.journalPages) {
-                    Label("See all my journal pages", systemImage: "books.vertical.fill")
-                        .font(.rounded(.headline, weight: .heavy))
-                        .foregroundStyle(JournalStyle.pink)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                }
-            }
         }
     }
 
@@ -906,11 +913,6 @@ struct JournalComposer: View {
     private var moreMenu: some View {
         Menu {
             Button {
-                router.push(.journalPages, in: hostTab)
-            } label: {
-                Label("My Journal Pages", systemImage: "books.vertical.fill")
-            }
-            Button {
                 isFavorite.toggle()
                 entry?.isFavorite = isFavorite
                 Haptics.tap()
@@ -1064,11 +1066,11 @@ struct JournalComposer: View {
         saveVoiceNotes(to: page)
 
         Haptics.success()
+        headingFocused = false
+        textFocused = false
         if presentation == .sheet {
             dismiss()
-        } else {
-            headingFocused = false
-            textFocused = false
+        } else if !router.replaceTop(with: AppRoute.savedJournalPage(page), in: hostTab) {
             showToast("Saved to your journal 💖")
         }
     }

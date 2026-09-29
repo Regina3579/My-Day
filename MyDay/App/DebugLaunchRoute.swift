@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import UIKit
 
 /// Debug builds only: `-screenshotRoute <name>` opens a screen at launch,
 /// so `scripts/screenshots.sh` can capture every screen in the simulator.
@@ -55,14 +56,91 @@ enum DebugLaunchRoute {
             context.insert(note)
             note.entry = page
         }
+        addDemoPages(in: context, today: today)
+    }
+
+    /// Earlier pages for My Journal Pages: a week of moods, photos, a favourite, a little win,
+    /// a dream, a page from last month and one in Trash.
+    @MainActor
+    private static func addDemoPages(in context: ModelContext, today: Date) {
+        struct Demo {
+            let days: Int, hour: Int, minute: Int
+            let title: String, body: String, mood: Mood
+            var favorite = false
+            var littleWin = ""
+            var gratitude = ""
+            var lookingForward = ""
+            var tags: [String] = []
+            var photos: [(String, CGRect)] = []
+            var trashedDaysAgo: Int?
+        }
+        let friends = ("HeroFriends", CGRect(x: 440, y: 0, width: 340, height: 340))
+        let cuddle = ("PriorityScene", CGRect(x: 470, y: 330, width: 330, height: 330))
+        let window = ("TodosScene", CGRect(x: 520, y: 70, width: 320, height: 320))
+        let books = ("JournalScene", CGRect(x: 540, y: 270, width: 290, height: 290))
+        let pages = [
+            Demo(days: 1, hour: 23, minute: 43, title: "A smiley day 😊",
+                 body: "Today felt so calm and beautiful. I enjoyed my time, had good food and laughed a lot with my sister.",
+                 mood: .happy, favorite: true, gratitude: "Laughing until my tummy hurt.", tags: ["Family"],
+                 photos: [friends, cuddle, window]),
+            Demo(days: 2, hour: 22, minute: 20, title: "A peaceful evening 🌙",
+                 body: "Spent some quiet time for myself. Read a book, listened to music and lit a little candle.",
+                 mood: .calm, lookingForward: "A picnic in the park this weekend.", tags: ["Self-Care"],
+                 photos: [books]),
+            Demo(days: 3, hour: 18, minute: 5, title: "Big day at work 💼",
+                 body: "I presented my project and it went so well! Everyone clapped and my manager said well done.",
+                 mood: .proud, littleWin: "Gave my first presentation.", tags: ["Work", "Proud"]),
+            Demo(days: 4, hour: 20, minute: 10, title: "Movie night 🍿",
+                 body: "Popcorn, blankets and our favourite film. The cosiest evening with the people I love.",
+                 mood: .loved, favorite: true, photos: [cuddle]),
+            Demo(days: 5, hour: 16, minute: 40, title: "A slow, rainy day",
+                 body: "It rained all afternoon, so I stayed in, made tea and took a long nap.",
+                 mood: .tired),
+            Demo(days: 6, hour: 11, minute: 12, title: "Sunday brunch 🥞",
+                 body: "Pancakes with strawberries and a long walk in the sunshine after.",
+                 mood: .excited, littleWin: "Walked 10,000 steps.", photos: [window]),
+            Demo(days: 33, hour: 19, minute: 30, title: "Beach day 🏖️",
+                 body: "Sand, sea and the prettiest sunset. I want to remember this day forever.",
+                 mood: .blissful, favorite: true, lookingForward: "Going back next summer.", photos: [friends]),
+            Demo(days: 9, hour: 21, minute: 0, title: "Old notes",
+                 body: "A few thoughts I didn't want to keep.", mood: .bored, trashedDaysAgo: 3),
+        ]
+        for demo in pages {
+            let day = today.adding(days: -demo.days)
+            let date = Calendar.current.date(bySettingHour: demo.hour, minute: demo.minute, second: 0, of: day) ?? day
+            let page = JournalEntry(date: date, title: demo.title, body: demo.body, mood: demo.mood,
+                                    littleWin: demo.littleWin)
+            page.isFavorite = demo.favorite
+            page.gratitude = demo.gratitude
+            page.lookingForward = demo.lookingForward
+            page.tags = demo.tags
+            page.createdAt = date
+            page.updatedAt = date
+            if let trashed = demo.trashedDaysAgo {
+                page.deletedAt = today.adding(days: -trashed)
+            }
+            context.insert(page)
+            for (order, (name, crop)) in demo.photos.enumerated() {
+                guard let cropped = UIImage(named: name)?.cgImage?.cropping(to: crop),
+                      let data = UIImage(cgImage: cropped).jpegData(compressionQuality: 0.9),
+                      let prepared = PhotoProcessor.prepare(data)
+                else { continue }
+                let photo = JournalPhoto(imageData: prepared.photo, thumbnailData: prepared.thumbnail, order: order)
+                context.insert(photo)
+                photo.entry = page
+            }
+        }
     }
 
     /// A To-Dos sheet to open once the screen appears ("todos-add" → "add").
     @MainActor private static var todosSheet: String?
     /// Open the newest journal page once the journal appears ("journal-page").
     @MainActor private static var journalPage = false
-    /// Show every journal page once the journal appears ("journal-pages").
-    @MainActor private static var journalPages = false
+    /// The My Journal Pages tab to show, scrolled to the tabs ("journal-pages": All Pages,
+    /// "journal-templates", "journal-feelings", "journal-photos", "journal-trash").
+    @MainActor private static var journalShelf: String?
+    /// Open Filter on My Journal Pages ("journal-filter").
+    @MainActor private static var journalFilter = false
     /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save,
     /// "journal-proud": the moods).
     @MainActor private static var journalAnchor: String?
@@ -127,9 +205,28 @@ enum DebugLaunchRoute {
     }
 
     @MainActor
-    static func takeJournalPages() -> Bool {
-        defer { journalPages = false }
-        return journalPages
+    static func takeJournalShelf() -> String? {
+        defer { journalShelf = nil }
+        return journalShelf
+    }
+
+    @MainActor
+    static func takeJournalFilter() -> Bool {
+        defer { journalFilter = false }
+        return journalFilter
+    }
+
+    /// Opens My Journal Pages, then today's page on the full page (as Edit Page does).
+    @MainActor
+    private static func openTodaysPage(_ router: Router, today: Date, context: ModelContext) {
+        router.open(.journal)
+        let start = today.startOfDay
+        let end = start.nextDay
+        let pages = (try? context.fetch(FetchDescriptor<JournalEntry>(
+            predicate: #Predicate { $0.date >= start && $0.date < end && $0.deletedAt == nil }))) ?? []
+        if let page = pages.first {
+            router.homePath.append(AppRoute.editJournalPage(page))
+        }
     }
 
     @MainActor
@@ -192,15 +289,23 @@ enum DebugLaunchRoute {
         case "journal-page":
             journalPage = true
             router.open(.journal)
-        case "journal-pages":
-            journalPages = true
+        case "journal-pages", "journal-templates", "journal-feelings", "journal-photos", "journal-trash":
+            let name = arguments[index + 1].dropFirst("journal-".count)
+            journalShelf = name == "pages" ? JournalShelf.all.rawValue : String(name)
             router.open(.journal)
+        case "journal-filter":
+            journalShelf = JournalShelf.all.rawValue
+            journalFilter = true
+            router.open(.journal)
+        case "journal-new":
+            router.open(.journal)
+            router.homePath.append(AppRoute.newJournalPage(nil))
         case "journal-middle":
             journalAnchor = "write"
-            router.open(.journal)
+            openTodaysPage(router, today: today, context: context)
         case "journal-bottom":
             journalAnchor = "save"
-            router.open(.journal)
+            openTodaysPage(router, today: today, context: context)
         case "journal-proud":
             // One of the last routes: today's page is felt "Proud", a mood picked with ＋.
             let start = today.startOfDay
@@ -211,13 +316,13 @@ enum DebugLaunchRoute {
                 page.mood = .proud
             }
             journalAnchor = "mood"
-            router.open(.journal)
+            openTodaysPage(router, today: today, context: context)
         case "journal-moods":
             journalMoods = true
-            router.open(.journal)
+            openTodaysPage(router, today: today, context: context)
         case "journal-voice":
             journalVoice = true
-            router.open(.journal)
+            openTodaysPage(router, today: today, context: context)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":
             calendarDayOffset = 1

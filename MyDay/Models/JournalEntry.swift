@@ -37,6 +37,9 @@ final class JournalEntry {
     var photos: [JournalPhoto]? = []
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
+    /// When the page was moved to Trash (nil while it is in the journal). Trashed pages are
+    /// kept for `JournalTrash.keepDays` days, then deleted.
+    var deletedAt: Date?
 
     init(date: Date = Date(), title: String = "", body: String = "", mood: Mood = .happy,
          littleWin: String = "") {
@@ -64,6 +67,29 @@ final class JournalEntry {
     }
 
     var hasLittleWin: Bool { !littleWin.trimmed.isEmpty }
+
+    var isInTrash: Bool { deletedAt != nil }
+
+    var hasVoiceNotes: Bool { voiceNote != nil || !(voiceNotes ?? []).isEmpty }
+
+    var hasPhotos: Bool { !(photos ?? []).isEmpty }
+
+    /// "Tomorrow I look forward to…", a Dreams tag or a Dream Journal page.
+    var isDream: Bool {
+        !lookingForward.trimmed.isEmpty || tags.contains { $0.localizedCaseInsensitiveCompare("Dreams") == .orderedSame }
+    }
+
+    /// Any of the growth prompts: grateful, highlight, looking forward or a little win.
+    var hasReflections: Bool {
+        ![gratitude, highlight, lookingForward, littleWin].allSatisfy { $0.trimmed.isEmpty }
+    }
+
+    /// Search looks in the heading, the text, the little win, the other prompts, the place and
+    /// the tags.
+    func matches(_ query: String) -> Bool {
+        [title, body, littleWin, gratitude, highlight, lookingForward, place, tagsText]
+            .contains { $0.localizedCaseInsensitiveContains(query) }
+    }
 
     var tags: [String] {
         get { tagsText.split(separator: "\n").map(String.init) }
@@ -256,6 +282,29 @@ enum JournalWeather: String, CaseIterable, Identifiable {
         case .snowy: "cloud.snow.fill"
         case .windy: "wind"
         case .foggy: "cloud.fog.fill"
+        }
+    }
+}
+
+/// Deleting a journal page moves it to Trash first; it can be restored for a while.
+@MainActor
+enum JournalTrash {
+    static let keepDays = 30
+
+    static func moveToTrash(_ entry: JournalEntry) {
+        entry.deletedAt = .now
+    }
+
+    static func restore(_ entry: JournalEntry) {
+        entry.deletedAt = nil
+    }
+
+    /// Deletes pages that have been in Trash for longer than `keepDays`.
+    static func purgeExpired(in context: ModelContext) {
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -keepDays, to: .now) else { return }
+        let trashed = FetchDescriptor<JournalEntry>(predicate: #Predicate { $0.deletedAt != nil })
+        for entry in (try? context.fetch(trashed)) ?? [] where (entry.deletedAt ?? .now) < cutoff {
+            context.delete(entry)
         }
     }
 }

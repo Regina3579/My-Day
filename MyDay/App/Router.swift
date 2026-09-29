@@ -29,9 +29,14 @@ enum AppTab: String, CaseIterable, Identifiable {
 enum AppRoute: Hashable {
     case todos(Date)
     case priority(Date)
+    /// "My Journal Pages": every page, with search, the tabs and Write a new page.
     case journal
-    /// Every journal page, with search, favourites and little wins.
-    case journalPages
+    /// Writing a new journal page, from a template when one is given.
+    case newJournalPage(JournalPageTemplate?)
+    /// Editing a journal page on the full page (the page's own Edit opens a sheet).
+    case editJournalPage(JournalEntry)
+    /// A page just written on the full page: it says it was saved.
+    case savedJournalPage(JournalEntry)
 }
 
 /// Sheets that can be opened from anywhere in the app.
@@ -97,6 +102,23 @@ final class Router {
         }
     }
 
+    /// Shows `value` in place of the page on top of `tab` (a journal page, once it is saved,
+    /// in place of the page it was written on). Returns false when `tab` has no kept path.
+    @discardableResult
+    func replaceTop<Value: Hashable>(with value: Value, in tab: AppTab) -> Bool {
+        switch tab {
+        case .home where !homePath.isEmpty:
+            homePath.removeLast()
+            homePath.append(value)
+        case .calendar where !calendarPath.isEmpty:
+            calendarPath.removeLast()
+            calendarPath.append(value)
+        default:
+            return false
+        }
+        return true
+    }
+
     func goHome() {
         tab = .home
         homePath = NavigationPath()
@@ -127,7 +149,11 @@ extension View {
             case .todos(let day): TodayToDosView(day: day)
             case .priority(let day): TodaysPriorityView(day: day)
             case .journal: JournalView()
-            case .journalPages: JournalPagesView()
+            case .newJournalPage(let template):
+                JournalComposer(entry: nil, date: .now, presentation: .page, template: template)
+            case .editJournalPage(let entry):
+                JournalComposer(entry: entry, date: entry.date, presentation: .page)
+            case .savedJournalPage(let entry): JournalDetailView(entry: entry, justSaved: true)
             }
         }
         .navigationDestination(for: JournalEntry.self) { entry in

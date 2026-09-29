@@ -7,7 +7,8 @@ struct InsightsView: View {
     @Environment(AppState.self) private var appState
     @Query private var tasks: [TaskItem]
     @Query private var priorities: [Priority]
-    @Query(sort: \JournalEntry.date, order: .reverse) private var entries: [JournalEntry]
+    @Query(filter: #Predicate<JournalEntry> { $0.deletedAt == nil }, sort: \JournalEntry.date, order: .reverse)
+    private var entries: [JournalEntry]
 
     var body: some View {
         let stats = InsightStats(tasks: tasks, priorities: priorities, entries: entries, today: appState.today)

@@ -17,7 +17,7 @@ struct HomeView: View {
         let end = start.nextDay
         _tasks = Query(filter: #Predicate<TaskItem> { $0.date >= start && $0.date < end })
         _priorities = Query(filter: #Predicate<Priority> { $0.date >= start && $0.date < end })
-        _entries = Query(filter: #Predicate<JournalEntry> { $0.date >= start && $0.date < end })
+        _entries = Query(filter: #Predicate<JournalEntry> { $0.date >= start && $0.date < end && $0.deletedAt == nil })
     }
 
     var body: some View {
