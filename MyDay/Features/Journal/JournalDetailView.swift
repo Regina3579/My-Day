@@ -208,7 +208,7 @@ private struct LittleWinBanner: View {
     }
 }
 
-/// The rest of a page: the weather and place, stickers, tags, the voice note and the
+/// The rest of a page: the weather and place, stickers, tags, the voice notes and the
 /// grateful, highlight and tomorrow lines.
 private struct JournalPageExtras: View {
     let entry: JournalEntry
@@ -234,8 +234,15 @@ private struct JournalPageExtras: View {
             if !entry.tags.isEmpty {
                 TagChips(tags: entry.tags)
             }
-            if let note = entry.voiceNote {
-                VoiceNotePlayer(data: note)
+            let voiceNotes = entry.sortedVoiceNotes
+            let voiceCount = voiceNotes.count + (entry.voiceNote == nil ? 0 : 1)
+            if let earlier = entry.voiceNote {
+                VoiceNotePlayer(data: earlier, title: VoiceNoteDraft.title(index: 0, count: voiceCount))
+            }
+            ForEach(Array(voiceNotes.enumerated()), id: \.element.persistentModelID) { index, note in
+                VoiceNotePlayer(data: note.audio,
+                                title: VoiceNoteDraft.title(index: index + voiceCount - voiceNotes.count, count: voiceCount),
+                                duration: note.duration, recordedAt: note.createdAt)
             }
             line(art: "JournalJar", title: "I'm grateful for…", text: entry.gratitude)
             line(art: "JournalHighlightStar", title: "A highlight of my day…", text: entry.highlight)

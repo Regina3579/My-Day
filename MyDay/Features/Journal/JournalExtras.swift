@@ -492,68 +492,131 @@ final class VoiceNoteRecorder {
     }
 }
 
+/// Joins two voice notes into one, the second after the first (to record more onto a note).
+enum VoiceNoteJoiner {
+    /// nil when the audio can't be read or written.
+    static func join(_ first: Data, _ second: Data) async -> Data? {
+        let folder = FileManager.default.temporaryDirectory
+        let name = UUID().uuidString
+        let firstURL = folder.appendingPathComponent("\(name)-1.m4a")
+        let secondURL = folder.appendingPathComponent("\(name)-2.m4a")
+        let outputURL = folder.appendingPathComponent("\(name)-joined.m4a")
+        defer {
+            for url in [firstURL, secondURL, outputURL] {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        do {
+            try first.write(to: firstURL)
+            try second.write(to: secondURL)
+            let composition = AVMutableComposition()
+            guard let track = composition.addMutableTrack(withMediaType: .audio,
+                                                          preferredTrackID: kCMPersistentTrackID_Invalid)
+            else { return nil }
+            var cursor = CMTime.zero
+            for url in [firstURL, secondURL] {
+                guard let source = try await AVURLAsset(url: url).loadTracks(withMediaType: .audio).first
+                else { return nil }
+                let range = try await source.load(.timeRange)
+                try track.insertTimeRange(range, of: source, at: cursor)
+                cursor = CMTimeAdd(cursor, range.duration)
+            }
+            guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetAppleM4A)
+            else { return nil }
+            if #available(iOS 18, *) {
+                try await export.export(to: outputURL, as: .m4a)
+            } else {
+                export.outputURL = outputURL
+                export.outputFileType = .m4a
+                await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+                    export.exportAsynchronously { done.resume() }
+                }
+                guard export.status == .completed else { return nil }
+            }
+            return try Data(contentsOf: outputURL)
+        } catch {
+            return nil
+        }
+    }
+}
+
+/// A voice note on the page being written: already saved, or just recorded.
+struct VoiceNoteDraft: Identifiable {
+    let id = UUID()
+    /// The saved note (nil until the page is saved).
+    var existing: JournalVoiceNote?
+    var audio: Data
+    var duration: TimeInterval
+    var recordedAt: Date
+    /// More was recorded onto it since it was saved.
+    var isChanged = false
+
+    init(audio: Data, duration: TimeInterval, recordedAt: Date = .now) {
+        self.audio = audio
+        self.duration = duration
+        self.recordedAt = recordedAt
+    }
+
+    init(saved note: JournalVoiceNote) {
+        existing = note
+        audio = note.audio
+        duration = note.duration
+        recordedAt = note.createdAt
+    }
+
+    /// The page's voice notes, the one from before a page could hold several first.
+    @MainActor
+    static func drafts(of entry: JournalEntry?) -> [VoiceNoteDraft] {
+        guard let entry else { return [] }
+        var drafts: [VoiceNoteDraft] = []
+        if let earlier = entry.voiceNote {
+            drafts.append(VoiceNoteDraft(audio: earlier, duration: VoiceNoteRecorder.duration(of: earlier),
+                                         recordedAt: entry.createdAt))
+        }
+        drafts += entry.sortedVoiceNotes.map(VoiceNoteDraft.init(saved:))
+        return drafts
+    }
+
+    /// "Voice note", or "Voice note 2" when the page has several.
+    static func title(index: Int, count: Int) -> String {
+        count > 1 ? "Voice note \(index + 1)" : "Voice note"
+    }
+}
+
+/// "Voice Notes": record a new note as often as you like, or tap Continue on one to record
+/// more onto its end (in the morning, then again in the afternoon).
 struct VoiceNoteSheet: View {
-    @Binding var voiceNote: Data?
+    @Binding var notes: [VoiceNoteDraft]
+    /// Starts recording onto this note when the sheet opens (its Continue button on the page).
+    let continuing: VoiceNoteDraft.ID?
+
     @State private var recorder = VoiceNoteRecorder()
+    /// The note being recorded onto (nil while recording a new one).
+    @State private var target: VoiceNoteDraft.ID?
+    @State private var playing: VoiceNoteDraft.ID?
+    @State private var isJoining = false
     @State private var isDenied = false
 
+    init(notes: Binding<[VoiceNoteDraft]>, continuing: VoiceNoteDraft.ID? = nil) {
+        _notes = notes
+        self.continuing = continuing
+    }
+
     var body: some View {
-        // Worked out once per change, not on every tick.
-        let length = voiceNote.map { VoiceNoteRecorder.format(VoiceNoteRecorder.duration(of: $0)) } ?? "0:00"
-        ExtraSheet(title: "Voice Note") {
+        ExtraSheet(title: "Voice Notes") {
             TimelineView(.periodic(from: .now, by: 0.2)) { _ in
                 VStack(spacing: 18) {
-                    Text(recorder.isRecording ? VoiceNoteRecorder.format(recorder.recordedTime) : length)
-                        .font(.rounded(size: 44, weight: .heavy))
-                        .monospacedDigit()
-                        .foregroundStyle(JournalStyle.ink)
-
-                    Button {
-                        toggleRecording()
-                    } label: {
-                        Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                            .font(.system(size: 34, weight: .bold))
-                            .foregroundStyle(Color.white)
-                            .frame(width: 92, height: 92)
-                            .background(Circle().fill(recorder.isRecording
-                                                      ? AnyShapeStyle(Color(hex: 0xE5484D).gradient)
-                                                      : AnyShapeStyle(JournalStyle.purpleGradient)))
-                            .shadow(color: JournalStyle.purple.opacity(0.4), radius: 12, x: 0, y: 6)
-                    }
-                    .buttonStyle(PressScaleStyle())
-                    .accessibilityLabel(recorder.isRecording ? "Stop recording" : "Record")
-
-                    Text(recorder.isRecording ? "Recording… tap to stop"
-                                              : (voiceNote == nil ? "Tap to record (up to 5 minutes)" : "Tap to record again"))
-                        .font(.rounded(.body, weight: .semibold))
-                        .foregroundStyle(JournalStyle.soft)
-
-                    if let note = voiceNote, !recorder.isRecording {
-                        HStack(spacing: 12) {
-                            Button {
-                                if recorder.isPlaying { recorder.stopPlaying() } else { recorder.play(note) }
-                            } label: {
-                                Label(recorder.isPlaying ? "Stop" : "Play", systemImage: recorder.isPlaying ? "stop.fill" : "play.fill")
-                                    .font(.rounded(.headline, weight: .heavy))
-                                    .foregroundStyle(JournalStyle.purple)
-                                    .frame(maxWidth: .infinity, minHeight: 48)
-                                    .background(Capsule().fill(Color.white))
+                    recorderPanel
+                    if !notes.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("My voice notes")
+                                .font(.rounded(.headline, weight: .heavy))
+                                .foregroundStyle(JournalStyle.plum)
+                            ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
+                                row(note, index: index)
                             }
-                            .buttonStyle(PressScaleStyle())
-                            Button(role: .destructive) {
-                                recorder.stopPlaying()
-                                voiceNote = nil
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                                    .font(.rounded(.headline, weight: .heavy))
-                                    .foregroundStyle(Color(hex: 0xD7263D))
-                                    .frame(maxWidth: .infinity, minHeight: 48)
-                                    .background(Capsule().fill(Color.white))
-                            }
-                            .buttonStyle(PressScaleStyle())
                         }
                     }
-
                     if isDenied {
                         Text("Please allow the microphone for My Day in Settings to record a voice note.")
                             .font(.rounded(.subheadline, weight: .semibold))
@@ -564,37 +627,210 @@ struct VoiceNoteSheet: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .onDisappear {
-            if recorder.isRecording, let data = recorder.stopRecording() {
-                voiceNote = data
+        .task {
+            if let continuing, notes.contains(where: { $0.id == continuing }) {
+                start(onto: continuing)
             }
+        }
+        .onDisappear {
+            if recorder.isRecording { stop() }
             recorder.stopPlaying()
         }
     }
 
-    private func toggleRecording() {
-        if recorder.isRecording {
-            if let data = recorder.stopRecording() {
-                voiceNote = data
+    // MARK: Recorder
+
+    private var targetIndex: Int? {
+        target.flatMap { id in notes.firstIndex { $0.id == id } }
+    }
+
+    private var targetName: String {
+        guard let index = targetIndex else { return "Voice note" }
+        return VoiceNoteDraft.title(index: index, count: notes.count)
+    }
+
+    private var recorderPanel: some View {
+        let isRecording = recorder.isRecording
+        let earlier = targetIndex.map { notes[$0].duration } ?? 0
+        return VStack(spacing: 14) {
+            Text(VoiceNoteRecorder.format(isRecording ? earlier + recorder.recordedTime : 0))
+                .font(.rounded(size: 44, weight: .heavy))
+                .monospacedDigit()
+                .foregroundStyle(JournalStyle.ink)
+
+            Button {
+                if isRecording { stop() } else { start(onto: nil) }
+            } label: {
+                Image(systemName: isRecording ? "stop.fill" : "mic.fill")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .frame(width: 92, height: 92)
+                    .background(Circle().fill(isRecording ? AnyShapeStyle(Color(hex: 0xE5484D).gradient)
+                                                          : AnyShapeStyle(JournalStyle.purpleGradient)))
+                    .shadow(color: JournalStyle.purple.opacity(0.4), radius: 12, x: 0, y: 6)
             }
-            Haptics.success()
-        } else {
-            Task {
-                isDenied = !(await recorder.startRecording())
-                if !isDenied { Haptics.tap() }
+            .buttonStyle(PressScaleStyle())
+            .disabled(isJoining)
+            .accessibilityLabel(isRecording ? "Stop recording" : "Record a new voice note")
+
+            HStack(spacing: 8) {
+                if isJoining {
+                    ProgressView()
+                        .tint(JournalStyle.purple)
+                }
+                Text(status(isRecording: isRecording))
+                    .font(.rounded(.body, weight: .semibold))
+                    .foregroundStyle(JournalStyle.soft)
+                    .multilineTextAlignment(.center)
             }
+        }
+        .padding(.vertical, 18)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.white))
+    }
+
+    private func status(isRecording: Bool) -> String {
+        if isJoining { return "Adding it to \(targetName)…" }
+        if isRecording {
+            return target == nil ? "Recording… tap to stop" : "Adding to \(targetName)… tap to stop"
+        }
+        return notes.isEmpty ? "Tap to record (up to 5 minutes)" : "Tap to record a new voice note"
+    }
+
+    private func row(_ note: VoiceNoteDraft, index: Int) -> some View {
+        let isPlaying = recorder.isPlaying && playing == note.id
+        let isTarget = target == note.id && (recorder.isRecording || isJoining)
+        return HStack(spacing: 10) {
+            Button {
+                if isPlaying {
+                    recorder.stopPlaying()
+                } else {
+                    playing = note.id
+                    recorder.play(note.audio)
+                }
+            } label: {
+                Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(Color.white)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(JournalStyle.purpleGradient))
+            }
+            .buttonStyle(PressScaleStyle())
+            .disabled(recorder.isRecording || isJoining)
+            .accessibilityLabel(isPlaying ? "Stop" : "Play")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(VoiceNoteDraft.title(index: index, count: notes.count))
+                    .font(.rounded(.headline, weight: .heavy))
+                    .foregroundStyle(JournalStyle.ink)
+                    .lineLimit(1)
+                Text("\(VoiceNoteRecorder.format(note.duration)) · \(note.recordedAt.formatted(date: .omitted, time: .shortened))")
+                    .font(.rounded(.subheadline, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(JournalStyle.soft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+
+            Button {
+                start(onto: note.id)
+            } label: {
+                Label("Continue", systemImage: "mic.badge.plus")
+                    .font(.rounded(.subheadline, weight: .heavy))
+                    .foregroundStyle(JournalStyle.pink)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 40)
+                    .background(Capsule().fill(JournalStyle.pinkFill))
+            }
+            .buttonStyle(PressScaleStyle())
+            .disabled(recorder.isRecording || isJoining)
+            .accessibilityLabel("Continue recording \(VoiceNoteDraft.title(index: index, count: notes.count))")
+
+            Button {
+                if playing == note.id { recorder.stopPlaying() }
+                withAnimation(.snappy) { notes.removeAll { $0.id == note.id } }
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(JournalStyle.soft)
+                    .frame(width: 36, height: 44)
+            }
+            .disabled(recorder.isRecording || isJoining)
+            .accessibilityLabel("Delete \(VoiceNoteDraft.title(index: index, count: notes.count))")
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(isTarget ? JournalStyle.pinkFill : Color(hex: 0xF3EBFF)))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .strokeBorder(isTarget ? JournalStyle.pink.opacity(0.6) : Color.clear, lineWidth: 1.5))
+    }
+
+    // MARK: Actions
+
+    /// Records a new note (`id` nil) or more onto the note `id`.
+    private func start(onto id: VoiceNoteDraft.ID?) {
+        recorder.stopPlaying()
+        target = id
+        Task {
+            let started = await recorder.startRecording()
+            isDenied = !started
+            if started {
+                Haptics.tap()
+            } else {
+                target = nil
+            }
+        }
+    }
+
+    private func stop() {
+        guard let recording = recorder.stopRecording(), !recording.isEmpty else {
+            target = nil
+            return
+        }
+        Haptics.success()
+        let length = VoiceNoteRecorder.duration(of: recording)
+        guard let id = target, let index = notes.firstIndex(where: { $0.id == id }) else {
+            withAnimation(.snappy) { notes.append(VoiceNoteDraft(audio: recording, duration: length)) }
+            target = nil
+            return
+        }
+        isJoining = true
+        let earlier = notes[index].audio
+        Task {
+            let joined = await VoiceNoteJoiner.join(earlier, recording)
+            if let joined, let index = notes.firstIndex(where: { $0.id == id }) {
+                notes[index].audio = joined
+                notes[index].duration = VoiceNoteRecorder.duration(of: joined)
+                notes[index].isChanged = true
+            } else {
+                // It couldn't be added on, so it's kept as a note of its own.
+                notes.append(VoiceNoteDraft(audio: recording, duration: length))
+            }
+            isJoining = false
+            target = nil
         }
     }
 }
 
-/// A voice note on a page: play or stop, with its length.
+/// A voice note on a page: play or stop, with its length and when it was recorded. On the
+/// page being written it can also be continued or deleted.
 struct VoiceNotePlayer: View {
     let data: Data
+    var title = "Voice note"
+    /// Its length in seconds (worked out from the audio when nil).
+    var duration: TimeInterval?
+    var recordedAt: Date?
+    var onContinue: (() -> Void)?
     var onDelete: (() -> Void)?
     @State private var recorder = VoiceNoteRecorder()
 
     var body: some View {
-        let length = VoiceNoteRecorder.format(VoiceNoteRecorder.duration(of: data))
+        let length = VoiceNoteRecorder.format(duration ?? VoiceNoteRecorder.duration(of: data))
+        let time = recordedAt.map { " · " + $0.formatted(date: .omitted, time: .shortened) } ?? ""
         TimelineView(.periodic(from: .now, by: 0.25)) { _ in
             HStack(spacing: 12) {
                 Button {
@@ -607,18 +843,35 @@ struct VoiceNotePlayer: View {
                         .background(Circle().fill(JournalStyle.purpleGradient))
                 }
                 .buttonStyle(PressScaleStyle())
-                .accessibilityLabel(recorder.isPlaying ? "Stop voice note" : "Play voice note")
+                .accessibilityLabel(recorder.isPlaying ? "Stop \(title)" : "Play \(title)")
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Voice note")
+                    Text(title)
                         .font(.rounded(.headline, weight: .heavy))
                         .foregroundStyle(JournalStyle.ink)
-                    Text(recorder.isPlaying ? "\(VoiceNoteRecorder.format(recorder.playedTime)) / \(length)" : length)
+                        .lineLimit(1)
+                    Text(recorder.isPlaying ? "\(VoiceNoteRecorder.format(recorder.playedTime)) / \(length)" : length + time)
                         .font(.rounded(.subheadline, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(JournalStyle.soft)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: 0)
+                if let onContinue {
+                    Button {
+                        recorder.stopPlaying()
+                        onContinue()
+                    } label: {
+                        Image(systemName: "mic.badge.plus")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(JournalStyle.pink)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(JournalStyle.pinkFill))
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    .accessibilityLabel("Continue recording \(title)")
+                }
                 if let onDelete {
                     Button {
                         recorder.stopPlaying()
@@ -627,9 +880,9 @@ struct VoiceNotePlayer: View {
                         Image(systemName: "trash")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(JournalStyle.soft)
-                            .frame(width: 44, height: 44)
+                            .frame(width: 40, height: 44)
                     }
-                    .accessibilityLabel("Delete voice note")
+                    .accessibilityLabel("Delete \(title)")
                 }
             }
             .padding(10)

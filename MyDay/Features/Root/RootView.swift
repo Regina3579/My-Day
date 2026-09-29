@@ -234,6 +234,7 @@ private extension View {
     RootView()
         .environment(Router())
         .environment(AppState())
-        .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, TaskTemplate.self],
+        .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, JournalVoiceNote.self,
+                              TaskTemplate.self],
                         inMemory: true)
 }

@@ -48,6 +48,13 @@ enum DebugLaunchRoute {
         page.weather = .sunny
         page.temperature = "28°C"
         context.insert(page)
+        // Two voice notes, from the morning and the afternoon (silent: for the layout only).
+        for (index, (hour, minute, length)) in [(9, 15, 42.0), (14, 30, 18.0)].enumerated() {
+            let recorded = Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: today) ?? today
+            let note = JournalVoiceNote(audio: Data(), duration: length, order: index, createdAt: recorded)
+            context.insert(note)
+            note.entry = page
+        }
     }
 
     /// A To-Dos sheet to open once the screen appears ("todos-add" → "add").
@@ -61,6 +68,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalAnchor: String?
     /// Open "Choose your mood" once the journal appears ("journal-moods").
     @MainActor private static var journalMoods = false
+    /// Open the Voice Notes sheet once the journal appears ("journal-voice").
+    @MainActor private static var journalVoice = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Tick every priority left once Today's Priority appears ("priority-alldone").
@@ -87,6 +96,12 @@ enum DebugLaunchRoute {
     static func takeJournalAnchor() -> String? {
         defer { journalAnchor = nil }
         return journalAnchor
+    }
+
+    @MainActor
+    static func takeJournalVoice() -> Bool {
+        defer { journalVoice = false }
+        return journalVoice
     }
 
     @MainActor
@@ -183,6 +198,9 @@ enum DebugLaunchRoute {
             router.open(.journal)
         case "journal-moods":
             journalMoods = true
+            router.open(.journal)
+        case "journal-voice":
+            journalVoice = true
             router.open(.journal)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":

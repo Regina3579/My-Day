@@ -161,7 +161,9 @@ struct JournalComposer: View {
     @State private var place: String
     @State private var weather: JournalWeather?
     @State private var temperature: String
-    @State private var voiceNote: Data?
+    @State private var voiceNotes: [VoiceNoteDraft]
+    /// The voice note the Voice Notes sheet records onto when it opens (its Continue button).
+    @State private var voiceContinuing: VoiceNoteDraft.ID?
     @State private var photos: [PhotoDraft]
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var isLoadingPhotos = false
@@ -190,7 +192,7 @@ struct JournalComposer: View {
         _place = State(initialValue: entry?.place ?? "")
         _weather = State(initialValue: entry?.weather)
         _temperature = State(initialValue: entry?.temperature ?? "")
-        _voiceNote = State(initialValue: entry?.voiceNote)
+        _voiceNotes = State(initialValue: VoiceNoteDraft.drafts(of: entry))
         _photos = State(initialValue: (entry?.sortedPhotos ?? []).map { photo in
             PhotoDraft(existing: photo, imageData: photo.imageData, thumbnailData: photo.thumbnailData,
                        preview: photo.thumbnailData.flatMap(UIImage.init(data:)))
@@ -198,7 +200,7 @@ struct JournalComposer: View {
     }
 
     private var canSave: Bool {
-        moodPicked || !photos.isEmpty || voiceNote != nil || weather != nil || !tags.isEmpty || !stickers.isEmpty
+        moodPicked || !photos.isEmpty || !voiceNotes.isEmpty || weather != nil || !tags.isEmpty || !stickers.isEmpty
             || ![title, text, littleWin, gratitude, highlight, lookingForward, place].allSatisfy { $0.trimmed.isEmpty }
     }
 
@@ -266,6 +268,10 @@ struct JournalComposer: View {
                         if DebugLaunchRoute.takeJournalMoods() {
                             try? await Task.sleep(for: .seconds(1))
                             extra = .moods
+                        }
+                        if DebugLaunchRoute.takeJournalVoice() {
+                            try? await Task.sleep(for: .seconds(1))
+                            extra = .voice
                         }
                         guard let anchor = DebugLaunchRoute.takeJournalAnchor() else { return }
                         try? await Task.sleep(for: .seconds(1))
@@ -424,6 +430,14 @@ struct JournalComposer: View {
             .foregroundStyle(JournalStyle.ink)
             .lineLimit(1)
             .fixedSize()
+    }
+
+    private var voiceNoteStatus: String? {
+        switch voiceNotes.count {
+        case 0: nil
+        case 1: "1 note"
+        default: "\(voiceNotes.count) notes"
+        }
     }
 
     private var weatherChipText: String {
@@ -645,7 +659,10 @@ struct JournalComposer: View {
                 photoTile
                 extraTile("Add Sticker", art: "ExtraSticker",
                           status: stickers.isEmpty ? nil : "\(stickers.count) added") { extra = .sticker }
-                extraTile("Voice Note", art: "ExtraVoice", status: voiceNote == nil ? nil : "Added") { extra = .voice }
+                extraTile("Voice Note", art: "ExtraVoice", status: voiceNoteStatus) {
+                    voiceContinuing = nil
+                    extra = .voice
+                }
                 extraTile("Location", art: "ExtraLocation", status: place.trimmed.isEmpty ? nil : place.trimmed) {
                     extra = .place
                 }
@@ -723,10 +740,16 @@ struct JournalComposer: View {
                 stickers = String(characters)
             }
         }
-        if let voiceNote {
-            VoiceNotePlayer(data: voiceNote) {
-                self.voiceNote = nil
-            }
+        ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, note in
+            VoiceNotePlayer(data: note.audio, title: VoiceNoteDraft.title(index: index, count: voiceNotes.count),
+                            duration: note.duration, recordedAt: note.recordedAt,
+                            onContinue: {
+                                voiceContinuing = note.id
+                                extra = .voice
+                            },
+                            onDelete: {
+                                withAnimation(.snappy) { voiceNotes.removeAll { $0.id == note.id } }
+                            })
         }
         if !place.trimmed.isEmpty {
             HStack(spacing: 8) {
@@ -913,7 +936,7 @@ struct JournalComposer: View {
         case .date: JournalDateSheet(date: $date)
         case .moods: MoodChooserSheet(mood: $mood, moodPicked: $moodPicked, isToday: date.isToday)
         case .sticker: StickerPickerSheet(stickers: $stickers)
-        case .voice: VoiceNoteSheet(voiceNote: $voiceNote)
+        case .voice: VoiceNoteSheet(notes: $voiceNotes, continuing: voiceContinuing)
         case .place: PlaceSheet(place: $place)
         case .weather: WeatherSheet(weather: $weather, temperature: $temperature)
         case .tags: TagPickerSheet(tags: $tags)
@@ -985,7 +1008,7 @@ struct JournalComposer: View {
             place = ""
             weather = nil
             temperature = ""
-            voiceNote = nil
+            voiceNotes = []
             photos = []
         }
         showToast("A fresh page ✨")
@@ -1036,9 +1059,9 @@ struct JournalComposer: View {
         page.place = place.trimmed
         page.weather = weather
         page.temperature = temperature
-        page.voiceNote = voiceNote
         page.updatedAt = .now
         savePhotos(to: page)
+        saveVoiceNotes(to: page)
 
         Haptics.success()
         if presentation == .sheet {
@@ -1048,6 +1071,35 @@ struct JournalComposer: View {
             textFocused = false
             showToast("Saved to your journal 💖")
         }
+    }
+
+    /// Removes voice notes that were deleted, keeps the rest in order (with anything recorded
+    /// onto them) and adds new ones. A page's one older voice note becomes the first of them.
+    private func saveVoiceNotes(to page: JournalEntry) {
+        let kept = Set(voiceNotes.compactMap { $0.existing?.persistentModelID })
+        for note in page.sortedVoiceNotes where !kept.contains(note.persistentModelID) {
+            context.delete(note)
+        }
+        var saved: [VoiceNoteDraft] = []
+        for (index, draft) in voiceNotes.enumerated() {
+            if let existing = draft.existing {
+                existing.order = index
+                if draft.isChanged {
+                    existing.audio = draft.audio
+                    existing.duration = draft.duration
+                    existing.updatedAt = .now
+                }
+                saved.append(VoiceNoteDraft(saved: existing))
+            } else {
+                let note = JournalVoiceNote(audio: draft.audio, duration: draft.duration, order: index,
+                                            createdAt: draft.recordedAt)
+                context.insert(note)
+                note.entry = page
+                saved.append(VoiceNoteDraft(saved: note))
+            }
+        }
+        page.voiceNote = nil
+        voiceNotes = saved
     }
 
     /// Removes photos that were taken out, keeps the rest in the new order and adds new ones.

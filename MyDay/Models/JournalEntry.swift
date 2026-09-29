@@ -27,7 +27,11 @@ final class JournalEntry {
     /// temperature as shown, like "28°C" ("" when none).
     var weatherRaw: String = ""
     var temperature: String = ""
-    /// A voice note (AAC audio), stored outside the database file.
+    /// The page's voice notes (see `sortedVoiceNotes`).
+    @Relationship(deleteRule: .cascade, inverse: \JournalVoiceNote.entry)
+    var voiceNotes: [JournalVoiceNote]? = []
+    /// The one voice note a page could hold before it could hold several (AAC audio, stored
+    /// outside the database file). It moves into `voiceNotes` when the page is next saved.
     @Attribute(.externalStorage) var voiceNote: Data?
     @Relationship(deleteRule: .cascade, inverse: \JournalPhoto.entry)
     var photos: [JournalPhoto]? = []
@@ -55,6 +59,10 @@ final class JournalEntry {
         (photos ?? []).sorted { $0.order < $1.order }
     }
 
+    var sortedVoiceNotes: [JournalVoiceNote] {
+        (voiceNotes ?? []).sorted { $0.order < $1.order }
+    }
+
     var hasLittleWin: Bool { !littleWin.trimmed.isEmpty }
 
     var tags: [String] {
@@ -72,6 +80,30 @@ final class JournalEntry {
     var displayTitle: String {
         let cleanTitle = title.trimmed
         return cleanTitle.isEmpty ? mood.dayName : cleanTitle
+    }
+}
+
+/// A voice note on a journal page. Recording onto it again adds to its end.
+@Model
+final class JournalVoiceNote {
+    var id: UUID = UUID()
+    /// AAC audio, stored outside the database file.
+    @Attribute(.externalStorage) var audio: Data = Data()
+    /// Length in seconds.
+    var duration: Double = 0
+    var order: Int = 0
+    var createdAt: Date = Date()
+    /// When it was last recorded onto.
+    var updatedAt: Date = Date()
+    var entry: JournalEntry?
+
+    init(audio: Data, duration: Double, order: Int, createdAt: Date = Date()) {
+        self.id = UUID()
+        self.audio = audio
+        self.duration = duration
+        self.order = order
+        self.createdAt = createdAt
+        self.updatedAt = Date()
     }
 }
 
