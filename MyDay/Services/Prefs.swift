@@ -8,6 +8,8 @@ enum Prefs {
     /// Whether Today's Priority's Completed list is open.
     static let showCompletedPriorities = "showCompletedPriorities"
     static let haptics = "hapticsEnabled"
+    /// Settings → Sounds & Haptics → Task Completion Sound.
+    static let taskCompletionSound = "taskCompletionSoundOn"
     static let journalLock = "journalLockEnabled"
     static let morningOn = "morningReminderOn"
     static let morningTime = "morningReminderSeconds"

@@ -70,6 +70,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalMoods = false
     /// Open the Voice Notes sheet once the journal appears ("journal-voice").
     @MainActor private static var journalVoice = false
+    /// Scroll Settings to Sounds & Haptics ("settings-sounds").
+    @MainActor private static var settingsSounds = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Tick every priority left once Today's Priority appears ("priority-alldone").
@@ -96,6 +98,12 @@ enum DebugLaunchRoute {
     static func takeJournalAnchor() -> String? {
         defer { journalAnchor = nil }
         return journalAnchor
+    }
+
+    @MainActor
+    static func takeSettingsSounds() -> Bool {
+        defer { settingsSounds = false }
+        return settingsSounds
     }
 
     @MainActor
@@ -208,6 +216,9 @@ enum DebugLaunchRoute {
             router.tab = .calendar
         case "insights": router.tab = .insights
         case "settings": router.tab = .settings
+        case "settings-sounds":
+            settingsSounds = true
+            router.tab = .settings
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)
         case let route where route.hasPrefix("todos-"):

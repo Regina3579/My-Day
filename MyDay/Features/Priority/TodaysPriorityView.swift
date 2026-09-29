@@ -377,8 +377,9 @@ struct TodaysPriorityView: View {
             Haptics.tap()
             return
         }
-        Haptics.success()
-        if priorities.allSatisfy(\.isCompleted) {
+        let finishedAll = priorities.allSatisfy(\.isCompleted)
+        CompletionFeedback.completed(finishingAll: finishedAll)
+        if finishedAll {
             celebrate()
         }
         // Let the tick and its hearts show, then move it down to Completed.

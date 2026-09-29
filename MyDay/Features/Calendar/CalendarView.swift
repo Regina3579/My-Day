@@ -166,7 +166,11 @@ struct CalendarView: View {
                     ForEach(items) { priority in
                         CompactCheckRow(title: priority.title, isDone: priority.isCompleted, tint: Palette.honey) {
                             withAnimation(.snappy) { priority.toggleCompleted() }
-                            Haptics.tap()
+                            if priority.isCompleted {
+                                CompletionFeedback.completed(finishingAll: items.allSatisfy(\.isCompleted))
+                            } else {
+                                Haptics.tap()
+                            }
                         }
                     }
                 }

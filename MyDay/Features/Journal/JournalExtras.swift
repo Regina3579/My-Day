@@ -453,6 +453,7 @@ final class VoiceNoteRecorder {
             let recorder = try AVAudioRecorder(url: fileURL, settings: settings)
             guard recorder.record(forDuration: Self.maxDuration) else { return false }
             self.recorder = recorder
+            SoundEffects.isRecording = true
             return true
         } catch {
             return false
@@ -463,6 +464,7 @@ final class VoiceNoteRecorder {
     func stopRecording() -> Data? {
         recorder?.stop()
         recorder = nil
+        SoundEffects.isRecording = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         let data = try? Data(contentsOf: fileURL)
         try? FileManager.default.removeItem(at: fileURL)

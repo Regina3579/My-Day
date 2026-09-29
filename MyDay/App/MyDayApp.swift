@@ -12,6 +12,7 @@ struct MyDayApp: App {
     init() {
         Appearance.configure()
         container = Self.makeContainer()
+        SoundEffects.preload()
     }
 
     var body: some Scene {

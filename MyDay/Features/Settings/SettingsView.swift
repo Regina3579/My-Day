@@ -10,6 +10,7 @@ struct SettingsView: View {
     /// The Completed list on the To-Dos screen is open (it starts closed).
     @AppStorage(Prefs.showCompleted) private var showCompleted = false
     @AppStorage(Prefs.haptics) private var haptics = true
+    @AppStorage(Prefs.taskCompletionSound) private var completionSound = true
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @State private var lockMessage: String?
     @State private var confirmClearDone = false
@@ -23,76 +24,97 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                VStack(spacing: 10) {
-                    HeroBanner(height: 150)
-                    Text("My Day")
-                        .font(.rounded(.title, weight: .heavy))
-                        .foregroundStyle(Palette.ink)
-                    Text("To-Do & Journal 💖")
-                        .font(.rounded(.subheadline, weight: .semibold))
-                        .foregroundStyle(Palette.hotPink)
+        ScrollViewReader { reader in
+            Form {
+                Section {
+                    VStack(spacing: 10) {
+                        HeroBanner(height: 150)
+                        Text("My Day")
+                            .font(.rounded(.title, weight: .heavy))
+                            .foregroundStyle(Palette.ink)
+                        Text("To-Do & Journal 💖")
+                            .font(.rounded(.subheadline, weight: .semibold))
+                            .foregroundStyle(Palette.hotPink)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-            }
-            .listRowBackground(Color.clear)
+                .listRowBackground(Color.clear)
 
-            Section("About you") {
-                TextField("Your name", text: $userName)
-                    .textContentType(.givenName)
-                    .submitLabel(.done)
-            }
+                Section("About you") {
+                    TextField("Your name", text: $userName)
+                        .textContentType(.givenName)
+                        .submitLabel(.done)
+                }
 
-            Section("Reminders") {
-                NavigationLink {
-                    RemindersView()
-                } label: {
-                    Label("Daily reminders", systemImage: "bell.badge.fill")
+                Section("Reminders") {
+                    NavigationLink {
+                        RemindersView()
+                    } label: {
+                        Label("Daily reminders", systemImage: "bell.badge.fill")
+                    }
                 }
-            }
 
-            Section("To-Dos") {
-                Toggle(isOn: $carryOver) {
-                    Label("Move unfinished items to today", systemImage: "arrow.uturn.forward.circle.fill")
+                Section("To-Dos") {
+                    Toggle(isOn: $carryOver) {
+                        Label("Move unfinished items to today", systemImage: "arrow.uturn.forward.circle.fill")
+                    }
+                    Toggle(isOn: $showCompleted) {
+                        Label("Show finished to-dos", systemImage: "checkmark.circle.fill")
+                    }
                 }
-                Toggle(isOn: $showCompleted) {
-                    Label("Show finished to-dos", systemImage: "checkmark.circle.fill")
-                }
-                Toggle(isOn: $haptics) {
-                    Label("Gentle haptics", systemImage: "hand.tap.fill")
-                }
-            }
 
-            Section {
-                Toggle(isOn: lockBinding) {
-                    Label("Lock with \(JournalLock.methodName)", systemImage: JournalLock.symbolName)
+                Section {
+                    Toggle(isOn: $completionSound) {
+                        Label("Task Completion Sound", systemImage: "bell.and.waves.left.and.right.fill")
+                    }
+                    .id("sounds")
+                    Toggle(isOn: $haptics) {
+                        Label("Gentle haptics", systemImage: "hand.tap.fill")
+                    }
+                } header: {
+                    Text("Sounds & Haptics")
+                } footer: {
+                    Text("A soft “ting” when you tick off a to-do or a priority, and a little chime when the day's last one is done. It stays quiet when your iPhone is on Silent and never stops your music.")
                 }
-            } header: {
-                Text("Journal")
-            } footer: {
-                Text("Your journal asks for \(JournalLock.methodName) each time you come back to the app.")
-            }
 
-            Section("Your data") {
-                Button {
-                    confirmClearDone = true
-                } label: {
-                    Label("Clear finished items", systemImage: "checkmark.circle.badge.xmark")
+                Section {
+                    Toggle(isOn: lockBinding) {
+                        Label("Lock with \(JournalLock.methodName)", systemImage: JournalLock.symbolName)
+                    }
+                } header: {
+                    Text("Journal")
+                } footer: {
+                    Text("Your journal asks for \(JournalLock.methodName) each time you come back to the app.")
                 }
-                Button(role: .destructive) {
-                    confirmEraseAll = true
-                } label: {
-                    Label("Erase everything", systemImage: "trash")
-                        .foregroundStyle(Color.red)
-                }
-            }
 
-            Section {
-                LabeledContent("Version", value: version)
-                LabeledContent("Made with", value: "💖 for beautiful days")
+                Section("Your data") {
+                    Button {
+                        confirmClearDone = true
+                    } label: {
+                        Label("Clear finished items", systemImage: "checkmark.circle.badge.xmark")
+                    }
+                    Button(role: .destructive) {
+                        confirmEraseAll = true
+                    } label: {
+                        Label("Erase everything", systemImage: "trash")
+                            .foregroundStyle(Color.red)
+                    }
+                }
+
+                Section {
+                    LabeledContent("Version", value: version)
+                    LabeledContent("Made with", value: "💖 for beautiful days")
+                }
             }
+            #if DEBUG
+            .task {
+                // `settings-sounds`: shows Sounds & Haptics for the screenshot.
+                guard DebugLaunchRoute.takeSettingsSounds() else { return }
+                try? await Task.sleep(for: .seconds(1))
+                reader.scrollTo("sounds", anchor: .top)
+            }
+            #endif
         }
         .font(.rounded(.body))
         .scrollContentBackground(.hidden)
@@ -100,6 +122,10 @@ struct SettingsView: View {
         .background(DreamyBackground(theme: .garden))
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: completionSound) { _, isOn in
+            // A preview, so you know what it sounds like.
+            if isOn { SoundEffects.play(.ting) }
+        }
         .alert("Journal lock", isPresented: lockAlertBinding) {
             Button("OK", role: .cancel) {}
         } message: {

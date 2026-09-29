@@ -91,6 +91,7 @@ final class SpeechTranscriber {
 
         do {
             try beginListening(with: recognizer)
+            SoundEffects.isRecording = true
             state = .listening
             restartTimer(after: Self.waitForFirstWord)
             limitTask = Task { [weak self] in
@@ -202,6 +203,7 @@ final class SpeechTranscriber {
     }
 
     private func teardown() {
+        SoundEffects.isRecording = false
         timerTask?.cancel()
         timerTask = nil
         limitTask?.cancel()

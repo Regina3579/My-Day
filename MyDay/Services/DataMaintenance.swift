@@ -6,16 +6,28 @@ import UIKit
 @MainActor
 enum TaskActions {
     /// Ticks a to-do on or off. Finishing a repeating to-do creates its next occurrence.
+    /// Ticking plays the soft "ting" (the all-done chime for the day's last to-do).
     static func toggle(_ task: TaskItem, in context: ModelContext) {
         task.isCompleted.toggle()
         task.completedAt = task.isCompleted ? Date() : nil
-        ReminderCenter.sync(task)
         if task.isCompleted {
-            scheduleNextOccurrence(of: task, in: context)
-            Haptics.success()
+            CompletionFeedback.completed(finishingAll: !hasOpenTasks(on: task.date, in: context))
         } else {
             Haptics.tap()
         }
+        ReminderCenter.sync(task)
+        if task.isCompleted {
+            scheduleNextOccurrence(of: task, in: context)
+        }
+    }
+
+    /// Whether `day` still has a to-do that isn't done. (The day's to-dos are checked in
+    /// memory, so a tick that isn't saved yet counts.)
+    private static func hasOpenTasks(on day: Date, in context: ModelContext) -> Bool {
+        let start = day.startOfDay
+        let end = start.nextDay
+        let sameDay = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.date >= start && $0.date < end })
+        return ((try? context.fetch(sameDay)) ?? []).contains { !$0.isCompleted }
     }
 
     static func delete(_ task: TaskItem, in context: ModelContext) {
