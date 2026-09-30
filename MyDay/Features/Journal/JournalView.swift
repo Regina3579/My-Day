@@ -135,7 +135,7 @@ struct JournalPagesHome: View {
 
     private var content: some View {
         VStack(spacing: 16) {
-            WriteNewPageRow()
+            WriteNewPageRow(todayPage: todayPage)
             MoodWeekCard(entries: live, today: appState.today, onCalendar: openCalendar)
             JournalTabsRow(selection: $shelf)
                 .id("tabs")
@@ -279,6 +279,11 @@ struct JournalPagesHome: View {
     // MARK: Pages
 
     /// Pages in the journal (not in Trash).
+    /// Today's page, once written: Write a new page carries on with it.
+    private var todayPage: JournalEntry? {
+        JournalEntry.page(on: appState.today, among: live)
+    }
+
     private var live: [JournalEntry] {
         allEntries.filter { $0.deletedAt == nil }
     }
@@ -307,9 +312,9 @@ struct JournalPagesHome: View {
     private var moreMenu: some View {
         Menu {
             Button {
-                router.push(.newJournalPage(nil), in: hostTab)
+                router.push(todayPage.map { AppRoute.editJournalPage($0) } ?? .newJournalPage(nil), in: hostTab)
             } label: {
-                Label("Write a New Page", systemImage: "square.and.pencil")
+                Label(todayPage == nil ? "Write a New Page" : "Continue Today's Page", systemImage: "square.and.pencil")
             }
             Button {
                 isFiltering = true

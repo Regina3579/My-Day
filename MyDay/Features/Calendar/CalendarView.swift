@@ -219,7 +219,10 @@ struct CalendarView: View {
         AgendaRow(style: .journal,
                   note: journalNote,
                   addLabel: "Write a journal page",
-                  onAdd: { router.sheet = .newJournal(selected.atTime(of: .now)) }) {
+                  onAdd: {
+                      router.writeInJournal(on: selected.atTime(of: .now), context: context,
+                                            isUnlocked: appState.isJournalUnlocked)
+                  }) {
             if isJournalLocked {
                 NavigationLink(value: AppRoute.journal) {
                     Label("Unlock your journal to see this day", systemImage: "lock.fill")

@@ -29,8 +29,12 @@ extension View {
 
 // MARK: - Write a new page
 
-/// The star waving beside the big pink "✏️ Write a new page ›".
+/// The star waving beside the big pink "✏️ Write a new page ›". A journal is one page a day,
+/// so once today has a page it reads "Continue today's page" and opens that page.
 struct WriteNewPageRow: View {
+    /// Today's page, when it has been written.
+    let todayPage: JournalEntry?
+
     var body: some View {
         HStack(spacing: 4) {
             Image("JournalWriteStar")
@@ -38,11 +42,11 @@ struct WriteNewPageRow: View {
                 .scaledToFit()
                 .frame(width: 80, height: 72)
                 .accessibilityHidden(true)
-            NavigationLink(value: AppRoute.newJournalPage(nil)) {
+            NavigationLink(value: todayPage.map { AppRoute.editJournalPage($0) } ?? AppRoute.newJournalPage(nil)) {
                 HStack(spacing: 10) {
                     Image(systemName: "pencil.line")
                         .font(.system(size: 22, weight: .bold))
-                    Text("Write a new page")
+                    Text(title)
                         .font(.rounded(.title3, weight: .heavy))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -70,8 +74,12 @@ struct WriteNewPageRow: View {
                 .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
             }
             .buttonStyle(PressScaleStyle(scale: 0.97))
-            .accessibilityLabel("Write a new page")
+            .accessibilityLabel(title)
         }
+    }
+
+    private var title: String {
+        todayPage == nil ? "Write a new page" : "Continue today's page"
     }
 }
 

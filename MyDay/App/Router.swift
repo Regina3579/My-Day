@@ -44,6 +44,8 @@ enum AppSheet: Identifiable {
     case newTask(Date)
     case newPriority(Date)
     case newJournal(Date)
+    /// Carrying on with a page already written (that day's page, as a journal is one page a day).
+    case editJournal(JournalEntry)
     case reminders
 
     var id: String {
@@ -51,6 +53,7 @@ enum AppSheet: Identifiable {
         case .newTask(let date): "task-\(date.timeIntervalSince1970)"
         case .newPriority(let date): "priority-\(date.timeIntervalSince1970)"
         case .newJournal(let date): "journal-\(date.timeIntervalSince1970)"
+        case .editJournal(let entry): "journal-page-\(entry.id.uuidString)"
         case .reminders: "reminders"
         }
     }

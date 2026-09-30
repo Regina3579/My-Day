@@ -142,7 +142,11 @@ struct RootView: View {
                     QuickAddMenu(
                         onTask: { quickAdd(.newTask(appState.today)) },
                         onPriority: { quickAdd(.newPriority(appState.today)) },
-                        onJournal: { quickAdd(.newJournal(.now)) }
+                        onJournal: {
+                            setQuickAdd(open: false)
+                            router.writeInJournal(on: .now, context: modelContext,
+                                                  isUnlocked: appState.isJournalUnlocked)
+                        }
                     )
                     .transition(.scale(scale: 0.4, anchor: .bottomTrailing).combined(with: .opacity))
                 }
@@ -177,6 +181,8 @@ struct RootView: View {
             NewPrioritySheet(date: date)
         case .newJournal(let date):
             NewJournalEntrySheet(date: date)
+        case .editJournal(let entry):
+            NewJournalEntrySheet(entry: entry)
         case .reminders:
             NavigationStack {
                 RemindersView(showsDoneButton: true)
