@@ -112,7 +112,6 @@ struct JournalPagesHome: View {
 
     private var content: some View {
         VStack(spacing: 16) {
-            MyPagesCard(pageCount: live.count, favoriteCount: live.filter(\.isFavorite).count)
             WriteNewPageRow()
             MoodWeekCard(entries: live, today: appState.today, onCalendar: openCalendar)
             JournalTabsGrid(selection: $shelf)

@@ -27,60 +27,6 @@ extension View {
     }
 }
 
-// MARK: - My Pages
-
-/// "My Pages 💗 — Every thought and beautiful moment belongs here…" beside the notebook.
-struct MyPagesCard: View {
-    let pageCount: Int
-    let favoriteCount: Int
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image("JournalNotebook")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 84, height: 72)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text("My Pages")
-                        .font(.rounded(.title2, weight: .heavy))
-                        .foregroundStyle(JournalPagesStyle.title)
-                        .accessibilityAddTraits(.isHeader)
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 17))
-                        .foregroundStyle(JournalPagesStyle.heartPink)
-                        .accessibilityHidden(true)
-                    Spacer(minLength: 0)
-                    Image("JournalPagesDecor")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 42)
-                        .accessibilityHidden(true)
-                }
-                Text("Every thought and beautiful moment belongs here…")
-                    .font(.rounded(.subheadline, weight: .medium))
-                    .foregroundStyle(JournalStyle.soft)
-                    .fixedSize(horizontal: false, vertical: true)
-                if pageCount > 0 {
-                    Text(countText)
-                        .font(.rounded(.footnote, weight: .bold))
-                        .foregroundStyle(JournalStyle.pink)
-                        .padding(.top, 2)
-                }
-            }
-        }
-        .journalPagesCard(padding: 12)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var countText: String {
-        let pages = pageCount == 1 ? "1 page" : "\(pageCount) pages"
-        guard favoriteCount > 0 else { return "📖 \(pages)" }
-        return "📖 \(pages)  ·  💗 \(favoriteCount) favorite\(favoriteCount == 1 ? "" : "s")"
-    }
-}
-
 // MARK: - Write a new page
 
 /// The star waving beside the big pink "✏️ Write a new page ›".
@@ -234,19 +180,19 @@ struct MoodWeekCard: View {
 
 // MARK: - Tabs
 
-/// The ten tabs, five across: All Pages, Favorites, Little Wins, Templates, Photos, Voice Notes,
-/// My Feelings, My Growth, Dreams and Trash.
+/// The ten tabs, five across in two short rows: All Pages, Favorites, Little Wins, Templates,
+/// Photos, Voice Notes, My Feelings, My Growth, Dreams and Trash.
 struct JournalTabsGrid: View {
     @Binding var selection: JournalShelf
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        let columns = typeSize.isAccessibilitySize ? 3 : 5
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns), spacing: 10) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 8) {
             ForEach(JournalShelf.allCases) { shelf in
                 tile(shelf)
             }
         }
+        // Small tiles: their names stay on one line even with larger text.
+        .dynamicTypeSize(...DynamicTypeSize.large)
     }
 
     private func tile(_ shelf: JournalShelf) -> some View {
@@ -255,33 +201,31 @@ struct JournalTabsGrid: View {
             withAnimation(.snappy) { selection = shelf }
             Haptics.tap()
         } label: {
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 Image(systemName: shelf.symbol)
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(shelf.color.gradient)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 30, height: 30)
                     .background(Circle().fill(isOn ? Color.white : shelf.color.opacity(0.13)))
-                // One word stays on one line (shrinking a little if it must), never "Tem-plates".
-                Text(shelf.tileTitle)
-                    .font(.rounded(.footnote, weight: .bold))
+                Text(shelf.label)
+                    .font(.rounded(.caption, weight: .bold))
                     .foregroundStyle(isOn ? Color.white : JournalPagesStyle.heading)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(shelf.tileTitle.contains("\n") ? 2 : 1)
+                    .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, minHeight: 34)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(.top, 9)
+            .padding(.top, 7)
             .padding(.bottom, 6)
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 1)
             .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isOn ? AnyShapeStyle(JournalPagesStyle.writeButton) : AnyShapeStyle(Color.white.opacity(0.9)))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(Color.white, lineWidth: isOn ? 2 : 1.5)
             )
-            .shadow(color: JournalStyle.pink.opacity(isOn ? 0.35 : 0.1), radius: isOn ? 9 : 6, x: 0, y: isOn ? 5 : 3)
+            .shadow(color: JournalStyle.pink.opacity(isOn ? 0.3 : 0.08), radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle(scale: 0.95))

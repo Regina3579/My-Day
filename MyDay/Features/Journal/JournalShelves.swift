@@ -24,18 +24,6 @@ enum JournalShelf: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The label on its tile, on two lines where it is long.
-    var tileTitle: String {
-        switch self {
-        case .all: "All\nPages"
-        case .wins: "Little\nWins"
-        case .voice: "Voice\nNotes"
-        case .feelings: "My\nFeelings"
-        case .growth: "My\nGrowth"
-        default: label
-        }
-    }
-
     var symbol: String {
         switch self {
         case .all: "book.fill"
