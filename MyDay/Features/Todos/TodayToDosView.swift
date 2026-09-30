@@ -577,7 +577,7 @@ extension TodoSheet {
         case "add": self = .compose(nil, nil)
         case "photo": self = .compose(nil, .photo)
         case "voice": self = .voice(sample: "Remind me to call the doctor tomorrow at 5 PM")
-        case "templates", "template-edit": self = .templates
+        case "templates", "template-edit", "template-move": self = .templates
         default: return nil
         }
     }

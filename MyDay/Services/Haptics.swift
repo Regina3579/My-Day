@@ -26,6 +26,12 @@ enum Haptics {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
+    /// A light click, as a dragged card moves to a new place.
+    static func selection() {
+        guard isEnabled else { return }
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
     /// A wrong pattern or passcode.
     static func error() {
         guard isEnabled else { return }

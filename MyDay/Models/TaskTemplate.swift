@@ -13,6 +13,9 @@ final class TaskTemplate {
     var createdAt: Date = Date()
     /// Which starter template this began as ("" for one the person made).
     var starterID: String = ""
+    /// Its place in Templates (press and hold a card to move it); ties keep the order they
+    /// were made in.
+    var sortOrder: Double = 0
 
     init(name: String, emoji: String, category: TaskCategory, items: [String]) {
         self.id = UUID()
@@ -79,7 +82,29 @@ enum TemplateLibrary {
             template.starterID = starter.id
             // Listed first, in their usual order, before the person's own.
             template.createdAt = Date(timeIntervalSinceReferenceDate: Double(index))
+            template.sortOrder = Double(index) - 1000
             context.insert(template)
+        }
+    }
+
+    /// The place after the last template, for a new one.
+    static func nextSortOrder(in context: ModelContext) -> Double {
+        var last = FetchDescriptor<TaskTemplate>(sortBy: [SortDescriptor(\.sortOrder, order: .reverse)])
+        last.fetchLimit = 1
+        return ((try? context.fetch(last))?.first?.sortOrder ?? 0) + 1
+    }
+
+    /// Moves `template` to where `target` is (the templates between shift over by one).
+    static func move(_ template: TaskTemplate, to target: TaskTemplate, in ordered: [TaskTemplate]) {
+        guard template != target,
+              let from = ordered.firstIndex(of: template),
+              let to = ordered.firstIndex(of: target)
+        else { return }
+        // It takes the target's place; the ones in between shift over by one.
+        var reordered = ordered
+        reordered.insert(reordered.remove(at: from), at: to)
+        for (index, item) in reordered.enumerated() {
+            item.sortOrder = Double(index)
         }
     }
 

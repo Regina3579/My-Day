@@ -156,6 +156,9 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsLockChoose = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
+    /// Move the last template to the front in Templates, as a press-and-hold drag would
+    /// ("todos-template-move").
+    @MainActor private static var templateMove = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Tick every priority left once Today's Priority appears ("priority-alldone").
@@ -188,6 +191,12 @@ enum DebugLaunchRoute {
     static func takeTemplateEdit() -> Bool {
         defer { templateEdit = false }
         return templateEdit
+    }
+
+    @MainActor
+    static func takeTemplateMove() -> Bool {
+        defer { templateMove = false }
+        return templateMove
     }
 
     @MainActor
@@ -373,6 +382,7 @@ enum DebugLaunchRoute {
             todosSheet = String(route.dropFirst("todos-".count))
             holdsTickPop = route == "todos-hearts"
             templateEdit = route == "todos-template-edit"
+            templateMove = route == "todos-template-move"
             router.open(.todos(today))
         default: break
         }

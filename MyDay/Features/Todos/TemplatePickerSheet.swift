@@ -1,8 +1,10 @@
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// ▦ Templates: ready-made lists (the starters and the person's own) to add in one go. Every
-/// template has ⋯ with Edit and Delete; the starters can be brought back if deleted.
+/// template has ⋯ with Edit and Delete, and can be pressed and held to move it around; the
+/// starters can be brought back if deleted.
 struct TemplatePickerSheet: View {
     let day: Date
     /// Titles of the day's to-dos, offered when saving a new template.
@@ -12,17 +14,26 @@ struct TemplatePickerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
-    @Query(sort: \TaskTemplate.createdAt) private var templates: [TaskTemplate]
+    @Query(sort: [SortDescriptor(\TaskTemplate.sortOrder), SortDescriptor(\TaskTemplate.createdAt)])
+    private var templates: [TaskTemplate]
     @State private var path: [TemplateRoute] = []
     @State private var pendingDelete: TaskTemplate?
+    /// The card being moved (press and hold, then drag).
+    @State private var dragging: TaskTemplate?
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Pick a list and choose what to add ✨")
-                        .font(.rounded(.subheadline, weight: .medium))
-                        .foregroundStyle(Palette.inkSoft)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Pick a list and choose what to add ✨")
+                        if templates.count > 1 {
+                            Label("Press and hold a card to move it around.", systemImage: "hand.draw.fill")
+                                .foregroundStyle(Palette.grape)
+                        }
+                    }
+                    .font(.rounded(.subheadline, weight: .medium))
+                    .foregroundStyle(Palette.inkSoft)
 
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                               spacing: 12) {
@@ -53,6 +64,11 @@ struct TemplatePickerSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
+            // Letting go anywhere else ends the move.
+            .onDrop(of: [.text], isTargeted: nil) { _ in
+                dragging = nil
+                return true
+            }
             .navigationTitle("Templates")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -73,6 +89,13 @@ struct TemplatePickerSheet: View {
             }
             #if DEBUG
             .task {
+                // `todos-template-move`: the last template moves to the front.
+                if DebugLaunchRoute.takeTemplateMove(), let last = templates.last, let first = templates.first {
+                    try? await Task.sleep(for: .seconds(0.8))
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        TemplateLibrary.move(last, to: first, in: templates)
+                    }
+                }
                 // `todos-template-edit`: opens the first template's editor for the screenshot.
                 guard DebugLaunchRoute.takeTemplateEdit() else { return }
                 try? await Task.sleep(for: .seconds(0.5))
@@ -88,7 +111,8 @@ struct TemplatePickerSheet: View {
         )
     }
 
-    /// A template's card: tap it to see its to-dos; ⋯ (or press and hold) to edit or delete it.
+    /// A template's card: tap it to see its to-dos, ⋯ to edit or delete it, or press and
+    /// hold to pick it up and move it; the other cards make room as it passes over them.
     private func card(_ template: TaskTemplate, tint: RowTint) -> some View {
         Button {
             path.append(.detail(template.id))
@@ -96,6 +120,20 @@ struct TemplatePickerSheet: View {
             TemplateCard(template: template, tint: tint)
         }
         .buttonStyle(PressScaleStyle())
+        .opacity(dragging == template ? 0.35 : 1)
+        .onDrag {
+            dragging = template
+            Haptics.tap()
+            return NSItemProvider(object: template.id.uuidString as NSString)
+        } preview: {
+            TemplateCard(template: template, tint: tint)
+                .frame(width: 170)
+                .scaleEffect(1.04)
+        }
+        .onDrop(of: [.text], delegate: TemplateDropDelegate(target: template, templates: templates,
+                                                            dragging: $dragging))
+        .accessibilityAction(named: "Move earlier") { move(template, by: -1) }
+        .accessibilityAction(named: "Move later") { move(template, by: 1) }
         .overlay(alignment: .topTrailing) {
             Menu {
                 actions(for: template)
@@ -111,9 +149,14 @@ struct TemplatePickerSheet: View {
             }
             .accessibilityLabel("Edit or delete \(template.name)")
         }
-        .contextMenu {
-            actions(for: template)
-        }
+    }
+
+    /// VoiceOver's Move earlier and Move later.
+    private func move(_ template: TaskTemplate, by step: Int) {
+        guard let index = templates.firstIndex(of: template) else { return }
+        let target = index + step
+        guard templates.indices.contains(target) else { return }
+        withAnimation(.snappy) { TemplateLibrary.move(template, to: templates[target], in: templates) }
     }
 
     @ViewBuilder
@@ -162,6 +205,31 @@ struct TemplatePickerSheet: View {
         path.removeAll { $0 == .detail(id) || $0 == .edit(id) }
         withAnimation(.snappy) { context.delete(template) }
         Haptics.tap()
+    }
+}
+
+/// While a card is dragged, passing over another card moves it there.
+private struct TemplateDropDelegate: DropDelegate {
+    let target: TaskTemplate
+    let templates: [TaskTemplate]
+    @Binding var dragging: TaskTemplate?
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target else { return }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            TemplateLibrary.move(dragging, to: target, in: templates)
+        }
+        Haptics.selection()
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        Haptics.tap()
+        return true
     }
 }
 
@@ -610,7 +678,10 @@ private struct TemplateEditorView: View {
             template.category = category
             template.items = titles
         } else {
-            context.insert(TaskTemplate(name: name.trimmed, emoji: emoji, category: category, items: titles))
+            let template = TaskTemplate(name: name.trimmed, emoji: emoji, category: category, items: titles)
+            // A new template goes at the end.
+            template.sortOrder = TemplateLibrary.nextSortOrder(in: context)
+            context.insert(template)
         }
         Haptics.success()
         onDone()
