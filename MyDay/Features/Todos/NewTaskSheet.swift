@@ -95,7 +95,7 @@ struct NewTaskSheet: View {
     }
 
     /// The next full hour on `day` (or today's next hour when `day` is today).
-    private static func nextHour(on day: Date) -> Date {
+    static func nextHour(on day: Date) -> Date {
         let now = Date()
         let base = day.isToday ? now : day.atTime(of: now)
         return Calendar.current.nextDate(after: base, matching: DateComponents(minute: 0),
@@ -660,7 +660,7 @@ struct SheetLabel: View {
 }
 
 /// A row that opens a small panel: "📅 Date & Time · Today ⌄".
-private struct OptionRow<Panel: View>: View {
+struct OptionRow<Panel: View>: View {
     let emoji: String
     let title: String
     let value: String
@@ -731,7 +731,7 @@ private struct OptionRow<Panel: View>: View {
 }
 
 /// Small pill for quick choices (Today, Tomorrow, repeat options).
-private struct DayChip: View {
+struct DayChip: View {
     let title: String
     let isOn: Bool
     let action: () -> Void
