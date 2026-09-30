@@ -115,22 +115,27 @@ struct QuoteTip: View {
 
     // MARK: The arrow
 
-    /// A thick pink arrow with a head at each end: up at the quote, down at the card.
+    /// A pink arrow with a head at each end, as in the design: a smooth curve bowing to the
+    /// right, with a small head pointing up at the quote and a bigger one pointing down at
+    /// the card.
     private var arrow: some View {
-        let start = CGPoint(x: spot.minX + spot.width * 0.3, y: spot.maxY + 10)
-        let end = CGPoint(x: cardLeading + cardWidth * 0.5, y: cardTop - 8)
+        let start = CGPoint(x: spot.minX + spot.width * 0.3, y: spot.maxY + 8)
+        let end = CGPoint(x: start.x + 26, y: cardTop - 6)
         let drop = end.y - start.y
-        let control1 = CGPoint(x: start.x + 18, y: start.y + drop * 0.55)
-        let control2 = CGPoint(x: end.x - 26, y: end.y - drop * 0.5)
+        let control1 = CGPoint(x: start.x + 26, y: start.y + drop * 0.7)
+        let control2 = CGPoint(x: end.x + 26, y: end.y - drop * 0.7)
+        let upHead = ArrowHead(tip: start, from: control1, length: 14, halfWidth: 7.5)
+        let downHead = ArrowHead(tip: end, from: control2, length: 18, halfWidth: 9.5)
         return ZStack {
+            // The line runs between the heads' backs, so each head points along it.
             Path { path in
-                path.move(to: start)
-                path.addCurve(to: end, control1: control1, control2: control2)
+                path.move(to: upHead.back)
+                path.addCurve(to: downHead.back, control1: control1, control2: control2)
             }
-            .stroke(QuoteTipStyle.arrow, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            .stroke(QuoteTipStyle.arrow, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
             Path { path in
-                Self.addHead(to: &path, at: start, from: control1)
-                Self.addHead(to: &path, at: end, from: control2)
+                upHead.add(to: &path)
+                downHead.add(to: &path)
             }
             .fill(QuoteTipStyle.arrow)
         }
@@ -149,19 +154,6 @@ struct QuoteTip: View {
         .opacity(shown ? 1 : 0)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-
-    /// A filled arrowhead at `tip`, pointing away from `from`.
-    private static func addHead(to path: inout Path, at tip: CGPoint, from: CGPoint) {
-        let angle = atan2(tip.y - from.y, tip.x - from.x)
-        let length: CGFloat = 18
-        let halfWidth: CGFloat = 11
-        let base = CGPoint(x: tip.x - length * cos(angle), y: tip.y - length * sin(angle))
-        let side = CGPoint(x: -sin(angle) * halfWidth, y: cos(angle) * halfWidth)
-        path.move(to: tip)
-        path.addLine(to: CGPoint(x: base.x + side.x, y: base.y + side.y))
-        path.addLine(to: CGPoint(x: base.x - side.x, y: base.y - side.y))
-        path.closeSubpath()
     }
 
     // MARK: The card
@@ -384,4 +376,33 @@ enum QuoteTipStyle {
                                            startPoint: .top, endPoint: .bottom)
     static let arrow = LinearGradient(colors: [Color(hex: 0xFF7BC0), Color(hex: 0xF2148E)],
                                       startPoint: .top, endPoint: .bottom)
+}
+
+/// A filled arrowhead at the end of a curve: its point at `tip`, facing away from the
+/// curve's nearby control point `from`, so it follows the line.
+private struct ArrowHead {
+    let tip: CGPoint
+    /// Where the line meets the head (a little inside it, so no gap shows).
+    let back: CGPoint
+    private let corners: (CGPoint, CGPoint)
+
+    init(tip: CGPoint, from control: CGPoint, length: CGFloat, halfWidth: CGFloat) {
+        let dx = tip.x - control.x
+        let dy = tip.y - control.y
+        let size = max(hypot(dx, dy), 0.001)
+        let along = CGPoint(x: dx / size, y: dy / size)
+        let base = CGPoint(x: tip.x - along.x * length, y: tip.y - along.y * length)
+        let across = CGPoint(x: -along.y * halfWidth, y: along.x * halfWidth)
+        self.tip = tip
+        back = CGPoint(x: tip.x - along.x * length * 0.75, y: tip.y - along.y * length * 0.75)
+        corners = (CGPoint(x: base.x + across.x, y: base.y + across.y),
+                   CGPoint(x: base.x - across.x, y: base.y - across.y))
+    }
+
+    func add(to path: inout Path) {
+        path.move(to: tip)
+        path.addLine(to: corners.0)
+        path.addLine(to: corners.1)
+        path.closeSubpath()
+    }
 }
