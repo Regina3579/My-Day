@@ -37,7 +37,7 @@ struct JournalPagesHome: View {
     @State private var heroIsVisible = true
     @State private var confirmEmptyTrash = false
     @FocusState private var searchFocused: Bool
-    /// The opening animation plays each time the journal opens (after the lock, when it is on).
+    /// The opening picture shows each time the journal opens (after the lock, when it is on).
     #if DEBUG
     @State private var isOpening = !DebugLaunchRoute.isScreenshotRun || DebugLaunchRoute.journalOpeningMoment != nil
     #else
