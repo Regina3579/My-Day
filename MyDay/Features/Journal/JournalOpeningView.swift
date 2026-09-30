@@ -111,10 +111,11 @@ struct JournalOpeningView: View {
             ])
             .position(place.point(192, 112))
             title(shown: arriving(t, Stage.opening), hidden: leaving(t, Stage.almost), place: place, lines: [
-                TitleLine("Opening", width: 142, size: 42, color: 0x5820A7),
-                TitleLine("your journal…", width: 214, size: 38, color: 0x94097A)
+                TitleLine("Opening", width: 138, size: 42, color: 0x5820A7),
+                // As in the design, it ends just before the butterfly.
+                TitleLine("your journal…", width: 198, size: 38, color: 0x94097A)
             ])
-            .position(place.point(187, 122))
+            .position(place.point(179, 122))
             title(shown: arriving(t, Stage.almost), hidden: leaving(t, Stage.open), place: place, lines: [
                 TitleLine("Almost there…", width: 240, size: 42, color: 0x9E0A7B),
                 TitleLine("Your beautiful stories", width: 214, size: 24, color: 0x7F0D82),
