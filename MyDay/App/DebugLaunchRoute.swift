@@ -10,12 +10,12 @@ enum DebugLaunchRoute {
         ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
     }
 
-    /// The launch animation: "splash" holds it still at 0.55 s (the bar about half full, two
-    /// hearts lit) and "splash-done" at 0.8 s (complete). Every other screenshot skips it.
+    /// The launch animation: "splash" holds it still at 1.55 s (the bar about 60% full, two
+    /// hearts lit) and "splash-done" at 2.2 s (complete). Every other screenshot skips it.
     static var splashMoment: TimeInterval? {
         switch route {
-        case "splash": 0.55
-        case "splash-done": 0.8
+        case "splash": 1.55
+        case "splash-done": 2.2
         default: nil
         }
     }
@@ -24,10 +24,10 @@ enum DebugLaunchRoute {
     /// moments. Every other screenshot skips it.
     static var journalOpeningMoment: TimeInterval? {
         switch route {
-        case "journal-opening-1": 0.14
-        case "journal-opening-2": 0.42
-        case "journal-opening-3": 0.66
-        case "journal-opening-4": 0.88
+        case "journal-opening-1": 0.8
+        case "journal-opening-2": 1.95
+        case "journal-opening-3": 2.9
+        case "journal-opening-4": 3.55
         default: nil
         }
     }
