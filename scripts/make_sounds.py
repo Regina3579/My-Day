@@ -1,4 +1,4 @@
-"""Synthesises My Day's four UI sounds (mono, 44.1 kHz, 16-bit WAV).
+"""Synthesises My Day's five UI sounds (mono, 44.1 kHz, 16-bit WAV).
 
 Run from MyDay/Resources/Sounds (needs numpy): python3 ../../../scripts/make_sounds.py
 """
@@ -37,6 +37,21 @@ def sparkle(freq, start, total, amp, decay, glide=0.01, vibrato=0.0, twin=0.0):
     if twin:
         note += twin * amp * np.sin(phase * 1.003)
     note *= np.exp(-t / decay)
+    a = int(0.003 * RATE)
+    note[:a] *= 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, a))
+    out = np.zeros(int(total * RATE))
+    i = int(start * RATE)
+    out[i:i + len(note)] += note
+    return out
+
+
+def bubble(start, total, f0, f1, amp, sweep=0.015, decay=0.022):
+    """A soft, rounded bubble "pop": a sine whose pitch rises quickly from f0 to f1, as a
+    popping bubble's does, and dies away fast, with a gentle 3 ms start and no noise."""
+    t = np.arange(int(decay * 8 * RATE)) / RATE
+    f = f1 - (f1 - f0) * np.exp(-t / sweep)
+    phase = 2 * np.pi * np.cumsum(f) / RATE
+    note = amp * (np.sin(phase) + 0.08 * np.sin(2 * phase)) * np.exp(-t / decay)
     a = int(0.003 * RATE)
     note[:a] *= 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, a))
     out = np.zeros(int(total * RATE))
@@ -134,3 +149,14 @@ bloom = sum(np.sin(2 * np.pi * f * t) for f in (2093.0 * 0.9985, 2093.0 * 1.0015
 bloom *= 0.035 * (1 - np.exp(-t / 0.08)) * np.exp(-t / 0.25)
 quote_tip[int(0.22 * RATE):] += bloom
 save('tip_discovery_dreamy.wav', finish(room(quote_tip, 0.26, seed=5), 0.25, 0.6))
+
+# Picking a mood star, "pop… ting ✨": the star coming alive. A tiny, soft bubble pop
+# (rising 520 Hz → E6), then 55 ms later one delicate, warm crystal ting an octave above
+# where the pop ends (E7, 5 ms strike, a detuned twin and a warm octave below), in a
+# small room, fading out quickly. 0.4 s.
+MOOD = 0.40
+mood = bubble(0.0, MOOD, 520.0, 1318.5, 0.8)
+mood += bell(2637.0, 0.055, MOOD - 0.055, MOOD,
+             [(1.0, 1.0, 0.09), (1.0032, 0.3, 0.10), (0.5, 0.18, 0.06), (2.0, 0.05, 0.03),
+              (2.76, 0.03, 0.02)], attack=0.005)
+save('mood_pop_ting.wav', finish(room(mood, 0.12, seed=9), 0.14, 0.6))

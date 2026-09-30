@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.showCompleted) private var showCompleted = false
     @AppStorage(Prefs.haptics) private var haptics = true
     @AppStorage(Prefs.taskCompletionSound) private var completionSound = true
+    @AppStorage(Prefs.moodStarSound) private var moodStarSound = true
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
     /// Turning the lock on or off, or changing how it opens.
@@ -70,13 +71,16 @@ struct SettingsView: View {
                         Label("Task Completion Sound", systemImage: "bell.and.waves.left.and.right.fill")
                     }
                     .id("sounds")
+                    Toggle(isOn: $moodStarSound) {
+                        Label("Mood Star Sound", systemImage: "sparkles")
+                    }
                     Toggle(isOn: $haptics) {
                         Label("Gentle haptics", systemImage: "hand.tap.fill")
                     }
                 } header: {
                     Text("Sounds & Haptics")
                 } footer: {
-                    Text("A soft “ting” when you tick off a to-do or a priority, and a little chime when the day's last one is done. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music.")
+                    Text("A soft “ting” when you tick off a to-do or a priority, a little chime when the day's last one is done, and a bubbly “pop… ting” when you pick a mood star in your journal. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music.")
                 }
 
                 Section {
@@ -154,6 +158,9 @@ struct SettingsView: View {
         .onChange(of: completionSound) { _, isOn in
             // A preview, so you know what it sounds like.
             if isOn { SoundEffects.play(.ting) }
+        }
+        .onChange(of: moodStarSound) { _, isOn in
+            if isOn { SoundEffects.play(.moodStar) }
         }
         .sheet(item: $lockGoal) { goal in
             JournalLockSetupSheet(goal: goal)

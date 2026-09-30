@@ -2,12 +2,13 @@ import AVFoundation
 
 /// My Day's little sounds, bundled with the app (`scripts/make_sounds.py` made them):
 /// a soft crystal "ting" (0.4 s) when a to-do or priority is ticked, a slightly more
-/// magical chime (1.2 s) when the day's last one is done, and the discovery sound
-/// ("Ting… twinkle!", 0.7 s) when a first-time tip pops up.
+/// magical chime (1.2 s) when the day's last one is done, the discovery sound
+/// ("Ting… twinkle!", 0.7 s) when a first-time tip pops up, and "pop… ting ✨" (0.4 s) when
+/// a mood star is picked.
 ///
 /// They are loaded at launch, so they play at once. They play gently, mix with other audio
 /// (music keeps playing), follow the Silent switch and never play while My Day is
-/// recording. Settings → Sounds & Haptics → Task Completion Sound turns off the ticking ones.
+/// recording. Settings → Sounds & Haptics turns off the ticking ones and the mood one.
 @MainActor
 enum SoundEffects {
     enum Sound: String, CaseIterable {
@@ -17,18 +18,27 @@ enum SoundEffects {
         case tip = "tip_discovery"
         /// The quote tip's version, ending dreamier: "ting ✨ ting-ling ✨".
         case quoteTip = "tip_discovery_dreamy"
+        /// Picking a mood star: a tiny, soft bubble pop, then one delicate crystal ting.
+        case moodStar = "mood_pop_ting"
 
         var volume: Float {
             switch self {
             case .ting: 0.5
             case .allDone: 0.55
             case .tip, .quoteTip: 0.45
+            // Very quiet: it plays on every tap of a star.
+            case .moodStar: 0.35
             }
         }
 
-        /// Only the ticking sounds follow Task Completion Sound; a tip shows only once.
-        var isTaskSound: Bool {
-            self == .ting || self == .allDone
+        /// The Settings → Sounds & Haptics switch that turns this sound off. A tip has none,
+        /// since each tip shows only once.
+        var setting: String? {
+            switch self {
+            case .ting, .allDone: Prefs.taskCompletionSound
+            case .moodStar: Prefs.moodStarSound
+            case .tip, .quoteTip: nil
+            }
         }
     }
 
@@ -37,9 +47,10 @@ enum SoundEffects {
 
     private static var players: [Sound: AVAudioPlayer] = [:]
 
-    /// Settings → Sounds & Haptics → Task Completion Sound (on unless turned off).
-    static var isEnabled: Bool {
-        UserDefaults.standard.object(forKey: Prefs.taskCompletionSound) as? Bool ?? true
+    /// Whether the sound's switch in Settings is on (every switch is on unless turned off).
+    static func isEnabled(_ sound: Sound) -> Bool {
+        guard let key = sound.setting else { return true }
+        return UserDefaults.standard.object(forKey: key) as? Bool ?? true
     }
 
     /// Loads every sound, so the first one plays without a delay.
@@ -55,7 +66,7 @@ enum SoundEffects {
     }
 
     static func play(_ sound: Sound) {
-        guard !sound.isTaskSound || isEnabled, !isRecording else { return }
+        guard isEnabled(sound), !isRecording else { return }
         let session = AVAudioSession.sharedInstance()
         // Ambient: mixes with music and podcasts instead of stopping them, and stays quiet
         // when the Silent switch is on.

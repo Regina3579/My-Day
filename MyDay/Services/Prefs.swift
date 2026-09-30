@@ -14,6 +14,8 @@ enum Prefs {
     static let haptics = "hapticsEnabled"
     /// Settings → Sounds & Haptics → Task Completion Sound.
     static let taskCompletionSound = "taskCompletionSoundOn"
+    /// Settings → Sounds & Haptics → Mood Star Sound.
+    static let moodStarSound = "moodStarSoundOn"
     static let journalLock = "journalLockEnabled"
     /// How the journal is unlocked: a `JournalLockMethod` raw value (Face ID when unset).
     static let journalLockMethod = "journalLockMethod"

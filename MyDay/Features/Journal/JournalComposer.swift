@@ -530,6 +530,7 @@ struct JournalComposer: View {
                 moodPicked = true
             }
             Haptics.tap()
+            SoundEffects.play(.moodStar)
         } label: {
             VStack(spacing: 6) {
                 Image(option.artName)

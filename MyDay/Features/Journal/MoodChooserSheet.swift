@@ -168,6 +168,7 @@ struct MoodChooserSheet: View {
         return Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { choice = option }
             Haptics.tap()
+            SoundEffects.play(.moodStar)
         } label: {
             VStack(spacing: 3) {
                 Image(option.artName)
