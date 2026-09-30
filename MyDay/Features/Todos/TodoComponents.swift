@@ -74,6 +74,12 @@ struct TodosHero: View {
 /// "Today ♥ · 27 May 2025" with the day's gentle quote, in one slim card.
 struct TodayHeaderCard: View {
     let day: Date
+    /// The quote glows for a moment (the first-time tip's "Show me").
+    var quoteGlows = false
+    /// Told where the quote is on screen (global), for the first-time tip.
+    var onQuoteFrame: ((CGRect) -> Void)?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 10) {
@@ -114,6 +120,23 @@ struct TodayHeaderCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(hex: 0xFFF3B0).opacity(quoteGlows ? 0.75 : 0))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Palette.hotPink.opacity(quoteGlows ? 0.8 : 0), lineWidth: 2)
+                    )
+                    .shadow(color: Color(hex: 0xFFC83D).opacity(quoteGlows ? 0.8 : 0), radius: 10)
+                    .padding(-6)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4).repeatCount(5, autoreverses: true),
+                               value: quoteGlows)
+            }
+            .onGeometryChange(for: CGRect.self) { geometry in
+                geometry.frame(in: .global)
+            } action: { frame in
+                onQuoteFrame?(frame)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

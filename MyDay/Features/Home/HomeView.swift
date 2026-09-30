@@ -6,9 +6,6 @@ import SwiftData
 struct HomeView: View {
     @Environment(Router.self) private var router
     @Environment(\.tabBarClearance) private var tabBarClearance
-    @AppStorage(Prefs.didShowQuoteTip) private var didShowQuoteTip = false
-    /// The first-time tip pointing at the daily quote.
-    @State private var showsQuoteTip = false
     @Query private var tasks: [TaskItem]
     @Query private var priorities: [Priority]
     @Query private var entries: [JournalEntry]
@@ -42,35 +39,7 @@ struct HomeView: View {
             .ignoresSafeArea(edges: .top)
         }
         .background(HomeBackdrop())
-        .overlayPreferenceValue(DailyQuoteAnchorKey.self) { anchor in
-            if showsQuoteTip, let anchor {
-                GeometryReader { proxy in
-                    DailyQuoteTip(quoteFrame: proxy[anchor], size: proxy.size, onDismiss: closeQuoteTip)
-                }
-                .ignoresSafeArea()
-                .transition(.opacity)
-            }
-        }
         .toolbar(.hidden, for: .navigationBar)
-        .task { await showQuoteTipIfNew() }
-    }
-
-    // MARK: First-time tip
-
-    /// New here: after a moment, point at the daily quote once.
-    private func showQuoteTipIfNew() async {
-        guard !didShowQuoteTip else { return }
-        try? await Task.sleep(for: .seconds(1))
-        guard !Task.isCancelled, !didShowQuoteTip, router.homePath.isEmpty, router.tab == .home,
-              !router.isMenuOpen, !router.isQuickAddOpen, router.sheet == nil
-        else { return }
-        didShowQuoteTip = true
-        withAnimation(.easeOut(duration: 0.3)) { showsQuoteTip = true }
-    }
-
-    private func closeQuoteTip() {
-        withAnimation(.easeOut(duration: 0.25)) { showsQuoteTip = false }
-        Haptics.tap()
     }
 
     // MARK: Scene, header and daily message
@@ -98,7 +67,6 @@ struct HomeView: View {
                     onReminders: { router.sheet = .reminders }
                 )
                 DailyQuoteView(date: today, maxWidth: w * 0.33)
-                    .anchorPreference(key: DailyQuoteAnchorKey.self, value: .bounds) { $0 }
                     .padding(.leading, w * 0.09)
             }
             .padding(.top, topInset + 4)

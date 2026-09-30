@@ -11,8 +11,14 @@ struct TodayToDosView: View {
     /// Whether the Completed list is open (also "Show finished to-dos" in Settings).
     @AppStorage(Prefs.showCompleted) private var showCompleted = false
     @AppStorage(Prefs.didShowVoiceTip) private var didShowVoiceTip = false
-    /// The first-time tip pointing at Speak a Task.
+    @AppStorage(Prefs.didShowQuoteTip) private var didShowQuoteTip = false
+    /// The first-time tips: the day's quote first, then Speak a Task.
     @State private var showsVoiceTip = false
+    @State private var showsQuoteTip = false
+    /// Where the day's quote is on screen (global), for its tip.
+    @State private var quoteFrame: CGRect = .zero
+    /// "Show me": the quote glows for a moment.
+    @State private var quoteGlows = false
     @Query private var tasks: [TaskItem]
     @State private var filter: CategoryChoice?
     @State private var sheet: TodoSheet?
@@ -108,19 +114,62 @@ struct TodayToDosView: View {
                 .transition(.opacity)
             }
         }
-        .task { await showVoiceTipIfNew() }
+        .overlay {
+            if showsQuoteTip {
+                GeometryReader { proxy in
+                    // The quote's frame is global; the tip's space starts where this view does.
+                    let origin = proxy.frame(in: .global).origin
+                    QuoteTip(quoteFrame: quoteFrame.offsetBy(dx: -origin.x, dy: -origin.y), size: proxy.size,
+                             onShowMe: showQuoteFromTip, onDismiss: closeQuoteTip)
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+        }
+        .task { await showTipsIfNew() }
     }
 
     // MARK: First-time tip
 
     /// New here: after a moment, point at Speak a Task once (not at the largest text sizes,
     /// where the buttons are at the end of the list).
-    private func showVoiceTipIfNew() async {
-        guard !didShowVoiceTip, pinsActions else { return }
+    private func showTipsIfNew() async {
+        guard !didShowQuoteTip || (!didShowVoiceTip && pinsActions) else { return }
         try? await Task.sleep(for: .seconds(0.9))
-        guard !Task.isCancelled, !didShowVoiceTip, sheet == nil else { return }
+        guard !Task.isCancelled, sheet == nil else { return }
+        if !didShowQuoteTip, quoteFrame != .zero {
+            didShowQuoteTip = true
+            withAnimation(.easeOut(duration: 0.3)) { showsQuoteTip = true }
+        } else {
+            showVoiceTipIfNew()
+        }
+    }
+
+    private func showVoiceTipIfNew() {
+        guard !didShowVoiceTip, pinsActions, sheet == nil else { return }
         didShowVoiceTip = true
         withAnimation(.easeOut(duration: 0.3)) { showsVoiceTip = true }
+    }
+
+    /// Closing the quote tip brings the Speak a Task tip, when it hasn't been shown yet.
+    private func closeQuoteTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsQuoteTip = false }
+        Haptics.tap()
+        Task {
+            try? await Task.sleep(for: .seconds(0.7))
+            showVoiceTipIfNew()
+        }
+    }
+
+    /// "Show me": the tip closes and the quote glows for a moment.
+    private func showQuoteFromTip() {
+        closeQuoteTip()
+        Task {
+            try? await Task.sleep(for: .seconds(0.3))
+            quoteGlows = true
+            try? await Task.sleep(for: .seconds(2.4))
+            quoteGlows = false
+        }
     }
 
     private func closeVoiceTip() {
@@ -173,7 +222,9 @@ struct TodayToDosView: View {
     private func header(width: CGFloat, safeTop: CGFloat) -> some View {
         VStack(spacing: 0) {
             hero(width: width, safeTop: safeTop)
-            TodayHeaderCard(day: day)
+            TodayHeaderCard(day: day, quoteGlows: quoteGlows) { frame in
+                quoteFrame = frame
+            }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
