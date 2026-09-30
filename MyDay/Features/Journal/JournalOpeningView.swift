@@ -18,7 +18,7 @@ struct JournalOpeningView: View {
     @State private var isDone = false
 
     /// How long it shows, in seconds, before the journal opens.
-    static let length: TimeInterval = 2.5
+    static let length: TimeInterval = 1.5
     /// The size of the picture in the design, in which the words are placed.
     private static let grid = CGSize(width: 364, height: 678)
 

@@ -13,7 +13,7 @@ enum DebugLaunchRoute {
     /// Opening My Journal: "journal-opening" holds it still once its words have popped in.
     /// Every other screenshot skips it.
     static var journalOpeningMoment: TimeInterval? {
-        route == "journal-opening" ? JournalOpeningView.length * 0.6 : nil
+        route == "journal-opening" ? JournalOpeningView.length - 0.1 : nil
     }
 
     /// The name after `-screenshotRoute`.
