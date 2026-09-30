@@ -59,6 +59,8 @@ struct QuoteTip: View {
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .onAppear {
+            // My Day's discovery sound, as the card pops up (not again if the page comes back).
+            if !shown { SoundEffects.play(.quoteTip) }
             withAnimation(.spring(response: 0.45, dampingFraction: 0.7)) { shown = true }
             if !reduceMotion {
                 withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) { bounce = true }

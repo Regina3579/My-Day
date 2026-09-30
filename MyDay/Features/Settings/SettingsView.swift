@@ -76,7 +76,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Sounds & Haptics")
                 } footer: {
-                    Text("A soft “ting” when you tick off a to-do or a priority, and a little chime when the day's last one is done. It stays quiet when your iPhone is on Silent and never stops your music.")
+                    Text("A soft “ting” when you tick off a to-do or a priority, and a little chime when the day's last one is done. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music.")
                 }
 
                 Section {

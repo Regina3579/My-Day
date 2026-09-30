@@ -1,23 +1,34 @@
 import AVFoundation
 
-/// My Day's two little sounds, bundled with the app (`scripts/make_sounds.py` made them):
-/// a soft crystal "ting" (0.4 s) when a to-do or priority is ticked, and a slightly more
-/// magical chime (1.2 s) when the day's last one is done.
+/// My Day's little sounds, bundled with the app (`scripts/make_sounds.py` made them):
+/// a soft crystal "ting" (0.4 s) when a to-do or priority is ticked, a slightly more
+/// magical chime (1.2 s) when the day's last one is done, and the discovery sound
+/// ("Ting… twinkle!", 0.7 s) when a first-time tip pops up.
 ///
-/// They are loaded at launch, so they play the moment a box is ticked. They play gently,
-/// mix with other audio (music keeps playing), follow the Silent switch, never play while
-/// My Day is recording, and can be turned off in Settings → Sounds & Haptics.
+/// They are loaded at launch, so they play at once. They play gently, mix with other audio
+/// (music keeps playing), follow the Silent switch and never play while My Day is
+/// recording. Settings → Sounds & Haptics → Task Completion Sound turns off the ticking ones.
 @MainActor
 enum SoundEffects {
     enum Sound: String, CaseIterable {
         case ting = "task_complete_ting"
         case allDone = "all_done_chime"
+        /// Every first-time tip: one crystal "ting", then three tiny rising sparkles.
+        case tip = "tip_discovery"
+        /// The quote tip's version, ending dreamier: "ting ✨ ting-ling ✨".
+        case quoteTip = "tip_discovery_dreamy"
 
         var volume: Float {
             switch self {
             case .ting: 0.5
             case .allDone: 0.55
+            case .tip, .quoteTip: 0.45
             }
+        }
+
+        /// Only the ticking sounds follow Task Completion Sound; a tip shows only once.
+        var isTaskSound: Bool {
+            self == .ting || self == .allDone
         }
     }
 
@@ -31,7 +42,7 @@ enum SoundEffects {
         UserDefaults.standard.object(forKey: Prefs.taskCompletionSound) as? Bool ?? true
     }
 
-    /// Loads both sounds, so the first tick plays without a delay.
+    /// Loads every sound, so the first one plays without a delay.
     static func preload() {
         for sound in Sound.allCases where players[sound] == nil {
             let url = Bundle.main.url(forResource: sound.rawValue, withExtension: "wav")
@@ -44,7 +55,7 @@ enum SoundEffects {
     }
 
     static func play(_ sound: Sound) {
-        guard isEnabled, !isRecording else { return }
+        guard !sound.isTaskSound || isEnabled, !isRecording else { return }
         let session = AVAudioSession.sharedInstance()
         // Ambient: mixes with music and podcasts instead of stopping them, and stays quiet
         // when the Silent switch is on.

@@ -1,4 +1,4 @@
-"""Synthesises My Day's two UI sounds (mono, 44.1 kHz, 16-bit WAV).
+"""Synthesises My Day's four UI sounds (mono, 44.1 kHz, 16-bit WAV).
 
 Run from MyDay/Resources/Sounds (needs numpy): python3 ../../../scripts/make_sounds.py
 """
@@ -24,6 +24,42 @@ def bell(freq, start, length, total, partials, attack=0.003):
     i = int(start * RATE)
     out[i:i + len(note)] += note[:len(out) - i]
     return out
+
+
+def sparkle(freq, start, total, amp, decay, glide=0.01, vibrato=0.0, twin=0.0):
+    """One tiny sparkle: a near-pure sine that starts `glide` flat and rises onto its note in
+    about 20 ms (the "twinkle"), with a faint octave. `vibrato` adds a slow 5.5 Hz wobble and `twin` a
+    detuned copy, both for a dreamier sparkle."""
+    t = np.arange(int(min(decay * 7, total - start) * RATE)) / RATE
+    f = freq * (1 - glide * np.exp(-t / 0.02)) * (1 + vibrato * np.sin(2 * np.pi * 5.5 * t))
+    phase = 2 * np.pi * np.cumsum(f) / RATE
+    note = amp * (np.sin(phase) + 0.12 * np.sin(2 * phase) * np.exp(-t / (decay / 3)))
+    if twin:
+        note += twin * amp * np.sin(phase * 1.003)
+    note *= np.exp(-t / decay)
+    a = int(0.003 * RATE)
+    note[:a] *= 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, a))
+    out = np.zeros(int(total * RATE))
+    i = int(start * RATE)
+    out[i:i + len(note)] += note
+    return out
+
+
+def room(signal, wet, seed=3):
+    """A small, soft room: the dry sound plus its echo off a synthetic impulse response
+    (decaying noise, darkened above 4.5 kHz, after a 12 ms gap so the strike stays clear)."""
+    rng = np.random.default_rng(seed)
+    n = int(0.45 * RATE)
+    t = np.arange(n) / RATE
+    ir = rng.standard_normal(n) * np.exp(-t / 0.11)
+    spec = np.fft.rfft(ir)
+    freqs = np.fft.rfftfreq(n, 1 / RATE)
+    ir = np.fft.irfft(spec / np.sqrt(1 + (freqs / 4500) ** 4), n)
+    ir[:int(0.012 * RATE)] = 0
+    ir /= np.sqrt(np.sum(ir ** 2))
+    size = len(signal) + n
+    tail = np.fft.irfft(np.fft.rfft(signal, size) * np.fft.rfft(ir, size), size)[:len(signal)]
+    return signal + wet * tail
 
 
 def finish(signal, fade, peak):
@@ -65,3 +101,36 @@ for k in range(7):
     freq = [3136.0, 3520.0, 4186.0, 4698.6][k % 4]
     chime += bell(freq, start, 0.2, CHIME, [(1.0, 0.09 * (1 - k / 9), 0.045)], attack=0.002)
 save('all_done_chime.wav', finish(chime, 0.35, 0.6))
+
+# First-time tips, "Ting… twinkle!": My Day's discovery sound, the same for every tip.
+# A soft, warm crystal "ting" (G6, a fourth below the task ting, with a slow 8 ms strike,
+# a detuned twin for shimmer and a quiet octave below for warmth), then three delicate
+# rising sparkles up a C-major chord (C7, E7, G7: "ti-li-ling"), in a small soft room,
+# fading out gently. 0.7 s.
+TIP = 0.70
+tip_glass = [(1.0, 1.0, 0.20), (1.0028, 0.35, 0.22), (0.5, 0.12, 0.10),
+             (2.0, 0.10, 0.07), (2.76, 0.05, 0.04), (5.40, 0.012, 0.015)]
+
+
+def tip_ting(total):
+    return bell(1568.0, 0.0, total, total, tip_glass, attack=0.008)
+
+
+tip = tip_ting(TIP)
+for start, freq, amp, decay in [(0.150, 2093.0, 0.30, 0.070), (0.215, 2637.0, 0.28, 0.075),
+                                (0.280, 3136.0, 0.26, 0.110)]:
+    tip += sparkle(freq, start, TIP, amp, decay)
+save('tip_discovery.wav', finish(room(tip, 0.18), 0.22, 0.6))
+
+# The quote tip's version ends dreamier, "ting ✨ ting-ling ✨": the same ting, then two
+# softer, longer sparkles (E7, then A7 with a slow wobble and a detuned twin), a faint
+# shimmer blooming under them, and a little more room. 0.75 s.
+QUOTE_TIP = 0.75
+quote_tip = tip_ting(QUOTE_TIP)
+quote_tip += sparkle(2637.0, 0.170, QUOTE_TIP, 0.30, 0.100, twin=0.3)
+quote_tip += sparkle(3520.0, 0.255, QUOTE_TIP, 0.25, 0.160, vibrato=0.003, twin=0.4)
+t = np.arange(int((QUOTE_TIP - 0.22) * RATE)) / RATE
+bloom = sum(np.sin(2 * np.pi * f * t) for f in (2093.0 * 0.9985, 2093.0 * 1.0015, 2637.0))
+bloom *= 0.035 * (1 - np.exp(-t / 0.08)) * np.exp(-t / 0.25)
+quote_tip[int(0.22 * RATE):] += bloom
+save('tip_discovery_dreamy.wav', finish(room(quote_tip, 0.26, seed=5), 0.25, 0.6))
