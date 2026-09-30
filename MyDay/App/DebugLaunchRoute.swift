@@ -13,13 +13,30 @@ enum DebugLaunchRoute {
     /// The launch animation: "splash" holds it still at 0.55 s (the bar about half full, two
     /// hearts lit) and "splash-done" at 0.8 s (complete). Every other screenshot skips it.
     static var splashMoment: TimeInterval? {
+        switch route {
+        case "splash": 0.55
+        case "splash-done": 0.8
+        default: nil
+        }
+    }
+
+    /// Opening My Journal: "journal-opening-1" … "-4" hold it still at each of the design's four
+    /// moments. Every other screenshot skips it.
+    static var journalOpeningMoment: TimeInterval? {
+        switch route {
+        case "journal-opening-1": 0.14
+        case "journal-opening-2": 0.42
+        case "journal-opening-3": 0.66
+        case "journal-opening-4": 0.88
+        default: nil
+        }
+    }
+
+    /// The name after `-screenshotRoute`.
+    private static var route: String? {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-screenshotRoute"), index + 1 < arguments.count else { return nil }
-        switch arguments[index + 1] {
-        case "splash": return 0.55
-        case "splash-done": return 0.8
-        default: return nil
-        }
+        return arguments[index + 1]
     }
 
     /// Screenshot runs only: adds demo to-dos, priorities and a journal page once, so the
@@ -328,7 +345,8 @@ enum DebugLaunchRoute {
                 context.delete(priority)
             }
             router.open(.priority(today))
-        case "journal": router.open(.journal)
+        case "journal", "journal-opening-1", "journal-opening-2", "journal-opening-3", "journal-opening-4":
+            router.open(.journal)
         case "journal-page":
             journalPage = true
             router.open(.journal)

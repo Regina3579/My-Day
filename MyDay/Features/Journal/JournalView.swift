@@ -37,6 +37,12 @@ struct JournalPagesHome: View {
     @State private var heroIsVisible = true
     @State private var confirmEmptyTrash = false
     @FocusState private var searchFocused: Bool
+    /// The opening animation plays each time the journal opens (after the lock, when it is on).
+    #if DEBUG
+    @State private var isOpening = !DebugLaunchRoute.isScreenshotRun || DebugLaunchRoute.journalOpeningMoment != nil
+    #else
+    @State private var isOpening = true
+    #endif
 
     var body: some View {
         GeometryReader { proxy in
@@ -48,6 +54,15 @@ struct JournalPagesHome: View {
             }
         }
         .background(JournalBackdrop())
+        .overlay {
+            if isOpening {
+                JournalOpeningView(frozenAt: debugOpeningMoment) {
+                    withAnimation(.easeOut(duration: 0.3)) { isOpening = false }
+                }
+                .transition(.opacity)
+            }
+        }
+        .toolbar(isOpening ? .hidden : .automatic, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("My Journal Pages")
@@ -108,6 +123,14 @@ struct JournalPagesHome: View {
                 isFiltering = true
             }
         }
+    }
+
+    private var debugOpeningMoment: TimeInterval? {
+        #if DEBUG
+        DebugLaunchRoute.journalOpeningMoment
+        #else
+        nil
+        #endif
     }
 
     private var content: some View {
