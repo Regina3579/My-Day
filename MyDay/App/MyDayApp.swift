@@ -20,6 +20,7 @@ struct MyDayApp: App {
             RootView()
                 .environment(router)
                 .environment(appState)
+                .launchSplash()
                 .tint(Palette.hotPink)
                 .preferredColorScheme(.light)
         }

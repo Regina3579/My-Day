@@ -10,6 +10,18 @@ enum DebugLaunchRoute {
         ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
     }
 
+    /// The launch animation: "splash" holds it still at 0.55 s (the bar about half full, two
+    /// hearts lit) and "splash-done" at 0.8 s (complete). Every other screenshot skips it.
+    static var splashMoment: TimeInterval? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-screenshotRoute"), index + 1 < arguments.count else { return nil }
+        switch arguments[index + 1] {
+        case "splash": return 0.55
+        case "splash-done": return 0.8
+        default: return nil
+        }
+    }
+
     /// Screenshot runs only: adds demo to-dos, priorities and a journal page once, so the
     /// screenshots have something to show. Every other launch, even of a Debug build, starts empty.
     @MainActor
