@@ -57,7 +57,7 @@ struct JournalPagesHome: View {
         .overlay {
             if isOpening {
                 JournalOpeningView(frozenAt: debugOpeningMoment) {
-                    withAnimation(.easeOut(duration: 0.3)) { isOpening = false }
+                    withAnimation(.easeOut(duration: 0.5)) { isOpening = false }
                 }
                 .transition(.opacity)
             }

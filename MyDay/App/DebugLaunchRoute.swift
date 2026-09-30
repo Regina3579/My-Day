@@ -27,7 +27,7 @@ enum DebugLaunchRoute {
         switch route {
         case "journal-opening-1": JournalOpeningView.Stage.opening * 0.6
         case "journal-opening-2": JournalOpeningView.Stage.almost - 0.25
-        case "journal-opening-3": JournalOpeningView.Stage.open - 0.5
+        case "journal-opening-3": JournalOpeningView.Stage.open - 0.8
         case "journal-opening-4": JournalOpeningView.Stage.end - 0.05
         default: nil
         }
