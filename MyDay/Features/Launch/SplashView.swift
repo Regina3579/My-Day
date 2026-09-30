@@ -36,7 +36,8 @@ private struct LaunchSplash: ViewModifier {
 /// - 0–0.2 s: the icon glows, with soft light rays.
 /// - 0.2–0.4 s: "Make today beautiful 💗" and the hearts pop in, with "Loading your happy space…".
 /// - 0.4–0.7 s: the heart bar fills, and the hearts under it light up one by one.
-/// - 0.7–0.8 s: the bar completes, the icon gives a little bounce, and the app opens.
+/// - 0.7–0.8 s: the bar completes; as the icon gives a little bounce, the girl, her puppy and
+///   kitten close their eyes in a happy smile (`LaunchLogoHappy`); then the app opens.
 struct SplashView: View {
     /// Debug screenshots only: hold the animation still at this moment.
     var frozenAt: TimeInterval?
@@ -96,11 +97,17 @@ struct SplashView: View {
     private func icon(at t: TimeInterval, size: CGFloat) -> some View {
         // A soft bounce as loading completes.
         let bounce = reduceMotion ? 0 : sin(ramp(t, 0.7, 0.8, eased: false) * .pi) * 0.04
-        return Image("LaunchLogo")
-            .resizable()
-            .frame(width: size, height: size)
-            .shadow(color: Color(hex: 0xF0428A).opacity(0.28 * ramp(t, 0, 0.2)), radius: 18, x: 0, y: 8)
-            .scaleEffect(1 + bounce)
+        // The happy icon is lined up on the "My Day" lettering, so only the girl and pets change.
+        return ZStack {
+            Image("LaunchLogo")
+                .resizable()
+            Image("LaunchLogoHappy")
+                .resizable()
+                .opacity(ramp(t, 0.7, 0.76))
+        }
+        .frame(width: size, height: size)
+        .shadow(color: Color(hex: 0xF0428A).opacity(0.28 * ramp(t, 0, 0.2)), radius: 18, x: 0, y: 8)
+        .scaleEffect(1 + bounce)
     }
 
     // MARK: "Make today beautiful 💗"
