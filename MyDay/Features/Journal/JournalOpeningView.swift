@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// Opening My Journal, as in the design, before My Journal Pages shows. It is paced so each
-/// message can be read (3.6 s in all; a tap skips it), with quick pops:
-/// - 0–1.25 s: "Get ready to write a beautiful story!" pops in over the girl winking by her
+/// Opening My Journal, as in the design, before My Journal Pages shows. It is paced slowly
+/// enough to see each picture and read each message (5.6 s in all; a tap skips it), with quick
+/// pops. Its stages (`Stage`), the design's four frames:
+/// - 0–2.0 s: "Get ready to write a beautiful story!" pops in over the girl winking by her
 ///   journal with her puppy.
-/// - 1.25–2.15 s: "Opening your journal…" as she hugs the journal, and the heart bar starts to fill.
-/// - 2.15–3.2 s: "Almost there… Your beautiful stories are ready!" as the bar nearly fills.
-/// - 3.2–3.6 s: the journal lies open in a burst of light; then the page shows.
+/// - 2.0–3.4 s: "Opening your journal…" as she hugs the journal, and the heart bar starts to fill.
+/// - 3.4–5.0 s: "Almost there… Your beautiful stories are ready!" as the bar nearly fills.
+/// - 5.0–5.6 s: the journal lies open in a burst of light; then the page shows.
 ///
 /// The four pictures (`JournalOpening1`…`4`) come from the design, with its words, bar and
 /// hearts taken out: those are drawn here, in the places the design has them. Everything is
@@ -21,7 +22,15 @@ struct JournalOpeningView: View {
     @State private var start = Date()
     @State private var isDone = false
 
-    static let length: TimeInterval = 3.6
+    /// When each stage starts, in seconds; change these to pace it.
+    enum Stage {
+        static let opening: TimeInterval = 2.0
+        static let almost: TimeInterval = 3.4
+        static let open: TimeInterval = 5.0
+        static let end: TimeInterval = 5.6
+    }
+
+    static let length = Stage.end
     /// The size of the pictures in the design, in which everything here is placed.
     private static let grid = CGSize(width: 364, height: 678)
 
@@ -60,10 +69,10 @@ struct JournalOpeningView: View {
             HeartProgressBar(progress: Self.progress(at: t))
                 .frame(width: place.length(287), height: place.length(23))
                 .position(place.point(181.5, 572.5))
-                .opacity(ramp(t, 1.25, 1.45) * (1 - ramp(t, 3.15, 3.3)))
+                .opacity(barShown(at: t))
             hearts(at: t, place: place)
                 .position(place.point(179.5, 618))
-                .opacity(ramp(t, 1.25, 1.45) * (1 - ramp(t, 3.15, 3.3)))
+                .opacity(barShown(at: t))
         }
         .frame(width: size.width, height: size.height)
     }
@@ -73,13 +82,13 @@ struct JournalOpeningView: View {
     private func pictures(at t: TimeInterval, in size: CGSize) -> some View {
         // Each fades in over the last; the first settles from a little zoom, the open journal
         // grows a touch as it opens.
-        let settle = reduceMotion ? 1 : 1.04 - 0.04 * ramp(t, 0, 0.6)
-        let opening = reduceMotion ? 1 : 1 + 0.06 * ramp(t, 3.2, 3.6)
+        let settle = reduceMotion ? 1 : 1.04 - 0.04 * ramp(t, 0, 0.8)
+        let opening = reduceMotion ? 1 : 1 + 0.06 * ramp(t, Stage.open, Stage.end)
         return ZStack {
             picture("JournalOpening1", in: size).scaleEffect(settle)
-            picture("JournalOpening2", in: size).opacity(ramp(t, 1.25, 1.45))
-            picture("JournalOpening3", in: size).opacity(ramp(t, 2.15, 2.35))
-            picture("JournalOpening4", in: size).opacity(ramp(t, 3.2, 3.4)).scaleEffect(opening)
+            picture("JournalOpening2", in: size).opacity(ramp(t, Stage.opening, Stage.opening + 0.25))
+            picture("JournalOpening3", in: size).opacity(ramp(t, Stage.almost, Stage.almost + 0.25))
+            picture("JournalOpening4", in: size).opacity(ramp(t, Stage.open, Stage.open + 0.25)).scaleEffect(opening)
         }
     }
 
@@ -95,18 +104,18 @@ struct JournalOpeningView: View {
 
     private func titles(at t: TimeInterval, place: GridPlacement) -> some View {
         ZStack {
-            title(shown: ramp(t, 0.05, 0.4, eased: false), hidden: ramp(t, 1.2, 1.35), place: place, lines: [
+            title(shown: ramp(t, 0.1, 0.45, eased: false), hidden: leaving(t, Stage.opening), place: place, lines: [
                 TitleLine("Get ready", width: 218, size: 48, color: 0x93097D),
                 TitleLine("to write a", width: 136, size: 28, color: 0x560F8A),
                 TitleLine("beautiful story!", width: 232, size: 32, color: 0x5D0E87)
             ])
             .position(place.point(192, 112))
-            title(shown: ramp(t, 1.3, 1.65, eased: false), hidden: ramp(t, 2.1, 2.25), place: place, lines: [
+            title(shown: arriving(t, Stage.opening), hidden: leaving(t, Stage.almost), place: place, lines: [
                 TitleLine("Opening", width: 142, size: 42, color: 0x5820A7),
                 TitleLine("your journal…", width: 214, size: 38, color: 0x94097A)
             ])
             .position(place.point(187, 122))
-            title(shown: ramp(t, 2.2, 2.55, eased: false), hidden: ramp(t, 3.2, 3.35), place: place, lines: [
+            title(shown: arriving(t, Stage.almost), hidden: leaving(t, Stage.open), place: place, lines: [
                 TitleLine("Almost there…", width: 240, size: 42, color: 0x9E0A7B),
                 TitleLine("Your beautiful stories", width: 214, size: 24, color: 0x7F0D82),
                 TitleLine("are ready!", width: 108, size: 24, color: 0x820B7F)
@@ -136,9 +145,16 @@ struct JournalOpeningView: View {
 
     // MARK: Bar and hearts
 
-    /// How full the bar is: 70% by 2.1 s, about 80% by 2.8 s ("Almost there…"), full at 3.15 s.
+    /// The bar and hearts show from "Opening your journal…" until the journal opens.
+    private func barShown(at t: TimeInterval) -> Double {
+        ramp(t, Stage.opening, Stage.opening + 0.25) * (1 - ramp(t, Stage.open - 0.1, Stage.open + 0.05))
+    }
+
+    /// How full the bar is: 70% as "Almost there…" comes, about 80% a little later, full just
+    /// before the journal opens.
     static func progress(at t: TimeInterval) -> Double {
-        let stops: [(TimeInterval, Double)] = [(1.3, 0), (2.1, 0.7), (2.8, 0.82), (3.15, 1)]
+        let stops: [(TimeInterval, Double)] = [(Stage.opening + 0.05, 0), (Stage.almost, 0.7),
+                                               (Stage.open - 0.4, 0.82), (Stage.open - 0.05, 1)]
         guard t > stops[0].0 else { return 0 }
         for (a, b) in zip(stops, stops.dropFirst()) where t <= b.0 {
             let x = (t - a.0) / (b.0 - a.0)
@@ -148,7 +164,8 @@ struct JournalOpeningView: View {
     }
 
     /// When each of the four hearts under the bar lights up.
-    private static let heartTimes: [TimeInterval] = [1.5, 2.0, 2.6, 3.1]
+    private static let heartTimes: [TimeInterval] = [Stage.opening + 0.3, Stage.almost + 0.1,
+                                                      Stage.almost + 0.6, Stage.open - 0.2]
 
     private func hearts(at t: TimeInterval, place: GridPlacement) -> some View {
         HStack(spacing: place.length(11)) {
@@ -168,6 +185,16 @@ struct JournalOpeningView: View {
     }
 
     // MARK: Timing
+
+    /// A message popping in just after its stage starts.
+    private func arriving(_ t: TimeInterval, _ stage: TimeInterval) -> Double {
+        ramp(t, stage + 0.05, stage + 0.4, eased: false)
+    }
+
+    /// A message fading as the next stage starts.
+    private func leaving(_ t: TimeInterval, _ next: TimeInterval) -> Double {
+        ramp(t, next - 0.1, next + 0.05)
+    }
 
     /// 0 before `from`, 1 after `to`, and in between a smooth (or, unless `eased`, even) rise.
     private func ramp(_ t: TimeInterval, _ from: TimeInterval, _ to: TimeInterval, eased: Bool = true) -> Double {

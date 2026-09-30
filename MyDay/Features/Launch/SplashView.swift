@@ -30,13 +30,14 @@ private struct LaunchSplash: ViewModifier {
     }
 }
 
-/// The launch animation, as in the design, paced so its words can be read (2.2 s; a tap skips
-/// it). It starts from exactly what the launch screen shows (the pink `LaunchBackground` and
-/// the 240 pt `LaunchLogo`, centred in the safe area), so it carries on from it without a jump:
-/// - 0–0.5 s: the icon glows, with soft light rays.
-/// - 0.5–1.0 s: "Make today beautiful 💗" and the hearts pop in, with "Loading your happy space…".
-/// - 1.0–1.9 s: the heart bar fills, and the hearts under it light up one by one.
-/// - 1.9–2.2 s: the bar completes; as the icon gives a little bounce, the girl, her puppy and
+/// The launch animation, as in the design, paced slowly enough to see the picture and read its
+/// words (3.6 s; a tap skips it). It starts from exactly what the launch screen shows (the pink
+/// `LaunchBackground` and the 240 pt `LaunchLogo`, centred in the safe area), so it carries on
+/// from it without a jump. Its stages (`Stage`), the design's four frames:
+/// - 0–0.8 s: the icon glows, with soft light rays.
+/// - 0.8–1.6 s: "Make today beautiful 💗" and the hearts pop in, with "Loading your happy space…".
+/// - 1.6–3.0 s: the heart bar fills, and the hearts under it light up one by one.
+/// - 3.0–3.6 s: the bar completes; as the icon gives a little bounce, the girl, her puppy and
 ///   kitten close their eyes in a happy smile (`LaunchLogoHappy`); then the app opens.
 /// The stages are longer than the design's 0.8 s, not the pops and bounces, which stay quick.
 struct SplashView: View {
@@ -49,7 +50,15 @@ struct SplashView: View {
     @State private var start = Date()
     @State private var isDone = false
 
-    static let length: TimeInterval = 2.2
+    /// When each stage starts, in seconds; change these to pace it.
+    enum Stage {
+        static let words: TimeInterval = 0.8
+        static let filling: TimeInterval = 1.6
+        static let done: TimeInterval = 3.0
+        static let end: TimeInterval = 3.6
+    }
+
+    static let length = Stage.end
     /// The size of `LaunchLogo` (720 px at 3x).
     static let iconSize: CGFloat = 240
 
@@ -79,8 +88,8 @@ struct SplashView: View {
         let size = Self.iconSize
         return ZStack {
             SplashGlow(size: size, turn: reduceMotion ? 0 : t * 14)
-                .opacity(ramp(t, 0, 0.5))
-                .scaleEffect(0.75 + 0.25 * ramp(t, 0, 0.5))
+                .opacity(ramp(t, 0, 0.6))
+                .scaleEffect(0.75 + 0.25 * ramp(t, 0, 0.6))
             ForEach(SplashHeart.all) { heart in
                 floating(heart, at: t, size: size)
             }
@@ -98,7 +107,7 @@ struct SplashView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
-            SplashBackground(decor: ramp(t, 0, 0.6))
+            SplashBackground(decor: ramp(t, 0, 0.8))
                 .ignoresSafeArea()
         }
     }
@@ -107,24 +116,24 @@ struct SplashView: View {
 
     private func icon(at t: TimeInterval, size: CGFloat) -> some View {
         // A soft bounce as loading completes.
-        let bounce = reduceMotion ? 0 : sin(ramp(t, 1.9, 2.2, eased: false) * .pi) * 0.04
+        let bounce = reduceMotion ? 0 : sin(ramp(t, Stage.done, Stage.done + 0.4, eased: false) * .pi) * 0.04
         // The happy icon is lined up on the "My Day" lettering, so only the girl and pets change.
         return ZStack {
             Image("LaunchLogo")
                 .resizable()
             Image("LaunchLogoHappy")
                 .resizable()
-                .opacity(ramp(t, 1.9, 2.05))
+                .opacity(ramp(t, Stage.done, Stage.done + 0.2))
         }
         .frame(width: size, height: size)
-        .shadow(color: Color(hex: 0xF0428A).opacity(0.28 * ramp(t, 0, 0.5)), radius: 18, x: 0, y: 8)
+        .shadow(color: Color(hex: 0xF0428A).opacity(0.28 * ramp(t, 0, 0.6)), radius: 18, x: 0, y: 8)
         .scaleEffect(1 + bounce)
     }
 
     // MARK: "Make today beautiful 💗"
 
     private func title(at t: TimeInterval) -> some View {
-        let shown = ramp(t, 0.5, 0.85, eased: false)
+        let shown = ramp(t, Stage.words, Stage.words + 0.35, eased: false)
         return VStack(alignment: .leading, spacing: -6) {
             Text("Make today")
                 .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFF4FA3), Color(hex: 0xEC1D86)],
@@ -142,8 +151,8 @@ struct SplashView: View {
         .shadow(color: Color.white.opacity(0.9), radius: 2)
         .rotationEffect(.degrees(-6))
         .scaleEffect(reduceMotion ? 1 : 0.8 + 0.2 * Self.overshoot(shown))
-        .offset(y: reduceMotion ? 0 : 10 * (1 - ramp(t, 0.5, 0.8)))
-        .opacity(ramp(t, 0.5, 0.75))
+        .offset(y: reduceMotion ? 0 : 10 * (1 - ramp(t, Stage.words, Stage.words + 0.3)))
+        .opacity(ramp(t, Stage.words, Stage.words + 0.25))
     }
 
     // MARK: Loading
@@ -171,16 +180,17 @@ struct SplashView: View {
             }
             .padding(.top, 4)
         }
-        .opacity(ramp(t, 0.55, 0.8))
+        .opacity(ramp(t, Stage.words + 0.05, Stage.words + 0.3))
     }
 
     /// When each heart under the bar lights up: one per stage of the design.
-    private static let heartTimes: [TimeInterval] = [0.8, 1.35, 1.95]
+    private static let heartTimes: [TimeInterval] = [Stage.filling - 0.3, Stage.done - 0.3, Stage.done + 0.2]
 
-    /// How full the bar is: about a third by 1.0 s, 60% by 1.7 s, full at 2.0 s (the design's
-    /// 36% and 60% moments).
+    /// How full the bar is: about a third as the words stage ends, 60% as the filling one ends,
+    /// full soon after (the design's 36% and 60% moments).
     static func progress(at t: TimeInterval) -> Double {
-        let stops: [(TimeInterval, Double)] = [(0.6, 0), (1.0, 0.36), (1.7, 0.62), (2.0, 1)]
+        let stops: [(TimeInterval, Double)] = [(Stage.words + 0.1, 0), (Stage.filling, 0.36),
+                                               (Stage.done, 0.62), (Stage.done + 0.3, 1)]
         guard t > stops[0].0 else { return 0 }
         for (a, b) in zip(stops, stops.dropFirst()) where t <= b.0 {
             let x = (t - a.0) / (b.0 - a.0)
@@ -192,8 +202,9 @@ struct SplashView: View {
     // MARK: Hearts around the icon
 
     private func floating(_ heart: SplashHeart, at t: TimeInterval, size: CGFloat) -> some View {
-        let shown = ramp(t, heart.delay, heart.delay + 0.3, eased: false)
-        let bob = reduceMotion ? 0 : sin((t + heart.delay * 7) * 5) * 3
+        let start = Stage.words + heart.delay
+        let shown = ramp(t, start, start + 0.3, eased: false)
+        let bob = reduceMotion ? 0 : sin((t + heart.delay * 7) * 4) * 3
         return heart.view(size: heart.size * size)
             .scaleEffect(reduceMotion ? 1 : 0.3 + 0.7 * Self.overshoot(shown))
             .opacity(min(shown * 1.5, 1))
@@ -207,7 +218,7 @@ struct SplashView: View {
 
     private func finalSparkles(at t: TimeInterval, size: CGFloat) -> some View {
         ForEach(Array(Self.sparkleSpots.enumerated()), id: \.offset) { index, spot in
-            let shown = ramp(t, 1.85 + Double(index) * 0.04, 2.2)
+            let shown = ramp(t, Stage.done - 0.05 + Double(index) * 0.05, Stage.done + 0.45)
             Image(systemName: "sparkle")
                 .font(.system(size: spot.size, weight: .bold))
                 .foregroundStyle(Color.white)
@@ -318,6 +329,7 @@ private struct SplashHeart: Identifiable {
     let y: CGFloat
     let size: CGFloat
     let look: Look
+    /// After the words stage starts.
     let delay: TimeInterval
 
     @ViewBuilder
@@ -338,12 +350,12 @@ private struct SplashHeart: Identifiable {
 
     /// As in the design: two big glossy hearts up by the title, smaller ones at the sides.
     static let all: [SplashHeart] = [
-        SplashHeart(id: 0, x: -0.56, y: -0.47, size: 0.2, look: .shiny, delay: 0.55),
-        SplashHeart(id: 1, x: 0.53, y: -0.66, size: 0.19, look: .shiny, delay: 0.65),
-        SplashHeart(id: 2, x: -0.6, y: -0.76, size: 0.09, look: .outline, delay: 0.72),
-        SplashHeart(id: 3, x: -0.27, y: -0.64, size: 0.07, look: .soft, delay: 0.8),
-        SplashHeart(id: 4, x: 0.58, y: 0.42, size: 0.13, look: .outline, delay: 0.7),
-        SplashHeart(id: 5, x: -0.62, y: 0.4, size: 0.08, look: .soft, delay: 0.85),
-        SplashHeart(id: 6, x: 0.68, y: -0.12, size: 0.07, look: .soft, delay: 0.9)
+        SplashHeart(id: 0, x: -0.56, y: -0.47, size: 0.2, look: .shiny, delay: 0),
+        SplashHeart(id: 1, x: 0.53, y: -0.66, size: 0.19, look: .shiny, delay: 0.1),
+        SplashHeart(id: 2, x: -0.6, y: -0.76, size: 0.09, look: .outline, delay: 0.17),
+        SplashHeart(id: 3, x: -0.27, y: -0.64, size: 0.07, look: .soft, delay: 0.25),
+        SplashHeart(id: 4, x: 0.58, y: 0.42, size: 0.13, look: .outline, delay: 0.15),
+        SplashHeart(id: 5, x: -0.62, y: 0.4, size: 0.08, look: .soft, delay: 0.3),
+        SplashHeart(id: 6, x: 0.68, y: -0.12, size: 0.07, look: .soft, delay: 0.35)
     ]
 }
