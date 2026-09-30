@@ -115,31 +115,35 @@ struct QuoteTip: View {
 
     // MARK: The arrow
 
-    /// A pink arrow with a head at each end, as in the design: a smooth curve bowing to the
-    /// right, with a small head pointing up at the quote and a bigger one pointing down at
-    /// the card.
+    /// A pink arrow with a head at each end, as in the design: one smooth curve from the left
+    /// of the quote down to the card, a small head pointing up at the quote and a bigger one
+    /// pointing straight down at the card, with a white outline and a soft pink glow. Its
+    /// shape scales with its length, so short screens get the same arrow, only shorter.
     private var arrow: some View {
-        let start = CGPoint(x: spot.minX + spot.width * 0.3, y: spot.maxY + 8)
-        let end = CGPoint(x: start.x + 26, y: cardTop - 6)
-        let drop = end.y - start.y
-        let control1 = CGPoint(x: start.x + 26, y: start.y + drop * 0.7)
-        let control2 = CGPoint(x: end.x + 26, y: end.y - drop * 0.7)
-        let upHead = ArrowHead(tip: start, from: control1, length: 14, halfWidth: 7.5)
-        let downHead = ArrowHead(tip: end, from: control2, length: 18, halfWidth: 9.5)
-        return ZStack {
-            // The line runs between the heads' backs, so each head points along it.
-            Path { path in
-                path.move(to: upHead.back)
-                path.addCurve(to: downHead.back, control1: control1, control2: control2)
-            }
-            .stroke(QuoteTipStyle.arrow, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
-            Path { path in
-                upHead.add(to: &path)
-                downHead.add(to: &path)
-            }
-            .fill(QuoteTipStyle.arrow)
+        let start = CGPoint(x: spot.minX + spot.width * 0.22, y: spot.maxY + 5)
+        let drop = cardTop - 4 - start.y
+        let end = CGPoint(x: start.x + drop * 0.53, y: cardTop - 4)
+        let control1 = CGPoint(x: start.x + drop * 0.22, y: start.y + drop * 0.35)
+        let control2 = CGPoint(x: end.x + 2, y: end.y - drop * 0.45)
+        let upHead = ArrowHead(tip: start, from: control1, length: 14, halfWidth: 7)
+        let downHead = ArrowHead(tip: end, from: control2, length: 18, halfWidth: 9)
+        // The line runs between the heads' backs, so each head points along it.
+        let line = Path { path in
+            path.move(to: upHead.back)
+            path.addCurve(to: downHead.back, control1: control1, control2: control2)
         }
-        .shadow(color: Color.white.opacity(0.9), radius: 2)
+        let heads = Path { path in
+            upHead.add(to: &path)
+            downHead.add(to: &path)
+        }
+        return ZStack {
+            line.stroke(Color.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+            heads.fill(Color.white)
+            heads.stroke(Color.white, style: StrokeStyle(lineWidth: 3.5, lineJoin: .round))
+            line.stroke(QuoteTipStyle.arrow, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+            heads.fill(QuoteTipStyle.arrow)
+        }
+        .shadow(color: QuoteTipStyle.arrowGlow, radius: 4)
         .overlay {
             Image(systemName: "sparkle")
                 .font(.system(size: 13, weight: .bold))
@@ -376,6 +380,7 @@ enum QuoteTipStyle {
                                            startPoint: .top, endPoint: .bottom)
     static let arrow = LinearGradient(colors: [Color(hex: 0xFF7BC0), Color(hex: 0xF2148E)],
                                       startPoint: .top, endPoint: .bottom)
+    static let arrowGlow = Color(hex: 0xF2148E).opacity(0.45)
 }
 
 /// A filled arrowhead at the end of a curve: its point at `tip`, facing away from the
