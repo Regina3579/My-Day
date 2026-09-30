@@ -31,9 +31,9 @@ are pieces of the app's own pictures); the app itself starts empty.
 | --- | --- | --- | --- | --- | --- |
 | <img src="docs/screenshots/iphone-17-pro-38-journal-lock-pattern.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-39-journal-lock-passcode.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-40-settings-lock.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-41-settings-lock-choose.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-43-todos-voice-tip.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-44-todos-quote-tip.jpg" width="170"> |
 
-| Journal opening |
-| --- |
-| <img src="docs/screenshots/iphone-17-pro-46-journal-opening.jpg" width="170"> |
+| Opening My Day (0.9 s) | Journal opening (1.5 s) |
+| --- | --- |
+| <img src="docs/screenshots/iphone-17-pro-47-splash.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-46-journal-opening.jpg" width="170"> |
 
 ## Features
 
@@ -47,7 +47,7 @@ are pieces of the app's own pictures); the app itself starts empty.
 | **Calendar** | The illustrated header from the design ("Calendar — Every day is a new page" with the girl, the puppy and the kitten) and a white **Today** button. The month card has pink ‹ › buttons, "♥ September 2026 ♥", pink weekday pills, the days around the month in grey, a pink ring for today and a pink circle for the selected day; small markers show to-dos (a dot, green when all are done), priorities (a star) and journal pages (a heart). Swipe the card to change month. The selected day's card shows its date, a chip such as "☀️ Today" or "Tomorrow", and three tinted rows: **Priorities** (pink), **To-Dos** (lilac) and **Journal** (pink), each with a picture and a round ＋. The day's items are listed under their row; tick them there. |
 | **Insights** | Done today, day streak, a weekly bar chart and a 30-day mood chart (Swift Charts). |
 | **Settings** | Your name, morning and evening reminders, carrying unfinished items over to today, showing finished to-dos (the Completed list open or closed), **Sounds & Haptics** (Task Completion Sound, Mood Star Sound and gentle haptics), the journal lock (**Lock My Journal**, then choose Face ID, Pattern or Number Passcode; a new pattern or passcode is asked for twice, and changing the method or turning the lock off first asks for the current one), and data clean-up. |
-| **Opening My Day** | The app opens straight to Home, with no loading animation. While iOS starts it, the launch screen is just My Day's soft pink, with no logo or words, as Apple's Human Interface Guidelines advise. |
+| **Opening My Day** | Every time the app starts, the design's loading page shows for 0.9 seconds (tap to skip): the happy My Day icon (the girl, her puppy and kitten smiling with their eyes closed) in a soft glow with light rays, "Make today beautiful 💗" and glossy hearts above it, and "Loading your happy space…" over a full pink heart bar with its three hearts lit. It fades in from the launch screen's plain pink (so nothing jumps), then fades into Home over 0.3 seconds. |
 | **Ticking things off** | Ticking a to-do or a priority (on its page or in the Calendar) plays a soft crystal "ting" (0.4 s) with a very light haptic tap, together with the tick and its two little hearts. Ticking the day's last one plays a slightly more magical 1-second chime instead, with the confetti (and, for priorities, the "All of today's priorities are done!" card). Unticking plays nothing. The sounds are bundled (`MyDay/Resources/Sounds`, made by `scripts/make_sounds.py`), loaded at launch so they play at once, mix with other audio, stay quiet on Silent and pause while you record; turn them off in Settings → Sounds & Haptics → Task Completion Sound. The journal's mood-star “pop… ting” has its own switch there (**Mood Star Sound**). The first-time tips' discovery sound also stays quiet on Silent and while you record, but has no switch, since each tip shows only once. |
 
 Everything is stored on the device with SwiftData, so data stays between launches.

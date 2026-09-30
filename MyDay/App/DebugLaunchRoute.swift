@@ -10,6 +10,11 @@ enum DebugLaunchRoute {
         ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
     }
 
+    /// The launch page: "splash" keeps it on screen. Every other screenshot skips it.
+    static var holdsSplash: Bool {
+        route == "splash"
+    }
+
     /// Opening My Journal: "journal-opening" holds it still once its words have popped in.
     /// Every other screenshot skips it.
     static var journalOpeningMoment: TimeInterval? {
