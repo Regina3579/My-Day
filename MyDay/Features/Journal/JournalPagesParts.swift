@@ -30,7 +30,7 @@ extension View {
 // MARK: - Write a new page
 
 /// The star waving beside the big pink "✏️ Write a new page ›". A journal is one page a day,
-/// so once today has a page it reads "Continue today's page" and opens that page.
+/// so once today has a page it reads "Continue writing" and opens that page.
 struct WriteNewPageRow: View {
     /// Today's page, when it has been written.
     let todayPage: JournalEntry?
@@ -49,7 +49,7 @@ struct WriteNewPageRow: View {
                     Text(title)
                         .font(.rounded(.title3, weight: .heavy))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                        .minimumScaleFactor(0.6)
                     Spacer(minLength: 4)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 16, weight: .heavy))
@@ -74,12 +74,13 @@ struct WriteNewPageRow: View {
                 .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
             }
             .buttonStyle(PressScaleStyle(scale: 0.97))
-            .accessibilityLabel(title)
+            .accessibilityLabel(todayPage == nil ? title : "Continue writing today's page")
         }
     }
 
+    /// Both fit the button: "Continue today's page" did not.
     private var title: String {
-        todayPage == nil ? "Write a new page" : "Continue today's page"
+        todayPage == nil ? "Write a new page" : "Continue writing"
     }
 }
 
