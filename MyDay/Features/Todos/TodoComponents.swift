@@ -723,8 +723,6 @@ private struct VoiceMicButton: View {
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let fill = LinearGradient(colors: [Color(hex: 0xFFDA4D), Color(hex: 0xFFA800)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing)
     private static let halo = RadialGradient(colors: [Color(hex: 0xFFC83D).opacity(0.6), Color(hex: 0xFFDA4D).opacity(0)],
                                              center: .center, startRadius: 19, endRadius: 31)
 
@@ -736,7 +734,7 @@ private struct VoiceMicButton: View {
             ZStack {
                 haloView
                 Circle()
-                    .fill(Self.fill)
+                    .fill(Palette.micYellow)
                     .overlay(
                         Circle()
                             .fill(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0)],

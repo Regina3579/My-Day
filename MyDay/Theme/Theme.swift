@@ -28,6 +28,9 @@ enum Palette {
     static let butter = Color(hex: 0xFDD374)
     static let cream = Color(hex: 0xFFF6D6)
     static let honey = Color(hex: 0xFEA707)      // Priority button
+    /// The round yellow microphone (Speak a Task, and speaking a journal page).
+    static let micYellow = LinearGradient(colors: [Color(hex: 0xFFDA4D), Color(hex: 0xFFA800)],
+                                          startPoint: .topLeading, endPoint: .bottomTrailing)
     static let cocoa = Color(hex: 0x4A1A0A)      // "Today's Priority" title
     static let mint = Color(hex: 0x22C46E)       // "Add Task" check
 }

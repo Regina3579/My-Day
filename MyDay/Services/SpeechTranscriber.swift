@@ -54,8 +54,8 @@ final class SpeechTranscriber {
     /// Bumped by `cancel()`, so a start that is still waiting for permission gives up.
     private var generation = 0
 
-    /// Stops by itself after this much quiet.
-    private static let pauseAfterSpeech: Duration = .seconds(2)
+    /// Stops by itself after this much quiet (longer where people stop to think, as in the journal).
+    var pauseAfterSpeech: Duration = .seconds(2)
     private static let waitForFirstWord: Duration = .seconds(8)
     private static let longest: Duration = .seconds(50)
 
@@ -167,7 +167,7 @@ final class SpeechTranscriber {
         if let text = update.text, text != transcript {
             transcript = text
             if state == .listening {
-                restartTimer(after: Self.pauseAfterSpeech)
+                restartTimer(after: pauseAfterSpeech)
             }
         }
         if update.isFinal || update.failed {

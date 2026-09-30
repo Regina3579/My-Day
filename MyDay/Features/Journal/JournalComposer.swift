@@ -196,6 +196,8 @@ struct JournalComposer: View {
     @State private var toast: String?
     @FocusState private var headingFocused: Bool
     @FocusState private var textFocused: Bool
+    /// Set while the yellow 🎙 in the writing box is listening.
+    @State private var isDictating = false
 
     /// Edits `entry`, or starts a new page dated `date` when it is nil (from `template`'s
     /// heading, prompts and tags when one is given).
@@ -618,7 +620,8 @@ struct JournalComposer: View {
                 .padding(.horizontal, 4)
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("Share your thoughts, feelings, moments or anything on your mind…")
+                    Text(isDictating ? "Listening… just say what's on your mind 💭"
+                                     : "Share your thoughts, feelings, moments or anything on your mind…")
                         .font(.rounded(.body, weight: .medium))
                         .foregroundStyle(JournalStyle.placeholder)
                         .padding(.horizontal, 5)
@@ -632,29 +635,38 @@ struct JournalComposer: View {
                     .frame(minHeight: 170)
                     .focused($textFocused)
             }
+            writingFooter
         }
         .padding(12)
-        .padding(.bottom, 24)
         .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(JournalStyle.fieldFill))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(JournalStyle.pink.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
         )
-        .overlay(alignment: .bottomLeading) {
+    }
+
+    /// Two little hearts, the character count, and the yellow 🎙 to speak instead of typing. The
+    /// 🎙 sits bottom right, where the thumb rests and where the keyboard's own dictation key is;
+    /// what is said is added after what is already written. Journal pauses are longer, so it
+    /// waits 4 seconds of quiet before it stops by itself.
+    private var writingFooter: some View {
+        HStack(spacing: 10) {
             HStack(alignment: .bottom, spacing: 2) {
                 Image(systemName: "heart.fill").font(.system(size: 16))
                 Image(systemName: "heart.fill").font(.system(size: 10))
             }
             .foregroundStyle(Color(hex: 0xFF8CC6))
-            .padding(12)
             .accessibilityHidden(true)
-        }
-        .overlay(alignment: .bottomTrailing) {
+            Spacer(minLength: 8)
             Text("\(text.count)/\(Self.textLimit)")
                 .font(.rounded(.footnote, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(JournalStyle.soft)
-                .padding(12)
+            DictationButton(text: $text, diameter: 44, isListening: $isDictating, look: .yellow,
+                            pauseAfterSpeech: .seconds(4)) {
+                headingFocused = false
+                textFocused = false
+            }
         }
     }
 

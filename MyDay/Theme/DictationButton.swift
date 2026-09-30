@@ -2,13 +2,23 @@ import SwiftUI
 import UIKit
 
 /// Speak instead of typing: a round 🎙 that types what you say into `text`, after anything
-/// already written. Tap it again to stop (it also stops by itself after a short pause).
+/// already written. Tap it again to stop (it also stops by itself after a pause).
 /// Uses the same speech recognition as Voice Add, on the device when the language allows.
 struct DictationButton: View {
+    enum Look {
+        /// A pink 🎙 on a pale pink circle.
+        case soft
+        /// The yellow microphone of Speak a Task: a white 🎙 on a glossy yellow circle.
+        case yellow
+    }
+
     @Binding var text: String
     var diameter: CGFloat = 40
     /// Set while it is listening, so the text field can say so.
     var isListening: Binding<Bool> = .constant(false)
+    var look: Look = .soft
+    /// How much quiet stops the listening.
+    var pauseAfterSpeech: Duration = .seconds(2)
     /// Called when listening starts (for example to put the keyboard away).
     var onStart: (() -> Void)?
 
@@ -54,15 +64,15 @@ struct DictationButton: View {
 
     var body: some View {
         let active = transcriber.isActive
+        let isYellow = look == .yellow && !active
         Button(action: toggle) {
             Image(systemName: active ? "stop.fill" : "mic.fill")
                 .font(.system(size: diameter * 0.42, weight: .bold))
-                .foregroundStyle(active ? Color.white : Palette.hotPink)
+                .foregroundStyle(active || isYellow ? Color.white : Palette.hotPink)
+                .shadow(color: isYellow ? Color(hex: 0xB86E00).opacity(0.55) : .clear, radius: 1.5, x: 0, y: 1)
                 .symbolEffect(.pulse, isActive: active && !reduceMotion)
                 .frame(width: diameter, height: diameter)
-                .background(Circle().fill(active ? AnyShapeStyle(Color(hex: 0xE5484D).gradient)
-                                                 : AnyShapeStyle(Color(hex: 0xFFE3F0))))
-                .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                .background { circle(active: active) }
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(active ? "Stop listening" : "Speak instead of typing")
@@ -91,6 +101,30 @@ struct DictationButton: View {
         .onDisappear { transcriber.cancel() }
     }
 
+    @ViewBuilder
+    private func circle(active: Bool) -> some View {
+        if active {
+            Circle()
+                .fill(Color(hex: 0xE5484D).gradient)
+                .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+        } else if look == .yellow {
+            Circle()
+                .fill(Palette.micYellow)
+                .overlay(
+                    Circle()
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0)],
+                                             startPoint: .top, endPoint: .center))
+                        .padding(3)
+                )
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 2))
+                .shadow(color: Palette.honey.opacity(0.5), radius: 6, x: 0, y: 3)
+        } else {
+            Circle()
+                .fill(Color(hex: 0xFFE3F0))
+                .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+        }
+    }
+
     private func toggle() {
         switch transcriber.state {
         case .listening:
@@ -102,6 +136,7 @@ struct DictationButton: View {
             break
         default:
             base = text.trimmed
+            transcriber.pauseAfterSpeech = pauseAfterSpeech
             onStart?()
             Haptics.tap()
             Task { await transcriber.start() }
