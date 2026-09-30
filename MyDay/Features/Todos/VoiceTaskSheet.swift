@@ -5,6 +5,9 @@ import SwiftUI
 /// the to-do only when the person taps Add Task.
 struct VoiceTaskSheet: View {
     let day: Date
+    /// The category chip chosen on the To-Dos page (nil for All). A spoken to-do goes there,
+    /// unless a category is named outright ("… in my shopping list").
+    var selectedCategory: CategoryChoice?
     /// Opens the full task sheet with this draft.
     let onEdit: (TaskDraft) -> Void
     /// Called with the new to-do's title after it is added.
@@ -21,6 +24,21 @@ struct VoiceTaskSheet: View {
 
     private var result: VoiceTaskParser.Result {
         VoiceTaskParser.parse(text, defaultDay: day)
+    }
+
+    /// What was understood, in the category being viewed unless another was named.
+    private var draft: TaskDraft {
+        var draft = result.draft
+        if let selectedCategory, result.categorySource != .named {
+            draft.choice = selectedCategory
+        }
+        return draft
+    }
+
+    private var categoryText: String {
+        let label = draft.choice.label
+        if result.categorySource == .named || selectedCategory != nil { return label }
+        return label + " (you can change it)"
     }
 
     private var canAdd: Bool { !text.trimmed.isEmpty }
@@ -205,7 +223,7 @@ struct VoiceTaskSheet: View {
     // MARK: Review
 
     private var review: some View {
-        let draft = result.draft
+        let draft = self.draft
         return VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 8) {
                 VoiceLabel(text: "I heard")
@@ -232,8 +250,7 @@ struct VoiceTaskSheet: View {
                 VoiceLabel(text: "Your new to-do")
                 VStack(spacing: 0) {
                     PreviewRow(emoji: "✏️", title: "Task", value: draft.title.isEmpty ? "—" : draft.title)
-                    PreviewRow(emoji: draft.category.emoji, title: "Category",
-                               value: draft.category.label + (result.heardCategory ? "" : " (you can change it)"))
+                    PreviewRow(emoji: draft.choice.emoji, title: "Category", value: categoryText)
                     PreviewRow(emoji: "📅", title: "Date", value: dayText(draft.day))
                     PreviewRow(emoji: "⏰", title: "Time",
                                value: draft.time?.formatted(date: .omitted, time: .shortened) ?? "No time")
@@ -271,7 +288,7 @@ struct VoiceTaskSheet: View {
                 .buttonStyle(SoftButtonStyle(tint: Palette.inkSoft))
             Button("Edit") {
                 transcriber.cancel()
-                onEdit(result.draft)
+                onEdit(draft)
             }
             .buttonStyle(SoftButtonStyle(tint: Palette.grape))
             .disabled(!canAdd)
@@ -291,7 +308,7 @@ struct VoiceTaskSheet: View {
     }
 
     private func addTask() {
-        let draft = result.draft
+        let draft = self.draft
         guard !draft.title.trimmed.isEmpty else { return }
         let task = draft.insertTask(into: context)
         ReminderCenter.sync(task)

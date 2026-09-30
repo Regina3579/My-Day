@@ -6,10 +6,20 @@ import Foundation
 enum VoiceTaskParser {
     struct Result {
         var draft: TaskDraft
-        /// A category word was heard (otherwise Personal is only a default).
-        var heardCategory = false
+        /// How the draft's category was chosen.
+        var categorySource = CategorySource.fallback
         /// Things the person should double-check, in plain words.
         var notes: [String] = []
+    }
+
+    /// Where a spoken to-do's category came from.
+    enum CategorySource {
+        /// Said outright: "… in my shopping list", "… for the work category".
+        case named
+        /// Guessed from a word in the to-do, like "doctor" (Health) or "milk" (Shopping).
+        case guessed
+        /// Nothing was heard, so it is Personal.
+        case fallback
     }
 
     /// - Parameters:
@@ -107,11 +117,16 @@ enum VoiceTaskParser {
             }
         }
 
-        // Category, from the words that are left.
-        stripCategoryPhrase(from: &text)
-        let heard = category(in: text)
-        draft.category = heard ?? .personal
-        result.heardCategory = heard != nil
+        // Category: named outright, or else guessed from the words that are left.
+        if let named = takeCategoryPhrase(from: &text) {
+            draft.category = named
+            result.categorySource = .named
+        } else if let guessed = category(in: text) {
+            draft.category = guessed
+            result.categorySource = .guessed
+        } else {
+            draft.category = .personal
+        }
 
         let title = cleanTitle(text)
         draft.title = title.isEmpty ? capitalizedFirst(spoken) : title
@@ -215,10 +230,12 @@ enum VoiceTaskParser {
         return best?.category
     }
 
-    /// "… for work", "… in my shopping list": the category is kept, the words are dropped from the title.
-    private static func stripCategoryPhrase(from text: inout String) {
-        _ = take(#"\b(?:in|on|to|for|under)\s+(?:the\s+|my\s+)?(?:personal|work|health|learning|shopping)\s+(?:category|list|tasks?)\b"#,
-                 from: &text)
+    /// "… for the work category", "… in my shopping list": returns the category named, and drops
+    /// the words from the title.
+    private static func takeCategoryPhrase(from text: inout String) -> TaskCategory? {
+        let match = take(#"\b(?:in|on|to|for|under)\s+(?:the\s+|my\s+)?(personal|work|health|learning|shopping)\s+(?:category|list|tasks?)\b"#,
+                         from: &text)
+        return match?[1].map { TaskCategory(storedValue: $0.lowercased()) }
     }
 
     // MARK: Title

@@ -234,6 +234,11 @@ struct TodayToDosView: View {
         case "confetti":
             try? await Task.sleep(for: .seconds(9.4))
             celebrate()
+        case "voice-shopping":
+            // Shopping is the chip chosen, so the spoken to-do goes to Shopping.
+            filter = .builtIn(.shopping)
+            try? await Task.sleep(for: .seconds(0.5))
+            sheet = .voice(sample: "Get flowers for Mom tomorrow at 6 PM")
         default:
             sheet = TodoSheet(debugRoute: route)
         }
@@ -374,6 +379,7 @@ struct TodayToDosView: View {
         case .voice(let sample):
             VoiceTaskSheet(
                 day: day,
+                selectedCategory: filter,
                 onEdit: { draft in self.sheet = .draft(draft) },
                 onAdded: { title in show("Added “\(title)” ✨") },
                 sample: sample
