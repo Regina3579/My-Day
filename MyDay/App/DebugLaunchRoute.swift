@@ -280,6 +280,8 @@ enum DebugLaunchRoute {
         // Only the lock routes lock the journal (a demo pattern of five dots, an L, or the
         // passcode 2580).
         JournalLock.disable()
+        // Only "todos-voice-tip" shows the first-time Speak a Task tip.
+        UserDefaults.standard.set(arguments[index + 1] != "todos-voice-tip", forKey: Prefs.didShowVoiceTip)
 
         switch arguments[index + 1] {
         case "quickadd": router.isQuickAddOpen = true

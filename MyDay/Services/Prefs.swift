@@ -7,6 +7,8 @@ enum Prefs {
     static let showCompleted = "showCompletedTasks"
     /// Whether Today's Priority's Completed list is open.
     static let showCompletedPriorities = "showCompletedPriorities"
+    /// Set once the first-time "Add your task with your voice" tip has been shown on To-Dos.
+    static let didShowVoiceTip = "didShowVoiceAddTip"
     static let haptics = "hapticsEnabled"
     /// Settings → Sounds & Haptics → Task Completion Sound.
     static let taskCompletionSound = "taskCompletionSoundOn"

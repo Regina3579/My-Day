@@ -597,6 +597,7 @@ struct TodosActionBar: View {
                 HStack(spacing: 8) {
                     addButton
                     VoiceMicButton(action: onVoice)
+                        .anchorPreference(key: VoiceMicAnchorKey.self, value: .bounds) { $0 }
                         .frame(width: Self.micColumn)
                 }
                 HStack(alignment: .top, spacing: 8) {

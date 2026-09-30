@@ -10,6 +10,9 @@ struct TodayToDosView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the Completed list is open (also "Show finished to-dos" in Settings).
     @AppStorage(Prefs.showCompleted) private var showCompleted = false
+    @AppStorage(Prefs.didShowVoiceTip) private var didShowVoiceTip = false
+    /// The first-time tip pointing at Speak a Task.
+    @State private var showsVoiceTip = false
     @Query private var tasks: [TaskItem]
     @State private var filter: CategoryChoice?
     @State private var sheet: TodoSheet?
@@ -95,6 +98,39 @@ struct TodayToDosView: View {
         .overlay(alignment: .bottom) {
             toastView
         }
+        .overlayPreferenceValue(VoiceMicAnchorKey.self) { anchor in
+            if showsVoiceTip, let anchor {
+                GeometryReader { proxy in
+                    VoiceAddTip(micFrame: proxy[anchor], size: proxy.size,
+                                onTry: tryVoiceFromTip, onDismiss: closeVoiceTip)
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+        }
+        .task { await showVoiceTipIfNew() }
+    }
+
+    // MARK: First-time tip
+
+    /// New here: after a moment, point at Speak a Task once (not at the largest text sizes,
+    /// where the buttons are at the end of the list).
+    private func showVoiceTipIfNew() async {
+        guard !didShowVoiceTip, pinsActions else { return }
+        try? await Task.sleep(for: .seconds(0.9))
+        guard !Task.isCancelled, !didShowVoiceTip, sheet == nil else { return }
+        didShowVoiceTip = true
+        withAnimation(.easeOut(duration: 0.3)) { showsVoiceTip = true }
+    }
+
+    private func closeVoiceTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsVoiceTip = false }
+        Haptics.tap()
+    }
+
+    private func tryVoiceFromTip() {
+        closeVoiceTip()
+        sheet = .voice(sample: nil)
     }
 
     /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete
