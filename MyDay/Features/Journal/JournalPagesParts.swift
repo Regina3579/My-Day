@@ -180,57 +180,103 @@ struct MoodWeekCard: View {
 
 // MARK: - Tabs
 
-/// The ten tabs, five across in two short rows: All Pages, Favorites, Little Wins, Templates,
-/// Photos, Voice Notes, My Feelings, My Growth, Dreams and Trash.
-struct JournalTabsGrid: View {
+/// One row of tabs, left to right: All Pages, Favorites, My Feelings, Photos, Voice Notes and
+/// ＋ More, which lists the rest (Little Wins, Templates, My Growth, Dreams and Trash). While
+/// one of those is open, the ＋ tile shows it, with a small ＋ still on its icon.
+struct JournalTabsRow: View {
     @Binding var selection: JournalShelf
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 8) {
-            ForEach(JournalShelf.allCases) { shelf in
-                tile(shelf)
+        // Six equal columns.
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 6), spacing: 0) {
+            ForEach(JournalShelf.shown) { shelf in
+                let isOn = shelf == selection
+                Button {
+                    select(shelf)
+                } label: {
+                    JournalTabTile(symbol: shelf.symbol, label: shelf.label, color: shelf.color, isOn: isOn)
+                }
+                .buttonStyle(PressScaleStyle(scale: 0.95))
+                .accessibilityLabel(shelf.label)
+                .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
             }
+            moreMenu
         }
-        // Small tiles: their names stay on one line even with larger text.
-        .dynamicTypeSize(...DynamicTypeSize.large)
     }
 
-    private func tile(_ shelf: JournalShelf) -> some View {
-        let isOn = shelf == selection
-        return Button {
-            withAnimation(.snappy) { selection = shelf }
-            Haptics.tap()
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: shelf.symbol)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(shelf.color.gradient)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(isOn ? Color.white : shelf.color.opacity(0.13)))
-                Text(shelf.label)
-                    .font(.rounded(.caption, weight: .bold))
-                    .foregroundStyle(isOn ? Color.white : JournalPagesStyle.heading)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity)
+    private var moreMenu: some View {
+        let open = JournalShelf.more.contains(selection) ? selection : nil
+        return Menu {
+            ForEach(JournalShelf.more) { shelf in
+                Button {
+                    select(shelf)
+                } label: {
+                    Label(shelf.label, systemImage: shelf.symbol)
+                }
             }
-            .padding(.top, 7)
-            .padding(.bottom, 6)
-            .padding(.horizontal, 1)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isOn ? AnyShapeStyle(JournalPagesStyle.writeButton) : AnyShapeStyle(Color.white.opacity(0.9)))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.white, lineWidth: isOn ? 2 : 1.5)
-            )
-            .shadow(color: JournalStyle.pink.opacity(isOn ? 0.3 : 0.08), radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
-            .contentShape(Rectangle())
+        } label: {
+            JournalTabTile(symbol: open?.symbol ?? "plus", label: open?.label ?? "More",
+                           color: open?.color ?? JournalStyle.pink, isOn: open != nil, showsPlus: open != nil)
         }
-        .buttonStyle(PressScaleStyle(scale: 0.95))
-        .accessibilityLabel(shelf.label)
-        .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
+        .menuOrder(.fixed)
+        .accessibilityLabel(open.map { "\($0.label). More tabs" } ?? "More tabs")
+        .accessibilityHint("Little Wins, Templates, My Growth, Dreams and Trash")
+        .accessibilityAddTraits(open != nil ? AccessibilityTraits.isSelected : [])
+    }
+
+    private func select(_ shelf: JournalShelf) {
+        withAnimation(.snappy) { selection = shelf }
+        Haptics.tap()
+    }
+}
+
+/// A tab: a round icon over its name on one line, pink when it is the open tab.
+private struct JournalTabTile: View {
+    let symbol: String
+    let label: String
+    let color: Color
+    let isOn: Bool
+    /// A small ＋ on the icon, on the ＋ More tile while it shows one of the tabs behind it.
+    var showsPlus = false
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(color.gradient)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(isOn ? Color.white : color.opacity(0.13)))
+                .overlay(alignment: .topTrailing) {
+                    if showsPlus {
+                        Image(systemName: "plus")
+                            .font(.system(size: 7, weight: .black))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 13, height: 13)
+                            .background(Circle().fill(JournalStyle.pink))
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1.5))
+                            .offset(x: 4, y: -3)
+                    }
+                }
+            // Small enough for six across; it shrinks a touch only on the narrowest iPhones.
+            Text(label)
+                .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                .foregroundStyle(isOn ? Color.white : JournalPagesStyle.heading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(.top, 7)
+        .padding(.bottom, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(isOn ? AnyShapeStyle(JournalPagesStyle.writeButton) : AnyShapeStyle(Color.white.opacity(0.9)))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .strokeBorder(Color.white, lineWidth: isOn ? 2 : 1.5)
+        )
+        .shadow(color: JournalStyle.pink.opacity(isOn ? 0.3 : 0.08), radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
+        .contentShape(Rectangle())
     }
 }
 

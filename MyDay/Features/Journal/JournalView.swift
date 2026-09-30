@@ -114,7 +114,7 @@ struct JournalPagesHome: View {
         VStack(spacing: 16) {
             WriteNewPageRow()
             MoodWeekCard(entries: live, today: appState.today, onCalendar: openCalendar)
-            JournalTabsGrid(selection: $shelf)
+            JournalTabsRow(selection: $shelf)
                 .id("tabs")
             shelfContent
                 .id("shelf")

@@ -9,6 +9,12 @@ enum JournalShelf: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Always in view, left to right: All Pages, Favorites, My Feelings, Photos, Voice Notes.
+    static let shown: [JournalShelf] = [.all, .favorites, .feelings, .photos, .voice]
+
+    /// Behind ＋ More: Little Wins, Templates, My Growth, Dreams and Trash.
+    static var more: [JournalShelf] { allCases.filter { !shown.contains($0) } }
+
     var label: String {
         switch self {
         case .all: "All Pages"
