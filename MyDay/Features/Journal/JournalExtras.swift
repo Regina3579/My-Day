@@ -5,11 +5,6 @@ import SwiftUI
 // MARK: - Presets
 
 enum JournalPresets {
-    static let stickers = [
-        "💖", "🌸", "⭐️", "🌈", "🦋", "🍓", "🧁", "🎀",
-        "🌷", "☀️", "🌙", "✨", "🐶", "🐱", "🐰", "🍰",
-        "☕️", "🎈", "🌻", "🍀", "💌", "🎵", "📚", "🏆"
-    ]
     static let maxStickers = 12
 
     static let tags = [
@@ -68,40 +63,48 @@ private struct ExtraSheet<Content: View>: View {
 
 // MARK: - Stickers
 
+/// "Add Stickers": the sticker sheet's groups as tabs (Hearts & Love, Mood & Feelings, …,
+/// Emoji), each a grid of its stickers; tap one to add it to the page.
 struct StickerPickerSheet: View {
     @Binding var stickers: String
+    /// The tab last opened, kept for next time.
+    @AppStorage(Prefs.stickerCategory) private var categoryID = StickerCatalog.categories[0].id
 
-    private var isFull: Bool { stickers.count >= JournalPresets.maxStickers }
+    private var onPage: [Sticker] { Sticker.list(from: stickers) }
+    private var isFull: Bool { onPage.count >= JournalPresets.maxStickers }
+    private var category: StickerCategory {
+        StickerCatalog.categories.first { $0.id == categoryID } ?? StickerCatalog.categories[0]
+    }
 
     var body: some View {
         ExtraSheet(title: "Add Stickers") {
-            VStack(alignment: .leading, spacing: 18) {
-                if !stickers.isEmpty {
+            VStack(alignment: .leading, spacing: 16) {
+                if !onPage.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("On your page (tap one to take it off)")
                             .font(.rounded(.subheadline, weight: .semibold))
                             .foregroundStyle(JournalStyle.soft)
-                        StickerRow(stickers: stickers, size: 34) { index in
-                            var characters = Array(stickers)
-                            characters.remove(at: index)
-                            stickers = String(characters)
+                        StickerRow(stickers: stickers, size: 42) { index in
+                            var list = onPage
+                            list.remove(at: index)
+                            stickers = Sticker.text(for: list)
                         }
                     }
                 }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 6), spacing: 10) {
-                    ForEach(JournalPresets.stickers, id: \.self) { sticker in
+                tabs
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+                    ForEach(category.stickers, id: \.self) { sticker in
                         Button {
                             guard !isFull else { return }
-                            stickers.append(sticker)
+                            stickers = Sticker.text(for: onPage + [sticker])
                             Haptics.tap()
                         } label: {
-                            Text(sticker)
-                                .font(.system(size: 32))
-                                .frame(maxWidth: .infinity, minHeight: 54)
-                                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white))
+                            StickerView(sticker: sticker, size: 52)
+                                .frame(maxWidth: .infinity, minHeight: 76)
+                                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
                         }
                         .buttonStyle(PressScaleStyle())
-                        .accessibilityLabel("Add \(sticker)")
+                        .accessibilityLabel("Add \(sticker.name)")
                     }
                 }
                 .opacity(isFull ? 0.5 : 1)
@@ -113,27 +116,60 @@ struct StickerPickerSheet: View {
             }
         }
     }
+
+    /// The groups, as pills in the sheet's colours; the open one has a pink edge.
+    private var tabs: some View {
+        ScrollViewReader { reader in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(StickerCatalog.categories) { item in
+                        let isOn = item.id == category.id
+                        Button {
+                            withAnimation(.snappy) { categoryID = item.id }
+                            Haptics.tap()
+                        } label: {
+                            Text(item.title)
+                                .font(.rounded(.subheadline, weight: isOn ? .heavy : .bold))
+                                .foregroundStyle(JournalStyle.ink)
+                                .lineLimit(1)
+                                .padding(.horizontal, 14)
+                                .frame(minHeight: 38)
+                                .background(Capsule().fill(Color(hex: item.tint)))
+                                .overlay(Capsule().strokeBorder(isOn ? JournalStyle.pink : Color.clear, lineWidth: 2))
+                        }
+                        .buttonStyle(PressScaleStyle())
+                        .id(item.id)
+                        .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .onAppear { reader.scrollTo(category.id, anchor: .center) }
+        }
+    }
 }
 
 /// Stickers in a row; tapping one calls `onTap` with its position.
 struct StickerRow: View {
+    /// As kept in `JournalEntry.stickers`.
     let stickers: String
     var size: CGFloat = 30
     var onTap: ((Int) -> Void)?
 
     var body: some View {
-        let items = Array(stickers)
+        let items = Sticker.list(from: stickers)
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(items.indices, id: \.self) { index in
-                    Text(String(items[index]))
-                        .font(.system(size: size))
-                        .rotationEffect(.degrees(index.isMultiple(of: 2) ? -8 : 8))
+                    StickerView(sticker: items[index], size: size)
+                        .rotationEffect(.degrees(index.isMultiple(of: 2) ? -6 : 6))
                         .onTapGesture { onTap?(index) }
-                        .accessibilityLabel(String(items[index]))
+                        .accessibilityLabel(onTap == nil ? items[index].name : "Remove \(items[index].name)")
+                        .accessibilityAddTraits(onTap == nil ? [] : AccessibilityTraits.isButton)
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 2)
         }
     }
 }

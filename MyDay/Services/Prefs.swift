@@ -16,6 +16,8 @@ enum Prefs {
     static let taskCompletionSound = "taskCompletionSoundOn"
     /// Settings → Sounds & Haptics → Mood Star Sound.
     static let moodStarSound = "moodStarSoundOn"
+    /// The sticker picker's tab last opened (a `StickerCategory` id).
+    static let stickerCategory = "journalStickerCategory"
     static let journalLock = "journalLockEnabled"
     /// How the journal is unlocked: a `JournalLockMethod` raw value (Face ID when unset).
     static let journalLockMethod = "journalLockMethod"

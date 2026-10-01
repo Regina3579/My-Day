@@ -251,7 +251,7 @@ private struct JournalPageExtras: View {
                 }
             }
             if !entry.stickers.isEmpty {
-                StickerRow(stickers: entry.stickers, size: 34)
+                StickerRow(stickers: entry.stickers, size: 48)
             }
             if !entry.tags.isEmpty {
                 TagChips(tags: entry.tags)

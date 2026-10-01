@@ -17,7 +17,8 @@ final class JournalEntry {
     var gratitude: String = ""
     var highlight: String = ""
     var lookingForward: String = ""
-    /// Emoji stickers, in the order they were added ("" when none).
+    /// Stickers, in the order they were added ("" when none): a picture sticker as "[hearts-01]",
+    /// an emoji as itself (see `Sticker`).
     var stickers: String = ""
     /// Tags such as "Good Vibes" or "Grateful", one per line (see `tags`).
     var tagsText: String = ""

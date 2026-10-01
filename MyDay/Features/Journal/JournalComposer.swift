@@ -300,6 +300,10 @@ struct JournalComposer: View {
                             try? await Task.sleep(for: .seconds(1))
                             extra = .voice
                         }
+                        if DebugLaunchRoute.takeJournalStickers() {
+                            try? await Task.sleep(for: .seconds(1))
+                            extra = .sticker
+                        }
                         guard let anchor = DebugLaunchRoute.takeJournalAnchor() else { return }
                         try? await Task.sleep(for: .seconds(1))
                         reader.scrollTo(anchor, anchor: anchor == "save" ? .bottom : .top)
@@ -678,7 +682,9 @@ struct JournalComposer: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 photoTile
                 extraTile("Add Sticker", art: "ExtraSticker",
-                          status: stickers.isEmpty ? nil : "\(stickers.count) added") { extra = .sticker }
+                          status: stickers.isEmpty ? nil : "\(Sticker.list(from: stickers).count) added") {
+                    extra = .sticker
+                }
                 extraTile("Voice Note", art: "ExtraVoice", status: voiceNoteStatus) {
                     voiceContinuing = nil
                     extra = .voice
@@ -754,10 +760,10 @@ struct JournalComposer: View {
             photoStrip
         }
         if !stickers.isEmpty {
-            StickerRow(stickers: stickers, size: 32) { index in
-                var characters = Array(stickers)
-                characters.remove(at: index)
-                stickers = String(characters)
+            StickerRow(stickers: stickers, size: 44) { index in
+                var list = Sticker.list(from: stickers)
+                list.remove(at: index)
+                stickers = Sticker.text(for: list)
             }
         }
         ForEach(Array(voiceNotes.enumerated()), id: \.element.id) { index, note in

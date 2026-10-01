@@ -62,7 +62,7 @@ enum DebugLaunchRoute {
         )
         page.gratitude = "My family and our cozy home."
         page.highlight = "Watching the sunset with my puppy."
-        page.stickers = "🌸☕️🐶"
+        page.stickers = "[nature-08][food-01][animals-02]"
         page.tags = ["Good Vibes", "Grateful"]
         page.weather = .sunny
         page.temperature = "28°C"
@@ -166,6 +166,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalMoods = false
     /// Open the Voice Notes sheet once the journal appears ("journal-voice").
     @MainActor private static var journalVoice = false
+    /// Open Add Stickers once the journal appears ("journal-stickers").
+    @MainActor private static var journalStickers = false
     /// Scroll Settings to Sounds & Haptics ("settings-sounds").
     @MainActor private static var settingsSounds = false
     /// Scroll Settings to the journal lock ("settings-lock"), or open Lock My Journal
@@ -239,6 +241,12 @@ enum DebugLaunchRoute {
     static func takeJournalVoice() -> Bool {
         defer { journalVoice = false }
         return journalVoice
+    }
+
+    @MainActor
+    static func takeJournalStickers() -> Bool {
+        defer { journalStickers = false }
+        return journalStickers
     }
 
     @MainActor
@@ -372,6 +380,9 @@ enum DebugLaunchRoute {
             openTodaysPage(router, today: today, context: context)
         case "journal-voice":
             journalVoice = true
+            openTodaysPage(router, today: today, context: context)
+        case "journal-stickers":
+            journalStickers = true
             openTodaysPage(router, today: today, context: context)
         case "calendar": router.tab = .calendar
         case "calendar-tomorrow":
