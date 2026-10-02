@@ -137,10 +137,12 @@ struct SettingsView: View {
                 }
             }
             #if DEBUG
-            .task {
+            .task(id: router.tab) {
                 // `settings-sounds`, `settings-lock` and `settings-icloud`: show Sounds & Haptics,
                 // the journal lock or iCloud for the screenshot; `settings-lock-choose` opens
-                // "Lock My Journal".
+                // "Lock My Journal". Run when the route turns to Settings, as this tab may start
+                // before the route is read.
+                guard router.tab == .settings else { return }
                 if DebugLaunchRoute.takeSettingsLockChoose() {
                     try? await Task.sleep(for: .seconds(1))
                     lockGoal = .turnOn

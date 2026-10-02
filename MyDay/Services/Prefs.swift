@@ -11,6 +11,11 @@ enum Prefs {
     static let didShowVoiceTip = "didShowVoiceAddTip"
     /// Set once the first-time "A New Quote Every Day!" tip has been shown on To-Dos.
     static let didShowQuoteTip = "didShowTodosQuoteTip"
+    /// Set once the first-time "Add photos to your tasks!" tip has been shown on To-Dos.
+    static let didShowPhotoTip = "didShowTodosPhotoTip"
+    /// Set once the first-time "There's a feeling for every kind of day!" tip has been shown on
+    /// the journal's writing page.
+    static let didShowMoodTip = "didShowJournalMoodTip"
     static let haptics = "hapticsEnabled"
     /// Settings → iCloud → Sync with iCloud (on when unset; see `MyDayStore.syncsWithICloud`).
     static let iCloudSync = "iCloudSyncOn"

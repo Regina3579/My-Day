@@ -625,6 +625,7 @@ struct TodosActionBar: View {
                 }
                 HStack(alignment: .top, spacing: 8) {
                     photoButton
+                        .anchorPreference(key: PhotoButtonAnchorKey.self, value: .bounds) { $0 }
                     templateButton
                     micLabel
                         .frame(width: Self.micColumn)

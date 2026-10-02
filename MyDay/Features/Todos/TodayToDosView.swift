@@ -12,9 +12,11 @@ struct TodayToDosView: View {
     @AppStorage(Prefs.showCompleted) private var showCompleted = false
     @AppStorage(Prefs.didShowVoiceTip) private var didShowVoiceTip = false
     @AppStorage(Prefs.didShowQuoteTip) private var didShowQuoteTip = false
-    /// The first-time tips: the day's quote first, then Speak a Task.
+    @AppStorage(Prefs.didShowPhotoTip) private var didShowPhotoTip = false
+    /// The first-time tips, one at a time: the day's quote, then Speak a Task, then Photo.
     @State private var showsVoiceTip = false
     @State private var showsQuoteTip = false
+    @State private var showsPhotoTip = false
     /// Where the day's quote is on screen (global), for its tip.
     @State private var quoteFrame: CGRect = .zero
     /// "Show me": the quote glows for a moment.
@@ -114,6 +116,16 @@ struct TodayToDosView: View {
                 .transition(.opacity)
             }
         }
+        .overlayPreferenceValue(PhotoButtonAnchorKey.self) { anchor in
+            if showsPhotoTip, let anchor {
+                GeometryReader { proxy in
+                    PhotoTip(photoFrame: proxy[anchor], size: proxy.size,
+                             onTry: tryPhotoFromTip, onDismiss: closePhotoTip)
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+        }
         .overlay {
             if showsQuoteTip {
                 GeometryReader { proxy in
@@ -127,21 +139,32 @@ struct TodayToDosView: View {
             }
         }
         .task { await showTipsIfNew() }
+        .onChange(of: sheet == nil) { _, isClosed in
+            // "Try it now" opened Speak a Task: the Photo tip comes once it is closed.
+            guard isClosed else { return }
+            Task {
+                try? await Task.sleep(for: .seconds(0.7))
+                showPhotoTipIfNew()
+            }
+        }
     }
 
     // MARK: First-time tip
 
-    /// New here: after a moment, point at Speak a Task once (not at the largest text sizes,
-    /// where the buttons are at the end of the list).
+    /// New here: after a moment, the tips not seen yet, one at a time: the day's quote, Speak a
+    /// Task, then Photo (the last two not at the largest text sizes, where the buttons are at
+    /// the end of the list). Each comes once the one before it is closed.
     private func showTipsIfNew() async {
-        guard !didShowQuoteTip || (!didShowVoiceTip && pinsActions) else { return }
+        guard !didShowQuoteTip || (pinsActions && (!didShowVoiceTip || !didShowPhotoTip)) else { return }
         try? await Task.sleep(for: .seconds(0.9))
         guard !Task.isCancelled, sheet == nil else { return }
         if !didShowQuoteTip, quoteFrame != .zero {
             didShowQuoteTip = true
             withAnimation(.easeOut(duration: 0.3)) { showsQuoteTip = true }
-        } else {
+        } else if !didShowVoiceTip {
             showVoiceTipIfNew()
+        } else {
+            showPhotoTipIfNew()
         }
     }
 
@@ -149,6 +172,15 @@ struct TodayToDosView: View {
         guard !didShowVoiceTip, pinsActions, sheet == nil else { return }
         didShowVoiceTip = true
         withAnimation(.easeOut(duration: 0.3)) { showsVoiceTip = true }
+    }
+
+    /// The Photo tip, after the Speak a Task tip, when no other tip or sheet is open.
+    private func showPhotoTipIfNew() {
+        guard !didShowPhotoTip, didShowVoiceTip, pinsActions, sheet == nil,
+              !showsQuoteTip, !showsVoiceTip, !showsPhotoTip
+        else { return }
+        didShowPhotoTip = true
+        withAnimation(.easeOut(duration: 0.3)) { showsPhotoTip = true }
     }
 
     /// Closing the quote tip brings the Speak a Task tip, when it hasn't been shown yet.
@@ -172,14 +204,29 @@ struct TodayToDosView: View {
         }
     }
 
+    /// Closing the Speak a Task tip brings the Photo tip, when it hasn't been shown yet.
     private func closeVoiceTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsVoiceTip = false }
         Haptics.tap()
+        Task {
+            try? await Task.sleep(for: .seconds(0.7))
+            showPhotoTipIfNew()
+        }
     }
 
     private func tryVoiceFromTip() {
         closeVoiceTip()
         sheet = .voice(sample: nil)
+    }
+
+    private func closePhotoTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsPhotoTip = false }
+        Haptics.tap()
+    }
+
+    private func tryPhotoFromTip() {
+        closePhotoTip()
+        sheet = .compose(filter, .photo)
     }
 
     /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete

@@ -198,6 +198,9 @@ struct JournalComposer: View {
     @FocusState private var textFocused: Bool
     /// Set while the yellow 🎙 in the writing box is listening.
     @State private var isDictating = false
+    /// The first-time tip pointing at the ＋ for more moods.
+    @AppStorage(Prefs.didShowMoodTip) private var didShowMoodTip = false
+    @State private var showsMoodTip = false
 
     /// Edits `entry`, or starts a new page dated `date` when it is nil (from `template`'s
     /// heading, prompts and tags when one is given).
@@ -326,6 +329,38 @@ struct JournalComposer: View {
                     .allowsHitTesting(false)
             }
         }
+        .overlayPreferenceValue(MoodPlusAnchorKey.self) { anchor in
+            if showsMoodTip, let anchor {
+                GeometryReader { proxy in
+                    MoodTip(plusFrame: proxy[anchor], size: proxy.size,
+                            onOpen: openMoodsFromTip, onDismiss: closeMoodTip)
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+        }
+        .task { await showMoodTipIfNew() }
+    }
+
+    // MARK: First-time tip
+
+    /// The first time a page is written: after a moment, point at the ＋ for more moods.
+    private func showMoodTipIfNew() async {
+        guard !didShowMoodTip else { return }
+        try? await Task.sleep(for: .seconds(0.9))
+        guard !Task.isCancelled, !didShowMoodTip, extra == nil else { return }
+        didShowMoodTip = true
+        withAnimation(.easeOut(duration: 0.3)) { showsMoodTip = true }
+    }
+
+    private func closeMoodTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsMoodTip = false }
+        Haptics.tap()
+    }
+
+    private func openMoodsFromTip() {
+        closeMoodTip()
+        extra = .moods
     }
 
     /// The picture, then the cards on their panel.
@@ -472,6 +507,7 @@ struct JournalComposer: View {
                     PlusBubble(diameter: 38)
                 }
                 .buttonStyle(PressScaleStyle())
+                .anchorPreference(key: MoodPlusAnchorKey.self, value: .bounds) { $0 }
                 .accessibilityLabel("More moods")
                 .accessibilityHint("Choose from all the moods")
             }
