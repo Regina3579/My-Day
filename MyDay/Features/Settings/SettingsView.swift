@@ -4,6 +4,7 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
+    @Environment(DataStore.self) private var store
     @AppStorage(Prefs.userName) private var userName = ""
     @AppStorage(Prefs.carryOver) private var carryOver = true
     /// The Completed list on the To-Dos screen is open (it starts closed).
@@ -48,6 +49,8 @@ struct SettingsView: View {
                         .textContentType(.givenName)
                         .submitLabel(.done)
                 }
+
+                ICloudSettingsSection()
 
                 Section("Reminders") {
                     NavigationLink {
@@ -135,14 +138,20 @@ struct SettingsView: View {
             }
             #if DEBUG
             .task {
-                // `settings-sounds` and `settings-lock`: show Sounds & Haptics or the journal
-                // lock for the screenshot; `settings-lock-choose` opens "Lock My Journal".
+                // `settings-sounds`, `settings-lock` and `settings-icloud`: show Sounds & Haptics,
+                // the journal lock or iCloud for the screenshot; `settings-lock-choose` opens
+                // "Lock My Journal".
                 if DebugLaunchRoute.takeSettingsLockChoose() {
                     try? await Task.sleep(for: .seconds(1))
                     lockGoal = .turnOn
                 }
+                let showsICloud = DebugLaunchRoute.takeSettingsICloud()
+                if showsICloud {
+                    // The simulator has no iCloud account: a demo of the status after a sync.
+                    store.syncStatus.showForScreenshot(.upToDate(Date().addingTimeInterval(-120)))
+                }
                 let anchor: String? = DebugLaunchRoute.takeSettingsSounds() ? "sounds"
-                    : DebugLaunchRoute.takeSettingsLock() ? "lock" : nil
+                    : DebugLaunchRoute.takeSettingsLock() ? "lock" : showsICloud ? "icloud" : nil
                 guard let anchor else { return }
                 try? await Task.sleep(for: .seconds(1))
                 reader.scrollTo(anchor, anchor: .top)
@@ -172,7 +181,9 @@ struct SettingsView: View {
                             titleVisibility: .visible) {
             Button("Erase everything", role: .destructive, action: eraseAll)
         } message: {
-            Text("This can't be undone.")
+            Text(store.syncsWithICloud
+                 ? "They are erased from iCloud and your other devices too. This can't be undone."
+                 : "This can't be undone.")
         }
     }
 

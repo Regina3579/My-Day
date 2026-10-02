@@ -12,6 +12,8 @@ enum Prefs {
     /// Set once the first-time "A New Quote Every Day!" tip has been shown on To-Dos.
     static let didShowQuoteTip = "didShowTodosQuoteTip"
     static let haptics = "hapticsEnabled"
+    /// Settings → iCloud → Sync with iCloud (on when unset; see `MyDayStore.syncsWithICloud`).
+    static let iCloudSync = "iCloudSyncOn"
     /// Settings → Sounds & Haptics → Task Completion Sound.
     static let taskCompletionSound = "taskCompletionSoundOn"
     /// Settings → Sounds & Haptics → Mood Star Sound.

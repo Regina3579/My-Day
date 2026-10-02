@@ -7,6 +7,7 @@ import Combine
 struct RootView: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
+    @Environment(DataStore.self) private var store
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(Prefs.carryOver) private var carryOver = true
@@ -69,6 +70,12 @@ struct RootView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             refreshDay()
+        }
+        .onChange(of: store.syncStatus.imports) { _, _ in
+            // Changes came from iCloud: from another device, or everything coming back after
+            // My Day was installed again.
+            TemplateLibrary.removeDuplicateStarters(in: modelContext)
+            ReminderCenter.syncAll(in: modelContext)
         }
         .task {
             SampleContent.removeIfNeeded(in: modelContext)
@@ -242,6 +249,7 @@ private extension View {
     RootView()
         .environment(Router())
         .environment(AppState())
+        .environment(DataStore())
         .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, JournalVoiceNote.self,
                               TaskTemplate.self],
                         inMemory: true)

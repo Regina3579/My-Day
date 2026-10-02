@@ -108,6 +108,34 @@ enum TemplateLibrary {
         }
     }
 
+    /// Keeps one copy of each starter. Installed again with Sync with iCloud on, My Day adds the
+    /// starters before iCloud brings back the ones saved earlier. The copy kept is the one the
+    /// person changed or moved, or else the same one on every device (by id), so two devices
+    /// tidying up at once keep the same copy.
+    static func removeDuplicateStarters(in context: ModelContext) {
+        let starters = (try? context.fetch(FetchDescriptor<TaskTemplate>(predicate: #Predicate { $0.starterID != "" }))) ?? []
+        for copies in Dictionary(grouping: starters, by: \.starterID).values where copies.count > 1 {
+            let kept = copies.min { first, second in
+                let (firstChanged, secondChanged) = (isChanged(first), isChanged(second))
+                return firstChanged != secondChanged ? firstChanged : first.id.uuidString < second.id.uuidString
+            }
+            for copy in copies where copy !== kept {
+                context.delete(copy)
+            }
+        }
+    }
+
+    /// Whether a starter is no longer as it was added: renamed, edited or moved.
+    private static func isChanged(_ template: TaskTemplate) -> Bool {
+        guard let index = TemplateBlueprint.starters.firstIndex(where: { $0.id == template.starterID }) else {
+            return true
+        }
+        let starter = TemplateBlueprint.starters[index]
+        return template.name != starter.name || template.emoji != starter.emoji
+            || template.categoryRaw != starter.category.rawValue || template.items != starter.items
+            || template.sortOrder != Double(index) - 1000
+    }
+
     static func isMissingStarters(among templates: [TaskTemplate]) -> Bool {
         let present = Set(templates.map(\.starterID))
         return TemplateBlueprint.starters.contains { !present.contains($0.id) }

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import UserNotifications
 
 /// Local notifications for to-do reminders and the two daily nudges.
@@ -87,6 +88,21 @@ enum ReminderCenter {
 
     static func cancel(taskID: UUID) {
         center.removePendingNotificationRequests(withIdentifiers: [identifier(for: taskID)])
+    }
+
+    /// Schedules the reminder of every to-do (to-dos can come from iCloud) and removes the
+    /// reminders whose to-do is gone or no longer has one.
+    @MainActor
+    static func syncAll(in context: ModelContext) {
+        let withReminders = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.reminderEnabled == true })
+        ((try? context.fetch(withReminders)) ?? []).forEach(sync)
+        Task { @MainActor in
+            let pending = await center.pendingNotificationRequests().map(\.identifier)
+            // Looked up after the wait, so a to-do added meanwhile keeps its reminder.
+            let current = Set(((try? context.fetch(withReminders)) ?? []).map { identifier(for: $0.id) })
+            let stale = pending.filter { $0.hasPrefix("task-") && !current.contains($0) }
+            center.removePendingNotificationRequests(withIdentifiers: stale)
+        }
     }
 
     // MARK: Daily reminders

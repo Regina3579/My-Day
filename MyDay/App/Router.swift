@@ -127,6 +127,18 @@ final class Router {
         homePath = NavigationPath()
     }
 
+    /// Closes every page, sheet and menu (they may show items of a store that is closing), and
+    /// keeps the tab.
+    func closeAll() {
+        homePath = NavigationPath()
+        calendarPath = NavigationPath()
+        sheet = nil
+        isMenuOpen = false
+        isQuickAddOpen = false
+        fullScreenPages = [:]
+        statusBarHidingPages = [:]
+    }
+
     func popToRoot(_ tab: AppTab) {
         switch tab {
         case .home: homePath = NavigationPath()

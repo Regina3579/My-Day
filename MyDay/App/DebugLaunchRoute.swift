@@ -174,6 +174,8 @@ enum DebugLaunchRoute {
     /// ("settings-lock-choose").
     @MainActor private static var settingsLock = false
     @MainActor private static var settingsLockChoose = false
+    /// Scroll Settings to iCloud, with a demo sync status ("settings-icloud").
+    @MainActor private static var settingsICloud = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Move the last template to the front in Templates, as a press-and-hold drag would
@@ -235,6 +237,12 @@ enum DebugLaunchRoute {
     static func takeSettingsLockChoose() -> Bool {
         defer { settingsLockChoose = false }
         return settingsLockChoose
+    }
+
+    @MainActor
+    static func takeSettingsICloud() -> Bool {
+        defer { settingsICloud = false }
+        return settingsICloud
     }
 
     @MainActor
@@ -405,6 +413,9 @@ enum DebugLaunchRoute {
             router.tab = .settings
         case "settings-lock-choose":
             settingsLockChoose = true
+            router.tab = .settings
+        case "settings-icloud":
+            settingsICloud = true
             router.tab = .settings
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)

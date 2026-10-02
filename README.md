@@ -31,9 +31,9 @@ are pieces of the app's own pictures); the app itself starts empty.
 | --- | --- | --- | --- | --- | --- |
 | <img src="docs/screenshots/iphone-17-pro-38-journal-lock-pattern.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-39-journal-lock-passcode.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-40-settings-lock.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-41-settings-lock-choose.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-43-todos-voice-tip.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-44-todos-quote-tip.jpg" width="170"> |
 
-| Opening My Day (0.9 s) | Journal opening (1.5 s) | Add Stickers |
-| --- | --- | --- |
-| <img src="docs/screenshots/iphone-17-pro-47-splash.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-46-journal-opening.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-48-journal-stickers.jpg" width="170"> |
+| Opening My Day (0.9 s) | Journal opening (1.5 s) | Add Stickers | iCloud Sync |
+| --- | --- | --- | --- |
+| <img src="docs/screenshots/iphone-17-pro-47-splash.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-46-journal-opening.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-48-journal-stickers.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-49-settings-icloud.jpg" width="170"> |
 
 ## Features
 
@@ -46,13 +46,15 @@ are pieces of the app's own pictures); the app itself starts empty.
 | **My Journal** | Opening the journal shows one picture from the design for 1.5 seconds (tap to skip): the girl winking beside her journal and puppy, as "Get ready to write a beautiful story!" pops in; then My Journal Pages fades in quickly (0.3 s), with no loading bar. It shows each time the journal opens (after the lock, when it is on), not when coming back from a page. The picture comes from the design, enlarged 4× with Real-ESRGAN; the words are drawn by the app. Then it opens full screen on **My Journal Pages**, as in the design, with bigger, clearer text: the illustrated "My Journal Pages — Every thought and beautiful moment belongs here…" scene (the girl, her puppy, the books and "A Happier Me Everyday"); the waving star beside a big pink **✏️ Write a new page ›**; **My week in moods** (the last seven days, each with its page's star; tap one to open that page) with **View Calendar**; and one row of small tabs (a round icon over its name), left to right: **All Pages**, **Favorites**, **My Feelings** (the mood you felt most, and a bar for each mood; tap one to see only those pages), **Photos** (every photo, three across; tap one to open its page), **Voice Notes** and **＋ More**, which lists the rest: **Little Wins** (with a count), **Templates** (Gratitude Page, Daily Reflection, Dream Journal, Self-Care Check-in, Letter to Myself, Happy Memory, Goals & Wishes and Let It Go: each starts a new page with its heading, gentle prompts and tags), **My Growth** (pages written, days in a row, little wins and words written), **Dreams** (pages with "Tomorrow I look forward to…" or the Dreams tag) and **Trash**; while one of these is open, the ＋ tile shows it (with a small ＋ on its icon). Pages are listed by month ("September 2026 💗") with a **This Month ⌄** menu (All Time, Last 7 Days, This Month, Last Month, Last 3 Months, This Year). Each page card has its date under a pink, purple or blue ribbon bow, its star and heading, its first lines, the time, its mood, a heart to favourite it, its photo (with "+2" for more) and ⋮ (Edit Page, Favorite, Move to Trash). A floating **Search your journal… 💗** bar and **Filter** (favourites, photos, voice notes, little wins, dates, order and any of the 30 moods) stay at the bottom while the pages scroll behind them. A journal is one page a day: **Write a new page** starts today's page, and once today has one the button reads **Continue writing** and opens today's page to add more (Quick Add's Journal and the Calendar's ＋ do the same for their day, and while the journal is locked they open the lock first, so a page is never shown before it is unlocked; a template still starts a page of its own). The writing page: the day (tap to change it) and its weather; **How are you feeling today?** with six little stars (Amazing, Happy, Calm, Sad, Stressed, Tired) and a pink **＋** that opens **Choose your mood**: all 30 stars from the design (Loved, Excited, Grumpy, Anxious, Motivated, Proud, Playful and more) on pastel tiles, with **Done** (a mood picked there shows under the six as "Feeling Proud"); tapping any star plays a tiny, very quiet “pop… ting ✨” (0.4 s: a soft bubble pop, then one delicate crystal ting), as if the star comes alive; **Write about your day…** with **Get a Prompt**: a one-line heading on top (like "A wonderful day"; left empty, the page is named after its mood), a pink line with a heart under it, then your writing with a 1000-character count and, at the bottom right, the cute yellow 🎙 to **speak instead of typing** (tap it, talk, and your words are written in after what is already there, with punctuation; it stops after 4 seconds of quiet, or when you tap it again; tap again to keep going); **Add some extras**: photos (up to 6), **stickers** (up to 12 a page: the 159 picture stickers from the sticker sheet, in its 14 groups as tabs — Hearts & Love, Mood & Feelings, Nature & Outdoors, Self-care & Wellness, Productivity & Growth, Travel & Adventure, Food & Drink, Weather & Seasons, Animals & Cute Characters, Aesthetic Elements, Words & Phrases, Special Occasions, Miscellaneous and Colorful Hearts — plus an Emoji tab; tap one on the page to take it off), **voice notes** (as many as you like, each recording up to 5 minutes; tap **Continue** on one to record more onto its end, say in the morning and again in the afternoon), the place (typed, or **Use My Location**), the weather (picked by hand, with an optional temperature) and mood tags such as "Good Vibes" (what you add shows right under your writing); **Today I'm grateful for…**, **A highlight of my day…**, **Tomorrow I look forward to…** and **Today's Little Win 🏆**; and a big **Save Journal Entry** button. Every part is optional. Once saved, the written page is shown ("Saved to your journal 💖"): its mood at the top (the little star and "Feeling Bored"), its heading, the heart line and your writing, then everything else on it, voice notes included. **Move to Trash** keeps a page in Trash for 30 days (Restore or Delete Forever, and **Empty Trash**), then deletes it. Optional **journal lock**, opened your way: **Face ID** (or Touch ID, with the iPhone passcode as a fallback), a **Pattern** (join at least 4 of 9 dots) or a **Number Passcode** (4 or 6 digits). A wrong pattern or passcode shakes and says how many tries are left; after 5 wrong tries each one more means a wait (30 seconds, growing to 5 minutes). **Forgot?** opens it with Face ID or the iPhone passcode instead. |
 | **Calendar** | The illustrated header from the design ("Calendar — Every day is a new page" with the girl, the puppy and the kitten) and a white **Today** button. The month card has pink ‹ › buttons, "♥ September 2026 ♥", pink weekday pills, the days around the month in grey, a pink ring for today and a pink circle for the selected day; small markers show to-dos (a dot, green when all are done), priorities (a star) and journal pages (a heart). Swipe the card to change month. The selected day's card shows its date, a chip such as "☀️ Today" or "Tomorrow", and three tinted rows: **Priorities** (pink), **To-Dos** (lilac) and **Journal** (pink), each with a picture and a round ＋. The day's items are listed under their row; tick them there. |
 | **Insights** | Done today, day streak, a weekly bar chart and a 30-day mood chart (Swift Charts). |
-| **Settings** | Your name, morning and evening reminders, carrying unfinished items over to today, showing finished to-dos (the Completed list open or closed), **Sounds & Haptics** (Task Completion Sound, Mood Star Sound and gentle haptics), the journal lock (**Lock My Journal**, then choose Face ID, Pattern or Number Passcode; a new pattern or passcode is asked for twice, and changing the method or turning the lock off first asks for the current one), and data clean-up. |
+| **Settings** | Your name, **iCloud** (Sync with iCloud), morning and evening reminders, carrying unfinished items over to today, showing finished to-dos (the Completed list open or closed), **Sounds & Haptics** (Task Completion Sound, Mood Star Sound and gentle haptics), the journal lock (**Lock My Journal**, then choose Face ID, Pattern or Number Passcode; a new pattern or passcode is asked for twice, and changing the method or turning the lock off first asks for the current one), and data clean-up. |
+| **iCloud sync** | Settings → iCloud → **Sync with iCloud** is on from the start. Your to-dos, priorities, templates, categories and journal pages (with their photos and voice notes) are kept on the iPhone and in your private iCloud database, so if you delete My Day and install it again, or sign in on a new iPhone with the same Apple ID, they all come back, and they stay the same on all your devices. Under the switch, My Day shows what iCloud is doing: "Syncing with iCloud…", "Up to date · Last synced 2 minutes ago", or why it can't sync (not signed in to iCloud, iCloud storage full, or no internet). Turning it off asks first, then keeps new changes on this iPhone only; everything already saved stays both on the iPhone and in iCloud. Turning it on again uploads what was added meanwhile. **Erase everything** says when it will erase from iCloud too. |
 | **Opening My Day** | Every time the app starts, the design's loading page shows for 0.9 seconds (tap to skip): the happy My Day icon (the girl, her puppy and kitten smiling with their eyes closed) in a soft glow with light rays, "Make today beautiful 💗" and glossy hearts above it, and "Loading your happy space…" over a full pink heart bar with its three hearts lit. It fades in from the launch screen's plain pink (so nothing jumps), then fades into Home over 0.3 seconds. |
 | **Ticking things off** | Ticking a to-do or a priority (on its page or in the Calendar) plays a soft crystal "ting" (0.4 s) with a very light haptic tap, together with the tick and its two little hearts. Ticking the day's last one plays a slightly more magical 1-second chime instead, with the confetti (and, for priorities, the "All of today's priorities are done!" card). Unticking plays nothing. The sounds are bundled (`MyDay/Resources/Sounds`, made by `scripts/make_sounds.py`), loaded at launch so they play at once, mix with other audio, stay quiet on Silent and pause while you record; turn them off in Settings → Sounds & Haptics → Task Completion Sound. The journal's mood-star “pop… ting” has its own switch there (**Mood Star Sound**). The first-time tips' discovery sound also stays quiet on Silent and while you record, but has no switch, since each tip shows only once. |
 
-Everything is stored on the device with SwiftData, so data stays between launches.
-The app makes no network calls of its own; only **Use My Location** on a journal
-page asks Apple's location service for the name of the place. Permissions are
+Everything is stored on the device with SwiftData, so data stays between launches,
+and, while **Sync with iCloud** is on, in your private iCloud database too (SwiftData
+syncs it through CloudKit). Apart from iCloud sync, only **Use My Location** on a journal
+page goes online: it asks Apple's location service for the name of the place. Permissions are
 asked for only when a feature needs them: notifications when you first switch on
 a reminder, the microphone and speech recognition when you first use Voice Add,
 the microphone when you first record a voice note, the camera when you first take
@@ -75,6 +77,9 @@ it on in Settings and offers another way (for example, typing instead of speakin
 
 - Xcode 16 or newer
 - iOS 17.0 or newer, iPhone (portrait)
+- For iCloud sync on a device: membership in the Apple Developer Program (Apple: "The iCloud
+  capability requires an active Apple Developer account with admin permissions"). Without it,
+  remove the iCloud capability and the app keeps its data on the device only.
 
 ## Run it
 
@@ -83,15 +88,39 @@ it on in Settings and offers another way (for example, typing instead of speakin
    if needed, change the bundle identifier (`com.regina3579.myday`).
 3. Pick an iPhone simulator or your iPhone, then press **Run** (⌘R).
 
+### Set up iCloud sync
+
+The project already has what SwiftData needs (Apple: "Syncing model data across a
+person's devices"): the iCloud capability with CloudKit and the container
+`iCloud.com.regina3579.myday`, Push Notifications (`MyDay/MyDay.entitlements`), and the
+Remote notifications background mode (`MyDay/Info.plist`). Every model is CloudKit-ready: no
+unique attributes, a default for every value, and optional relationships with inverses.
+
+1. In *Signing & Capabilities*, under **iCloud**, make sure **CloudKit** and the container
+   `iCloud.com.regina3579.myday` are ticked. A container name is unique across iCloud, so if
+   Xcode can't create this one, add your own (`iCloud.` + your bundle identifier) and tick only
+   that one; My Day uses the first container listed.
+2. Sign in to iCloud on the iPhone or simulator, then run My Day from Xcode once with the launch
+   argument `-initializeCloudKitSchema` (*Product → Scheme → Edit Scheme → Run → Arguments*). It
+   writes every record type and field to the container's development schema.
+3. Before you release the app, deploy the schema to production in
+   [CloudKit Console](https://icloud.developer.apple.com) (*Deploy Schema Changes*). TestFlight
+   and App Store builds use the production schema, and a production schema can only be added
+   to: record types and fields can't be removed or renamed later.
+4. To test: add a to-do, delete My Day, install it again and open it. Settings → iCloud shows
+   "Syncing with iCloud…" and your data comes back (it takes from a few seconds to a few minutes,
+   depending on the network).
+
 ## Project structure
 
 ```
 MyDay/
-├── App/            App entry, navigation (Router), UIKit appearance
+├── App/            App entry, navigation (Router), the store (DataStore: on the
+│                   iPhone and in iCloud), UIKit appearance
 ├── Models/         SwiftData models: TaskItem, CustomCategory, TaskTemplate, Priority,
 │                   JournalEntry, JournalPhoto, JournalVoiceNote, JournalPageTemplate;
 │                   TaskDraft (an unsaved to-do)
-├── Services/       Reminders, speech (SpeechTranscriber, VoiceTaskParser),
+├── Services/       iCloud sync status, reminders, speech (SpeechTranscriber, VoiceTaskParser),
 │                   journal lock (Face ID, pattern, passcode; Keychain), haptics,
 │                   day rollover, helpers
 ├── Theme/          Colours from the artwork, fonts, shared components
@@ -111,7 +140,7 @@ MyDay/
 │   │               MoodChooserSheet, JournalDetailView, NewJournalEntrySheet, lock screen
 │   ├── Calendar/   CalendarView, CalendarComponents
 │   ├── Insights/   InsightsView
-│   └── Settings/   SettingsView, RemindersView, JournalLockSettings
+│   └── Settings/   SettingsView, ICloudSettings, RemindersView, JournalLockSettings
 └── Assets.xcassets App icon, home, to-dos, priority and calendar illustrations, kitten, colours
 ```
 
