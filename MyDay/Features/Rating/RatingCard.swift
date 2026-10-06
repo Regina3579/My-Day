@@ -18,7 +18,9 @@ struct RatingCard: View {
     /// edge, 652 × 308) at the top, and the card under it, 631 wide, down to 775.
     private static let grid = CGSize(width: 652, height: 775)
     private static let cardWidth: CGFloat = 631
-    private static let cardTop: CGFloat = 298
+    /// The card's top, hidden under the picture's cloud edge (its corners are rounded, so they
+    /// stay inside the cloud's first and last bumps).
+    private static let cardTop: CGFloat = 294
     private static let midX: CGFloat = 325.5
 
     var body: some View {
@@ -56,7 +58,8 @@ struct RatingCard: View {
 
     private func card(_ p: TipArtFrame) -> some View {
         ZStack(alignment: .topLeading) {
-            UnevenRoundedRectangle(bottomLeadingRadius: p.length(72), bottomTrailingRadius: p.length(72),
+            UnevenRoundedRectangle(topLeadingRadius: p.length(26), bottomLeadingRadius: p.length(72),
+                                   bottomTrailingRadius: p.length(72), topTrailingRadius: p.length(26),
                                    style: .continuous)
                 .fill(RatingStyle.card)
                 .shadow(color: RatingStyle.glow.opacity(0.5), radius: p.length(26))
