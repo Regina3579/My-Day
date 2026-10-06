@@ -4,6 +4,7 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
+    @Environment(AppState.self) private var appState
     @Environment(DataStore.self) private var store
     @AppStorage(Prefs.userName) private var userName = ""
     @AppStorage(Prefs.carryOver) private var carryOver = true
@@ -117,6 +118,18 @@ struct SettingsView: View {
                     Text(lockFooter)
                 }
 
+                Section {
+                    Button(action: showTipsAgain) {
+                        Label("Show tips again", systemImage: "lightbulb.fill")
+                            .foregroundStyle(Palette.hotPink)
+                    }
+                    .id("tips")
+                } header: {
+                    Text("Tips")
+                } footer: {
+                    Text("See the first-time tips again, one at a time: on To-Dos (a new quote every day, Speak a Task, then Photo), and the moods tip when you next write a journal page.")
+                }
+
                 Section("Your data") {
                     Button {
                         confirmClearDone = true
@@ -138,10 +151,10 @@ struct SettingsView: View {
             }
             #if DEBUG
             .task(id: router.tab) {
-                // `settings-sounds`, `settings-lock` and `settings-icloud`: show Sounds & Haptics,
-                // the journal lock or iCloud for the screenshot; `settings-lock-choose` opens
-                // "Lock My Journal". Run when the route turns to Settings, as this tab may start
-                // before the route is read.
+                // `settings-sounds`, `settings-lock`, `settings-icloud` and `settings-tips`: show
+                // Sounds & Haptics, the journal lock, iCloud or Tips for the screenshot;
+                // `settings-lock-choose` opens "Lock My Journal". Run when the route turns to
+                // Settings, as this tab may start before the route is read.
                 guard router.tab == .settings else { return }
                 if DebugLaunchRoute.takeSettingsLockChoose() {
                     try? await Task.sleep(for: .seconds(1))
@@ -153,7 +166,8 @@ struct SettingsView: View {
                     store.syncStatus.showForScreenshot(.upToDate(Date().addingTimeInterval(-120)))
                 }
                 let anchor: String? = DebugLaunchRoute.takeSettingsSounds() ? "sounds"
-                    : DebugLaunchRoute.takeSettingsLock() ? "lock" : showsICloud ? "icloud" : nil
+                    : DebugLaunchRoute.takeSettingsLock() ? "lock" : showsICloud ? "icloud"
+                    : DebugLaunchRoute.takeSettingsTips() ? "tips" : nil
                 guard let anchor else { return }
                 try? await Task.sleep(for: .seconds(1))
                 reader.scrollTo(anchor, anchor: .top)
@@ -211,6 +225,24 @@ struct SettingsView: View {
         }
         return "Your journal asks for \(lockMethod.askedFor) each time you come back to the app."
             + (lockMethod.usesSecret ? " Forgot it? You can open it with \(JournalLock.methodName) instead." : "")
+    }
+
+    // MARK: Tips
+
+    /// Marks the four first-time tips as not seen and opens today's To-Dos, where the first three
+    /// come one at a time (the moods tip waits for the next journal page). My Day goes back to its
+    /// home screen first, so To-Dos opens afresh even when it was already open there.
+    private func showTipsAgain() {
+        for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip] {
+            UserDefaults.standard.set(false, forKey: key)
+        }
+        Haptics.tap()
+        router.goHome()
+        let today = appState.today
+        Task {
+            try? await Task.sleep(for: .seconds(0.35))
+            router.open(.todos(today))
+        }
     }
 
     // MARK: Data
