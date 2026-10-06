@@ -123,7 +123,8 @@ final class RatingPrompt {
     }
 }
 
-/// Apple's ways to rate My Day.
+/// Apple's ways to rate My Day (on the main actor, like Apple's `RequestReviewAction`).
+@MainActor
 enum AppReview {
     /// My Day's App Store ID (the number in its App Store link), from `MyDayAppStoreID` in
     /// Info.plist. It is empty until My Day is in App Store Connect.
