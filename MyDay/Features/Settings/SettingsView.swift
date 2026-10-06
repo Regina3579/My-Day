@@ -140,7 +140,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Tips")
                 } footer: {
-                    Text("See the first-time tips again, one at a time: on To-Dos (a new quote every day, Speak a Task, then Photo), and the moods tip when you next write a journal page.")
+                    Text("See the first-time tips again, one at a time: on To-Dos (a new quote every day, Speak a Task, then Photo), and the moods and Get a Prompt tips when you next write a journal page.")
                 }
 
                 Section("Your data") {
@@ -249,11 +249,12 @@ struct SettingsView: View {
 
     // MARK: Tips
 
-    /// Marks the four first-time tips as not seen and opens today's To-Dos, where the first three
-    /// come one at a time (the moods tip waits for the next journal page). My Day goes back to its
-    /// home screen first, so To-Dos opens afresh even when it was already open there.
+    /// Marks the five first-time tips as not seen and opens today's To-Dos, where the first three
+    /// come one at a time (the moods and Get a Prompt tips wait for the next journal page). My Day
+    /// goes back to its home screen first, so To-Dos opens afresh even when it was already open there.
     private func showTipsAgain() {
-        for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip] {
+        for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip,
+                    Prefs.didShowPromptTip] {
             UserDefaults.standard.set(false, forKey: key)
         }
         Haptics.tap()

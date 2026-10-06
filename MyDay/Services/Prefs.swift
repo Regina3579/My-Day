@@ -16,6 +16,9 @@ enum Prefs {
     /// Set once the first-time "There's a feeling for every kind of day!" tip has been shown on
     /// the journal's writing page.
     static let didShowMoodTip = "didShowJournalMoodTip"
+    /// Set once the first-time "Not sure what to write?" tip has been shown on the journal's
+    /// writing page, pointing at Get a Prompt.
+    static let didShowPromptTip = "didShowJournalPromptTip"
     /// The "Enjoying My Day?" rating card (see `RatingPrompt`): the days My Day has been used,
     /// the last of them, how many times the card has asked, when it last asked, and whether
     /// "Rate Now" (or Settings → Rate My Day) was tapped.

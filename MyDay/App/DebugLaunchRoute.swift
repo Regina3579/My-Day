@@ -350,9 +350,10 @@ enum DebugLaunchRoute {
         // Only "todos-voice-tip" and "todos-quote-tip" show the first-time tips.
         UserDefaults.standard.set(arguments[index + 1] != "todos-voice-tip", forKey: Prefs.didShowVoiceTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-quote-tip", forKey: Prefs.didShowQuoteTip)
-        // Only "todos-photo-tip" and "journal-mood-tip" show the newer tips.
+        // Only "todos-photo-tip", "journal-mood-tip" and "journal-prompt-tip" show the newer tips.
         UserDefaults.standard.set(arguments[index + 1] != "todos-photo-tip", forKey: Prefs.didShowPhotoTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-mood-tip", forKey: Prefs.didShowMoodTip)
+        UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
 
         switch arguments[index + 1] {
         case "quickadd": router.isQuickAddOpen = true
@@ -390,7 +391,7 @@ enum DebugLaunchRoute {
             journalShelf = JournalShelf.all.rawValue
             journalFilter = true
             router.open(.journal)
-        case "journal-new", "journal-mood-tip":
+        case "journal-new", "journal-mood-tip", "journal-prompt-tip":
             router.open(.journal)
             router.homePath.append(AppRoute.newJournalPage(nil))
         case "journal-middle":

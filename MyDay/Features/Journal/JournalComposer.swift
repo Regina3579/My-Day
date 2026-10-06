@@ -202,6 +202,14 @@ struct JournalComposer: View {
     /// The first-time tip pointing at the ＋ for more moods.
     @AppStorage(Prefs.didShowMoodTip) private var didShowMoodTip = false
     @State private var showsMoodTip = false
+    /// The first-time tip pointing at Get a Prompt, after the moods tip.
+    @AppStorage(Prefs.didShowPromptTip) private var didShowPromptTip = false
+    @State private var showsPromptTip = false
+    /// Where Get a Prompt and the page's bottom are on screen, so its tip only comes when there
+    /// is room for it (the page scrolls up first when there isn't).
+    @State private var promptFrame = CGRect.zero
+    @State private var pageBottom: CGFloat = 0
+    @State private var tipScrollTarget: String?
 
     /// Edits `entry`, or starts a new page dated `date` when it is nil (from `template`'s
     /// heading, prompts and tags when one is given).
@@ -294,6 +302,10 @@ struct JournalComposer: View {
         GeometryReader { proxy in
             ScrollViewReader { reader in
                 scroller(proxy)
+                    .onChange(of: tipScrollTarget) { _, target in
+                        guard let target else { return }
+                        withAnimation(.easeInOut(duration: 0.45)) { reader.scrollTo(target, anchor: .top) }
+                    }
                 #if DEBUG
                     .task {
                         if DebugLaunchRoute.takeJournalMoods() {
@@ -340,28 +352,91 @@ struct JournalComposer: View {
                 .transition(.opacity)
             }
         }
-        .task { await showMoodTipIfNew() }
+        .overlayPreferenceValue(PromptButtonAnchorKey.self) { anchor in
+            if showsPromptTip, let anchor {
+                GeometryReader { proxy in
+                    PromptTip(buttonFrame: proxy[anchor], size: proxy.size,
+                              onTry: tryPromptFromTip, onDismiss: closePromptTip)
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { geometry in
+            geometry.frame(in: .global).maxY
+        } action: { bottom in
+            pageBottom = bottom
+        }
+        .onChange(of: extra) { _, sheet in
+            // The moods tip's ＋ (or anything else) opened a sheet: the prompt tip waits for it.
+            guard sheet == nil, didShowMoodTip, !didShowPromptTip else { return }
+            Task {
+                try? await Task.sleep(for: .seconds(0.7))
+                await showPromptTipIfNew()
+            }
+        }
+        .task { await showTipsIfNew() }
     }
 
-    // MARK: First-time tip
+    // MARK: First-time tips
 
-    /// The first time a page is written: after a moment, point at the ＋ for more moods.
-    private func showMoodTipIfNew() async {
-        guard !didShowMoodTip else { return }
+    /// The first time a page is written: after a moment, point at the ＋ for more moods; once
+    /// that tip is closed (or on a later page), point at Get a Prompt.
+    private func showTipsIfNew() async {
+        guard !didShowMoodTip || !didShowPromptTip else { return }
         try? await Task.sleep(for: .seconds(0.9))
-        guard !Task.isCancelled, !didShowMoodTip, extra == nil else { return }
-        didShowMoodTip = true
-        withAnimation(.easeOut(duration: 0.3)) { showsMoodTip = true }
+        guard !Task.isCancelled, extra == nil else { return }
+        if !didShowMoodTip {
+            didShowMoodTip = true
+            withAnimation(.easeOut(duration: 0.3)) { showsMoodTip = true }
+        } else {
+            await showPromptTipIfNew()
+        }
     }
 
     private func closeMoodTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsMoodTip = false }
         Haptics.tap()
+        Task {
+            try? await Task.sleep(for: .seconds(0.7))
+            await showPromptTipIfNew()
+        }
     }
 
     private func openMoodsFromTip() {
         closeMoodTip()
         extra = .moods
+    }
+
+    /// The Get a Prompt tip, once, when no other tip or sheet is open. It needs the button on
+    /// screen with room round it for the cloud, so the page scrolls up first when it is low.
+    private func showPromptTipIfNew() async {
+        guard !didShowPromptTip, didShowMoodTip, !showsMoodTip, !showsPromptTip, extra == nil,
+              promptFrame != .zero, pageBottom > 0
+        else { return }
+        if !promptTipFits {
+            tipScrollTarget = "mood"
+            try? await Task.sleep(for: .seconds(0.6))
+            tipScrollTarget = nil
+        }
+        guard promptTipFits, !didShowPromptTip, !showsMoodTip, extra == nil else { return }
+        didShowPromptTip = true
+        withAnimation(.easeOut(duration: 0.3)) { showsPromptTip = true }
+    }
+
+    /// Room above Get a Prompt for the kitten and below it for the cloud and the arrow.
+    private var promptTipFits: Bool {
+        promptFrame.midY - 125 >= 60 && promptFrame.midY + 80 <= pageBottom
+    }
+
+    private func closePromptTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsPromptTip = false }
+        Haptics.tap()
+    }
+
+    private func tryPromptFromTip() {
+        closePromptTip()
+        addPrompt()
     }
 
     /// The picture, then the cards on their panel.
@@ -651,6 +726,12 @@ struct JournalComposer: View {
             .background(Capsule().fill(JournalStyle.pinkFill))
         }
         .buttonStyle(PressScaleStyle())
+        .anchorPreference(key: PromptButtonAnchorKey.self, value: .bounds) { $0 }
+        .onGeometryChange(for: CGRect.self) { geometry in
+            geometry.frame(in: .global)
+        } action: { frame in
+            promptFrame = frame
+        }
     }
 
     /// Like a page: the heading, a line with a heart, then the writing.
