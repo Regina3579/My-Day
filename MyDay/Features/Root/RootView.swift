@@ -1,15 +1,19 @@
 import SwiftUI
 import SwiftData
 import Combine
+import StoreKit
 
 /// Hosts the four tabs, the floating tab bar (hidden under full-screen pages), the Quick Add
-/// menu, the side menu and the app-wide sheets.
+/// menu, the side menu, the "Enjoying My Day?" rating card and the app-wide sheets.
 struct RootView: View {
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
     @Environment(DataStore.self) private var store
+    @Environment(RatingPrompt.self) private var rating
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
     @AppStorage(Prefs.carryOver) private var carryOver = true
 
     var body: some View {
@@ -50,6 +54,12 @@ struct RootView: View {
                         .transition(.move(edge: .leading))
                         .zIndex(2)
                 }
+
+                if rating.isShowing {
+                    RatingCard(onRate: rateNow, onLater: { rating.later() })
+                        .transition(.opacity)
+                        .zIndex(3)
+                }
             }
             .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
             .animation(.easeInOut(duration: 0.25), value: router.showsTabBar)
@@ -63,7 +73,9 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: refreshDay()
+            case .active:
+                refreshDay()
+                rating.noteActive()
             case .background: appState.isJournalUnlocked = false
             default: break
             }
@@ -85,8 +97,17 @@ struct RootView: View {
             DebugLaunchRoute.addDemoData(in: modelContext)
             #endif
             refreshDay()
+            rating.noteActive()
+            rating.isScreenFree = { [router] in
+                router.sheet == nil && !router.isMenuOpen && !router.isQuickAddOpen
+            }
             #if DEBUG
             DebugLaunchRoute.apply(to: router, today: appState.today, context: modelContext)
+            if DebugLaunchRoute.takeRatingCard() {
+                // `rating-card`: the card over To-Dos, for the screenshot.
+                try? await Task.sleep(for: .seconds(1.5))
+                rating.preview()
+            }
             #endif
         }
     }
@@ -223,6 +244,15 @@ struct RootView: View {
         }
     }
 
+    /// "Rate Now": the card goes, then Apple's page to rate My Day opens.
+    private func rateNow() {
+        rating.rated()
+        Task {
+            try? await Task.sleep(for: .seconds(0.45))
+            AppReview.open(openURL: openURL, requestReview: requestReview)
+        }
+    }
+
     private func refreshDay() {
         let today = Date().startOfDay
         if appState.today != today {
@@ -250,6 +280,7 @@ private extension View {
         .environment(Router())
         .environment(AppState())
         .environment(DataStore())
+        .environment(RatingPrompt())
         .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, JournalVoiceNote.self,
                               TaskTemplate.self],
                         inMemory: true)

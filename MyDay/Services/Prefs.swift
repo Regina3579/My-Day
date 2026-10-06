@@ -16,6 +16,14 @@ enum Prefs {
     /// Set once the first-time "There's a feeling for every kind of day!" tip has been shown on
     /// the journal's writing page.
     static let didShowMoodTip = "didShowJournalMoodTip"
+    /// The "Enjoying My Day?" rating card (see `RatingPrompt`): the days My Day has been used,
+    /// the last of them, how many times the card has asked, when it last asked, and whether
+    /// "Rate Now" (or Settings → Rate My Day) was tapped.
+    static let ratingActiveDays = "ratingActiveDays"
+    static let ratingLastActiveDay = "ratingLastActiveDay"
+    static let ratingAsks = "ratingAsks"
+    static let ratingLastAsked = "ratingLastAsked"
+    static let ratingDone = "ratingDone"
     static let haptics = "hapticsEnabled"
     /// Settings → iCloud → Sync with iCloud (on when unset; see `MyDayStore.syncsWithICloud`).
     static let iCloudSync = "iCloudSyncOn"

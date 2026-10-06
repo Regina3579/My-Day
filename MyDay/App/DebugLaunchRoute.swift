@@ -178,6 +178,10 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsICloud = false
     /// Scroll Settings to Tips, with Show tips again ("settings-tips").
     @MainActor private static var settingsTips = false
+    /// Scroll Settings to Rate My Day ("settings-rate").
+    @MainActor private static var settingsRate = false
+    /// Show the "Enjoying My Day?" rating card over To-Dos ("rating-card").
+    @MainActor private static var ratingCard = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Move the last template to the front in Templates, as a press-and-hold drag would
@@ -251,6 +255,18 @@ enum DebugLaunchRoute {
     static func takeSettingsTips() -> Bool {
         defer { settingsTips = false }
         return settingsTips
+    }
+
+    @MainActor
+    static func takeSettingsRate() -> Bool {
+        defer { settingsRate = false }
+        return settingsRate
+    }
+
+    @MainActor
+    static func takeRatingCard() -> Bool {
+        defer { ratingCard = false }
+        return ratingCard
     }
 
     @MainActor
@@ -431,6 +447,12 @@ enum DebugLaunchRoute {
         case "settings-tips":
             settingsTips = true
             router.tab = .settings
+        case "settings-rate":
+            settingsRate = true
+            router.tab = .settings
+        case "rating-card":
+            ratingCard = true
+            router.open(.todos(today))
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)
         case let route where route.hasPrefix("todos-"):

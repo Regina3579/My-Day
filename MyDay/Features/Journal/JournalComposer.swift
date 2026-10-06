@@ -164,6 +164,7 @@ struct JournalComposer: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
+    @Environment(RatingPrompt.self) private var rating
     @Environment(\.hostTab) private var hostTab
 
     /// The page being edited: nil for a new page until it is first saved.
@@ -1094,6 +1095,7 @@ struct JournalComposer: View {
 
     private func save() {
         guard canSave else { return }
+        let isNewPage = entry == nil
         let page: JournalEntry
         if let entry {
             page = entry
@@ -1127,6 +1129,20 @@ struct JournalComposer: View {
             dismiss()
         } else if !router.replaceTop(with: AppRoute.savedJournalPage(page), in: hostTab) {
             showToast("Saved to your journal 💖")
+        }
+        if isNewPage {
+            noteJournalMilestone(for: page)
+        }
+    }
+
+    /// A new page that makes 5 pages, or a 3-day writing streak, is a happy moment: the rating
+    /// card may come once "Saved" has shown.
+    private func noteJournalMilestone(for page: JournalEntry) {
+        let pages = (try? context.fetch(FetchDescriptor<JournalEntry>(
+            predicate: #Predicate { $0.deletedAt == nil }))) ?? []
+        let dates = pages.filter { $0 !== page }.map(\.date) + [page.date]
+        if RatingPrompt.isJournalMilestone(pageDates: dates) {
+            rating.happyMoment()
         }
     }
 

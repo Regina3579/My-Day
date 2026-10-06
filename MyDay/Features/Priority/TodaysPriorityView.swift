@@ -10,6 +10,7 @@ import UIKit
 struct TodaysPriorityView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
+    @Environment(RatingPrompt.self) private var rating
     @Environment(\.hostTab) private var hostTab
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the Completed list is open.
@@ -392,9 +393,11 @@ struct TodaysPriorityView: View {
         }
     }
 
-    /// The last priority is done: the finished ones are listed, and the confetti flies.
+    /// The last priority is done: the finished ones are listed, and the confetti flies (a happy
+    /// moment, when the rating card may come once the confetti is over).
     private func celebrate() {
         celebration += 1
+        rating.happyMoment()
         withAnimation(.snappy) { showCompleted = true }
         let message = day.isToday ? "All of today's priorities are done! Well done!"
                                   : "All priorities are done! Well done!"

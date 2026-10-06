@@ -1,11 +1,15 @@
 import SwiftUI
 import SwiftData
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
     @Environment(DataStore.self) private var store
+    @Environment(RatingPrompt.self) private var rating
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
     @AppStorage(Prefs.userName) private var userName = ""
     @AppStorage(Prefs.carryOver) private var carryOver = true
     /// The Completed list on the To-Dos screen is open (it starts closed).
@@ -124,6 +128,15 @@ struct SettingsView: View {
                             .foregroundStyle(Palette.hotPink)
                     }
                     .id("tips")
+                    #if DEBUG
+                    // Builds run from Xcode only: the card otherwise waits for 7 days of use.
+                    Button {
+                        rating.preview()
+                    } label: {
+                        Label("Preview the rating card", systemImage: "star.bubble")
+                            .foregroundStyle(Palette.hotPink)
+                    }
+                    #endif
                 } header: {
                     Text("Tips")
                 } footer: {
@@ -145,14 +158,20 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Button(action: rateMyDay) {
+                        Label("Rate My Day ⭐️", systemImage: "star.bubble.fill")
+                            .foregroundStyle(Palette.hotPink)
+                    }
+                    .id("rate")
                     LabeledContent("Version", value: version)
                     LabeledContent("Made with", value: "💖 for beautiful days")
                 }
             }
             #if DEBUG
             .task(id: router.tab) {
-                // `settings-sounds`, `settings-lock`, `settings-icloud` and `settings-tips`: show
-                // Sounds & Haptics, the journal lock, iCloud or Tips for the screenshot;
+                // `settings-sounds`, `settings-lock`, `settings-icloud`, `settings-tips` and
+                // `settings-rate`: show Sounds & Haptics, the journal lock, iCloud, Tips or Rate
+                // My Day for the screenshot;
                 // `settings-lock-choose` opens "Lock My Journal". Run when the route turns to
                 // Settings, as this tab may start before the route is read.
                 guard router.tab == .settings else { return }
@@ -167,7 +186,8 @@ struct SettingsView: View {
                 }
                 let anchor: String? = DebugLaunchRoute.takeSettingsSounds() ? "sounds"
                     : DebugLaunchRoute.takeSettingsLock() ? "lock" : showsICloud ? "icloud"
-                    : DebugLaunchRoute.takeSettingsTips() ? "tips" : nil
+                    : DebugLaunchRoute.takeSettingsTips() ? "tips"
+                    : DebugLaunchRoute.takeSettingsRate() ? "rate" : nil
                 guard let anchor else { return }
                 try? await Task.sleep(for: .seconds(1))
                 reader.scrollTo(anchor, anchor: .top)
@@ -243,6 +263,16 @@ struct SettingsView: View {
             try? await Task.sleep(for: .seconds(0.35))
             router.open(.todos(today))
         }
+    }
+
+    // MARK: Rating
+
+    /// Opens Apple's page to rate My Day, whenever someone wants to. The "Enjoying My Day?"
+    /// card won't ask again after this.
+    private func rateMyDay() {
+        Haptics.tap()
+        rating.rated()
+        AppReview.open(openURL: openURL, requestReview: requestReview)
     }
 
     // MARK: Data

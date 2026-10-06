@@ -9,6 +9,8 @@ struct MyDayApp: App {
     @State private var appState = AppState()
     /// The to-dos, priorities, templates and journal pages, on the iPhone and in iCloud.
     @State private var store = DataStore()
+    /// When the "Enjoying My Day?" card asks for a rating.
+    @State private var rating = RatingPrompt()
 
     init() {
         Appearance.configure()
@@ -31,6 +33,7 @@ struct MyDayApp: App {
             .environment(router)
             .environment(appState)
             .environment(store)
+            .environment(rating)
             .launchSplash()
             .tint(Palette.hotPink)
             .preferredColorScheme(.light)

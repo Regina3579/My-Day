@@ -5,6 +5,7 @@ import SwiftUI
 /// four ways to add a to-do and the day's progress. Also used for other days from the calendar.
 struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
+    @Environment(RatingPrompt.self) private var rating
     @Environment(\.tabBarClearance) private var tabBarClearance
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -561,10 +562,12 @@ struct TodayToDosView: View {
         AccessibilityNotification.Announcement(task.isImportant ? "Marked important" : "No longer important").post()
     }
 
-    /// Everything is done: "All done for today!" and the big confetti.
+    /// Everything is done: "All done for today!" and the big confetti (a happy moment, when
+    /// the rating card may come once the confetti is over).
     private func celebrate() {
         celebration += 1
         AccessibilityNotification.Announcement("All done for \(day.isToday ? "today" : "the day")!").post()
+        rating.happyMoment()
         guard !reduceMotion else { return }
         showsConfetti = true
         let run = celebration
