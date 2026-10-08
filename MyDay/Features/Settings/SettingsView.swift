@@ -91,10 +91,29 @@ struct SettingsView: View {
                     Toggle(isOn: $haptics) {
                         Label("Gentle haptics", systemImage: "hand.tap.fill")
                     }
+                    Button {
+                        SoundEffects.play(.reminder)
+                    } label: {
+                        HStack {
+                            Label {
+                                Text("Reminder Sound")
+                                    .foregroundStyle(Palette.ink)
+                            } icon: {
+                                Image(systemName: "music.note")
+                            }
+                            Spacer()
+                            Text("Gentle Bloom")
+                                .foregroundStyle(Palette.inkSoft)
+                            Image(systemName: "play.circle.fill")
+                                .foregroundStyle(Palette.hotPink)
+                        }
+                    }
+                    .accessibilityLabel("Reminder Sound, Gentle Bloom")
+                    .accessibilityHint("Plays the sound")
                 } header: {
                     Text("Sounds & Haptics")
                 } footer: {
-                    Text("A soft “ting” when you tick off a to-do or a priority, a little chime when the day's last one is done, and a bubbly “pop… ting” when you pick a mood star in your journal. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music.")
+                    Text("A soft “ting” when you tick off a to-do or a priority, a little chime when the day's last one is done, and a bubbly “pop… ting” when you pick a mood star in your journal. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music. To-do reminders arrive with “Gentle Bloom”, a 3-second music-box melody: tap Reminder Sound to hear it.")
                 }
 
                 Section {

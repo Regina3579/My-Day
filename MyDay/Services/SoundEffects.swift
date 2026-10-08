@@ -4,7 +4,8 @@ import AVFoundation
 /// a soft crystal "ting" (0.4 s) when a to-do or priority is ticked, a slightly more
 /// magical chime (1.2 s) when the day's last one is done, the discovery sound
 /// ("Ting… twinkle!", 0.7 s) when a first-time tip pops up, and "pop… ting ✨" (0.4 s) when
-/// a mood star is picked.
+/// a mood star is picked. "Gentle Bloom" (3 s) is the to-do reminders' notification sound; here
+/// it only plays when Settings → Reminder Sound is tapped, so it can be heard.
 ///
 /// They are loaded at launch, so they play at once. They play gently, mix with other audio
 /// (music keeps playing), follow the Silent switch and never play while My Day is
@@ -20,6 +21,8 @@ enum SoundEffects {
         case quoteTip = "tip_discovery_dreamy"
         /// Picking a mood star: a tiny, soft bubble pop, then one delicate crystal ting.
         case moodStar = "mood_pop_ting"
+        /// To-do reminders: a little music box, four soft rising notes and a tiny sparkle.
+        case reminder = "gentle_bloom"
 
         var volume: Float {
             switch self {
@@ -28,16 +31,17 @@ enum SoundEffects {
             case .tip, .quoteTip: 0.45
             // Very quiet: it plays on every tap of a star.
             case .moodStar: 0.35
+            case .reminder: 0.6
             }
         }
 
         /// The Settings → Sounds & Haptics switch that turns this sound off. A tip has none,
-        /// since each tip shows only once.
+        /// since each tip shows only once, and the reminder sound plays here only when asked for.
         var setting: String? {
             switch self {
             case .ting, .allDone: Prefs.taskCompletionSound
             case .moodStar: Prefs.moodStarSound
-            case .tip, .quoteTip: nil
+            case .tip, .quoteTip, .reminder: nil
             }
         }
     }

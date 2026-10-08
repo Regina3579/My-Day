@@ -108,6 +108,8 @@ struct RootView: View {
             DebugLaunchRoute.addDemoData(in: modelContext)
             #endif
             refreshDay()
+            // Each launch, so reminders set by an earlier version carry the current reminder sound.
+            ReminderCenter.syncAll(in: modelContext)
             rating.noteActive()
             rating.isScreenFree = { [router] in
                 router.sheet == nil && !router.isMenuOpen && !router.isQuickAddOpen && router.iCloudTip == nil

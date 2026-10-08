@@ -1,4 +1,4 @@
-"""Synthesises My Day's five UI sounds (mono, 44.1 kHz, 16-bit WAV).
+"""Synthesises My Day's five UI sounds and its to-do reminder sound (mono, 44.1 kHz, 16-bit WAV).
 
 Run from MyDay/Resources/Sounds (needs numpy): python3 ../../../scripts/make_sounds.py
 """
@@ -160,3 +160,48 @@ mood += bell(2637.0, 0.055, MOOD - 0.055, MOOD,
              [(1.0, 1.0, 0.09), (1.0032, 0.3, 0.10), (0.5, 0.18, 0.06), (2.0, 0.05, 0.03),
               (2.76, 0.03, 0.02)], attack=0.005)
 save('mood_pop_ting.wav', finish(room(mood, 0.12, seed=9), 0.14, 0.6))
+
+# To-do reminders, "Gentle Bloom": a little music box. Four soft notes rising up an F-major
+# chord (C6, F6, A6, C7: "sol-do-mi-sol"), each a delicate bell (a music-box tine: a pure tone
+# with a bright, quickly fading strike and a twin 1.6 Hz sharp for a slow shimmer) over a warm, piano-like
+# tone an octave below (soft harmonics that fade more slowly). The notes grow a little louder
+# as they rise and the last one rings longest; then a tiny sparkle (F7, A7, C8, F8) with a faint
+# shimmer, in a small soft room, fading out at 3 s. A gentle "you have something lovely to do".
+# Played by iOS for the notification (Linear PCM WAV, under Apple's 30-second limit).
+
+
+def piano(freq, start, total, amp, decay, attack=0.006):
+    """A warm, piano-like note: harmonics 1-4, the higher ones softer and gone sooner, with a
+    6 ms hammer and a slow fade."""
+    t = np.arange(int((total - start) * RATE)) / RATE
+    note = np.zeros_like(t)
+    for h, (a, d) in enumerate([(1.0, 1.0), (0.42, 0.55), (0.16, 0.32), (0.06, 0.2)], start=1):
+        note += a * np.sin(2 * np.pi * freq * h * t) * np.exp(-t / (decay * d))
+    a = int(attack * RATE)
+    note[:a] *= 0.5 - 0.5 * np.cos(np.linspace(0, np.pi, a))
+    out = np.zeros(int(total * RATE))
+    i = int(start * RATE)
+    out[i:i + len(note)] += amp * note
+    return out
+
+
+BLOOM = 3.0
+gentle_bloom = np.zeros(int(BLOOM * RATE))
+for i, (freq, start, loud) in enumerate([(1046.5, 0.00, 0.78), (1396.9, 0.30, 0.84),
+                                         (1760.0, 0.60, 0.92), (2093.0, 0.90, 1.00)]):
+    ring = 1.7 if i == 3 else 1.0
+    # The twin is 1.6 Hz sharp on every note, so each shimmers at the same slow, even pace.
+    music_box = [(1.0, 1.0, 0.75), (1 + 1.6 / freq, 0.20, 0.85), (2.0, 0.10, 0.22),
+                 (2.76, 0.10, 0.10), (5.40, 0.035, 0.04)]
+    partials = [(r, a * loud, d * ring) for r, a, d in music_box]
+    gentle_bloom += bell(freq, start, BLOOM - start, BLOOM, partials, attack=0.006)
+    gentle_bloom += piano(freq / 2, start, BLOOM, 0.42 * loud, 0.9 * ring)
+for k, freq in enumerate([2793.8, 3520.0, 4186.0, 5587.7]):
+    gentle_bloom += sparkle(freq, 1.38 + 0.06 * k, BLOOM, 0.16 - 0.025 * k, 0.12 + 0.03 * k, twin=0.3)
+t = np.arange(int((BLOOM - 1.36) * RATE)) / RATE
+shimmer = sum(np.sin(2 * np.pi * f * t) for f in (2793.8 * 0.9985, 2793.8 * 1.0015, 3520.0))
+shimmer *= 0.03 * (1 - np.exp(-t / 0.08)) * np.exp(-t / 0.4)
+gentle_bloom[int(1.36 * RATE):] += shimmer
+# Seed 38: this room's echo warms every note and the sparkle alike (within 1.2 dB), where most
+# rooms would happen to cancel one note's pitch.
+save('gentle_bloom.wav', finish(room(gentle_bloom, 0.24, seed=38), 0.7, 0.65))
