@@ -19,12 +19,15 @@ struct ICloudSettingsSection: View {
             } action: { frame in
                 tipTarget.toggle = frame
             }
-            .listRowBackground(RowFrameReader { tipTarget.toggleRow = $0 })
             .id("icloud")
             if store.syncsWithICloud, store.syncStatus.state != .idle {
                 CloudSyncStatusRow(state: store.syncStatus.state)
-                    .listRowBackground(RowFrameReader { tipTarget.statusRow = $0 })
-                    .onDisappear { tipTarget.statusRow = .zero }
+                    .onGeometryChange(for: CGRect.self) { geometry in
+                        geometry.frame(in: .global)
+                    } action: { frame in
+                        tipTarget.status = frame
+                    }
+                    .onDisappear { tipTarget.status = .zero }
             }
         } header: {
             Text("iCloud")
@@ -58,21 +61,6 @@ struct ICloudSettingsSection: View {
         store.syncsWithICloud
             ? "Your to-dos, priorities, templates and journal pages, with their photos and voice notes, are kept in your private iCloud. If you delete My Day or get a new iPhone, sign in with the same Apple ID and they all come back."
             : "Your data is kept only on this iPhone, and deleting My Day deletes it. Turn on Sync with iCloud to keep it safe."
-    }
-}
-
-/// A settings row's usual background, which reports where the row is on screen (the whole row,
-/// not just its content).
-private struct RowFrameReader: View {
-    let onChange: (CGRect) -> Void
-
-    var body: some View {
-        Color(uiColor: .secondarySystemGroupedBackground)
-            .onGeometryChange(for: CGRect.self) { geometry in
-                geometry.frame(in: .global)
-            } action: { frame in
-                onChange(frame)
-            }
     }
 }
 

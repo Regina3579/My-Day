@@ -24,6 +24,10 @@ struct SettingsView: View {
     /// navigation bar and the tab bar), for the first-time iCloud tip.
     @State private var iCloudTarget = ICloudTipTarget()
     @State private var visibleFrame: CGRect = .zero
+    #if DEBUG
+    /// Screenshot runs only: why the iCloud tip did not fit (temporary, while it is checked).
+    @State private var iCloudTipProblem: String?
+    #endif
     /// Turning the lock on or off, or changing how it opens.
     @State private var lockGoal: JournalLockSetupSheet.Goal?
     @State private var confirmClearDone = false
@@ -218,6 +222,17 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
         .tabBarSafeArea()
         .background(DreamyBackground(theme: .garden))
+        #if DEBUG
+        .overlay(alignment: .top) {
+            if let iCloudTipProblem {
+                Text(iCloudTipProblem)
+                    .font(.system(size: 11, design: .monospaced))
+                    .padding(6)
+                    .background(Color.yellow)
+                    .padding(.top, 120)
+            }
+        }
+        #endif
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: completionSound) { _, isOn in
@@ -282,7 +297,16 @@ struct SettingsView: View {
             }
             try? await Task.sleep(for: .seconds(0.6))
         }
-        guard !Task.isCancelled, canShowICloudTip, ICloudTip.fits(iCloudTarget, in: visibleFrame) else { return }
+        guard !Task.isCancelled, canShowICloudTip, ICloudTip.fits(iCloudTarget, in: visibleFrame) else {
+            #if DEBUG
+            if DebugLaunchRoute.isScreenshotRun {
+                let f = { (r: CGRect) in String(format: "%.0f,%.0f %.0f×%.0f", r.minX, r.minY, r.width, r.height) }
+                iCloudTipProblem = "toggle \(f(iCloudTarget.toggle)) status \(f(iCloudTarget.status)) "
+                    + "section \(f(iCloudTarget.section)) visible \(f(visibleFrame)) can \(canShowICloudTip)"
+            }
+            #endif
+            return
+        }
         didShowICloudTip = true
         withAnimation(.easeOut(duration: 0.3)) { router.iCloudTip = iCloudTarget }
     }

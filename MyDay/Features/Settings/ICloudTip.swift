@@ -1,15 +1,24 @@
 import SwiftUI
 
-/// Where Settings → iCloud is on screen, for the first-time tip that points at it: the Sync with
-/// iCloud row, the sync status row under it (when it shows) and the switch's row content.
+/// Where Settings → iCloud is on screen, for the first-time tip that points at it: the content of
+/// the Sync with iCloud row (the switch is at its trailing end) and of the sync status row under
+/// it, when it shows.
 struct ICloudTipTarget: Equatable {
-    var toggleRow: CGRect = .zero
-    var statusRow: CGRect = .zero
     var toggle: CGRect = .zero
+    var status: CGRect = .zero
 
-    /// The section's card: its rows together.
+    /// The section's card: its rows' content, with the list's usual margins round it (measured
+    /// on the system's settings cards).
     var section: CGRect {
-        statusRow.isEmpty ? toggleRow : toggleRow.union(statusRow)
+        guard !toggle.isEmpty else { return .zero }
+        let content = status.isEmpty ? toggle : toggle.union(status)
+        let margin: CGSize
+        if #available(iOS 26, *) {
+            margin = CGSize(width: 14, height: 12)
+        } else {
+            margin = CGSize(width: 20, height: 7)
+        }
+        return content.insetBy(dx: -margin.width, dy: -margin.height)
     }
 
     /// The switch, at the trailing end of its row (the system's size for it).
@@ -29,7 +38,7 @@ struct ICloudTipTarget: Equatable {
         func move(_ rect: CGRect) -> CGRect {
             rect.isEmpty ? rect : rect.offsetBy(dx: -origin.x, dy: -origin.y)
         }
-        return ICloudTipTarget(toggleRow: move(toggleRow), statusRow: move(statusRow), toggle: move(toggle))
+        return ICloudTipTarget(toggle: move(toggle), status: move(status))
     }
 }
 
