@@ -65,7 +65,8 @@ struct ICloudTip: View {
 
     /// The corners of a settings card.
     private static var sectionCorner: CGFloat {
-        if #available(iOS 26, *) { 26 } else { 10 }
+        if #available(iOS 26, *) { return 26 }
+        return 10
     }
 
     /// Points per grid pixel, from the iCloud card's width.
