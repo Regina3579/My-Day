@@ -19,6 +19,11 @@ struct SettingsView: View {
     @AppStorage(Prefs.moodStarSound) private var moodStarSound = true
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
+    @AppStorage(Prefs.didShowICloudTip) private var didShowICloudTip = false
+    /// Where Settings → iCloud is, and the part of the screen the list shows (between the
+    /// navigation bar and the tab bar), for the first-time iCloud tip.
+    @State private var iCloudTarget = ICloudTipTarget()
+    @State private var visibleFrame: CGRect = .zero
     /// Turning the lock on or off, or changing how it opens.
     @State private var lockGoal: JournalLockSetupSheet.Goal?
     @State private var confirmClearDone = false
@@ -55,7 +60,7 @@ struct SettingsView: View {
                         .submitLabel(.done)
                 }
 
-                ICloudSettingsSection()
+                ICloudSettingsSection(tipTarget: $iCloudTarget)
 
                 Section("Reminders") {
                     NavigationLink {
@@ -140,7 +145,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Tips")
                 } footer: {
-                    Text("See the first-time tips again, one at a time: on To-Dos (a new quote every day, Speak a Task, then Photo), the Reminder tip when you next open a to-do, and the moods and Get a Prompt tips when you next write a journal page.")
+                    Text("See the first-time tips again, one at a time: on To-Dos (a new quote every day, Speak a Task, then Photo), the Reminder tip when you next open a to-do, the moods and Get a Prompt tips when you next write a journal page, and the iCloud tip when you next come to Settings.")
                 }
 
                 Section("Your data") {
@@ -167,6 +172,17 @@ struct SettingsView: View {
                     LabeledContent("Made with", value: "💖 for beautiful days")
                 }
             }
+            .onGeometryChange(for: CGRect.self) { geometry in
+                let frame = geometry.frame(in: .global)
+                let insets = geometry.safeAreaInsets
+                return CGRect(x: frame.minX, y: frame.minY + insets.top, width: frame.width,
+                              height: max(0, frame.height - insets.top - insets.bottom))
+            } action: { visible in
+                visibleFrame = visible
+            }
+            .task(id: router.tab) {
+                await showICloudTipIfNew(scrollingWith: reader)
+            }
             #if DEBUG
             .task(id: router.tab) {
                 // `settings-sounds`, `settings-lock`, `settings-icloud`, `settings-tips` and
@@ -183,6 +199,10 @@ struct SettingsView: View {
                 if showsICloud {
                     // The simulator has no iCloud account: a demo of the status after a sync.
                     store.syncStatus.showForScreenshot(.upToDate(Date().addingTimeInterval(-120)))
+                }
+                if DebugLaunchRoute.takeSettingsICloudTip() {
+                    // `settings-icloud-tip`: as in its design, the status says it has just synced.
+                    store.syncStatus.showForScreenshot(.upToDate(Date()))
                 }
                 let anchor: String? = DebugLaunchRoute.takeSettingsSounds() ? "sounds"
                     : DebugLaunchRoute.takeSettingsLock() ? "lock" : showsICloud ? "icloud"
@@ -249,13 +269,37 @@ struct SettingsView: View {
 
     // MARK: Tips
 
-    /// Marks the six first-time tips as not seen and opens today's To-Dos, where the first three
+    /// The first time Settings opens: after a moment, a tip points at Sync with iCloud. The list
+    /// scrolls first when the iCloud card and the tip's card above it don't both fit on screen;
+    /// it waits for another visit when something else is open.
+    private func showICloudTipIfNew(scrollingWith reader: ScrollViewProxy) async {
+        guard router.tab == .settings, !didShowICloudTip else { return }
+        try? await Task.sleep(for: .seconds(0.8))
+        guard !Task.isCancelled, canShowICloudTip else { return }
+        if !ICloudTip.fits(iCloudTarget, in: visibleFrame) {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                reader.scrollTo("icloud", anchor: UnitPoint(x: 0.5, y: 0.7))
+            }
+            try? await Task.sleep(for: .seconds(0.6))
+        }
+        guard !Task.isCancelled, canShowICloudTip, ICloudTip.fits(iCloudTarget, in: visibleFrame) else { return }
+        didShowICloudTip = true
+        withAnimation(.easeOut(duration: 0.3)) { router.iCloudTip = iCloudTarget }
+    }
+
+    /// Nothing else is open: no sheet, menu, question or rating card.
+    private var canShowICloudTip: Bool {
+        !didShowICloudTip && router.tab == .settings && router.iCloudTip == nil && router.sheet == nil
+            && !router.isMenuOpen && lockGoal == nil && !confirmClearDone && !confirmEraseAll && !rating.isShowing
+    }
+
+    /// Marks the seven first-time tips as not seen and opens today's To-Dos, where the first three
     /// come one at a time (the Reminder tip waits for the next to-do opened, the moods and Get a
-    /// Prompt tips for the next journal page). My Day
+    /// Prompt tips for the next journal page, the iCloud tip for the next visit here). My Day
     /// goes back to its home screen first, so To-Dos opens afresh even when it was already open there.
     private func showTipsAgain() {
         for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip,
-                    Prefs.didShowPromptTip, Prefs.didShowReminderTip] {
+                    Prefs.didShowPromptTip, Prefs.didShowReminderTip, Prefs.didShowICloudTip] {
             UserDefaults.standard.set(false, forKey: key)
         }
         Haptics.tap()

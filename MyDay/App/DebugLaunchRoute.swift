@@ -176,6 +176,8 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsLockChoose = false
     /// Scroll Settings to iCloud, with a demo sync status ("settings-icloud").
     @MainActor private static var settingsICloud = false
+    /// The first-time iCloud tip on Settings, with a demo "Up to date" status ("settings-icloud-tip").
+    @MainActor private static var settingsICloudTip = false
     /// Scroll Settings to Tips, with Show tips again ("settings-tips").
     @MainActor private static var settingsTips = false
     /// Scroll Settings to Rate My Day ("settings-rate").
@@ -249,6 +251,12 @@ enum DebugLaunchRoute {
     static func takeSettingsICloud() -> Bool {
         defer { settingsICloud = false }
         return settingsICloud
+    }
+
+    @MainActor
+    static func takeSettingsICloudTip() -> Bool {
+        defer { settingsICloudTip = false }
+        return settingsICloudTip
     }
 
     @MainActor
@@ -350,12 +358,13 @@ enum DebugLaunchRoute {
         // Only "todos-voice-tip" and "todos-quote-tip" show the first-time tips.
         UserDefaults.standard.set(arguments[index + 1] != "todos-voice-tip", forKey: Prefs.didShowVoiceTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-quote-tip", forKey: Prefs.didShowQuoteTip)
-        // Only "todos-photo-tip", "journal-mood-tip", "journal-prompt-tip" and "todos-reminder-tip"
-        // show the newer tips.
+        // Only "todos-photo-tip", "journal-mood-tip", "journal-prompt-tip", "todos-reminder-tip" and
+        // "settings-icloud-tip" show the newer tips.
         UserDefaults.standard.set(arguments[index + 1] != "todos-photo-tip", forKey: Prefs.didShowPhotoTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-mood-tip", forKey: Prefs.didShowMoodTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
+        UserDefaults.standard.set(arguments[index + 1] != "settings-icloud-tip", forKey: Prefs.didShowICloudTip)
 
         switch arguments[index + 1] {
         case "quickadd": router.isQuickAddOpen = true
@@ -449,6 +458,9 @@ enum DebugLaunchRoute {
             router.tab = .settings
         case "settings-tips":
             settingsTips = true
+            router.tab = .settings
+        case "settings-icloud-tip":
+            settingsICloudTip = true
             router.tab = .settings
         case "settings-rate":
             settingsRate = true

@@ -67,6 +67,9 @@ final class Router {
     var sheet: AppSheet?
     var isMenuOpen = false
     var isQuickAddOpen = false
+    /// The first-time iCloud tip, shown over everything (the tab bar too) by the root view:
+    /// where Settings → iCloud is on screen. Set by Settings, cleared when the tip closes.
+    var iCloudTip: ICloudTipTarget?
     /// How many full-screen pages (Today's Priority) each tab is showing: the tab bar hides
     /// while the current tab shows one. A count, not a flag, so a page that replaces another
     /// one of its kind (its `onAppear` can run before the old page's `onDisappear`) keeps it hidden.
@@ -135,6 +138,7 @@ final class Router {
         sheet = nil
         isMenuOpen = false
         isQuickAddOpen = false
+        iCloudTip = nil
         fullScreenPages = [:]
         statusBarHidingPages = [:]
     }

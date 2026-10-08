@@ -22,6 +22,9 @@ enum Prefs {
     /// Set once the first-time "Task Reminders" tip has been shown on a to-do's Task Details,
     /// pointing at Reminder.
     static let didShowReminderTip = "didShowTaskReminderTip"
+    /// Set once the first-time "Your memories are safe" tip has been shown on Settings,
+    /// pointing at Sync with iCloud.
+    static let didShowICloudTip = "didShowSettingsICloudTip"
     /// The "Enjoying My Day?" rating card (see `RatingPrompt`): the days My Day has been used,
     /// the last of them, how many times the card has asked, when it last asked, and whether
     /// "Rate Now" (or Settings → Rate My Day) was tapped.

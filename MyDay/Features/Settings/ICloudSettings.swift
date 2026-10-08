@@ -6,15 +6,25 @@ struct ICloudSettingsSection: View {
     @Environment(DataStore.self) private var store
     @Environment(Router.self) private var router
     @State private var confirmTurnOff = false
+    /// Where the section is on screen, for the first-time iCloud tip.
+    @Binding var tipTarget: ICloudTipTarget
 
     var body: some View {
         Section {
             Toggle(isOn: syncToggle) {
                 Label("Sync with iCloud", systemImage: "icloud.fill")
             }
+            .onGeometryChange(for: CGRect.self) { geometry in
+                geometry.frame(in: .global)
+            } action: { frame in
+                tipTarget.toggle = frame
+            }
+            .listRowBackground(RowFrameReader { tipTarget.toggleRow = $0 })
             .id("icloud")
             if store.syncsWithICloud, store.syncStatus.state != .idle {
                 CloudSyncStatusRow(state: store.syncStatus.state)
+                    .listRowBackground(RowFrameReader { tipTarget.statusRow = $0 })
+                    .onDisappear { tipTarget.statusRow = .zero }
             }
         } header: {
             Text("iCloud")
@@ -48,6 +58,21 @@ struct ICloudSettingsSection: View {
         store.syncsWithICloud
             ? "Your to-dos, priorities, templates and journal pages, with their photos and voice notes, are kept in your private iCloud. If you delete My Day or get a new iPhone, sign in with the same Apple ID and they all come back."
             : "Your data is kept only on this iPhone, and deleting My Day deletes it. Turn on Sync with iCloud to keep it safe."
+    }
+}
+
+/// A settings row's usual background, which reports where the row is on screen (the whole row,
+/// not just its content).
+private struct RowFrameReader: View {
+    let onChange: (CGRect) -> Void
+
+    var body: some View {
+        Color(uiColor: .secondarySystemGroupedBackground)
+            .onGeometryChange(for: CGRect.self) { geometry in
+                geometry.frame(in: .global)
+            } action: { frame in
+                onChange(frame)
+            }
     }
 }
 

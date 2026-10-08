@@ -60,6 +60,16 @@ struct RootView: View {
                         .transition(.opacity)
                         .zIndex(3)
                 }
+
+                if let target = router.iCloudTip {
+                    GeometryReader { tipProxy in
+                        ICloudTip(target: target.moved(from: tipProxy.frame(in: .global).origin),
+                                  size: tipProxy.size, onTry: syncFromICloudTip, onDismiss: closeICloudTip)
+                    }
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(3)
+                }
             }
             .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
             .animation(.easeInOut(duration: 0.25), value: router.showsTabBar)
@@ -70,6 +80,7 @@ struct RootView: View {
         }
         .onChange(of: router.tab) { _, _ in
             router.isQuickAddOpen = false
+            router.iCloudTip = nil
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -99,7 +110,7 @@ struct RootView: View {
             refreshDay()
             rating.noteActive()
             rating.isScreenFree = { [router] in
-                router.sheet == nil && !router.isMenuOpen && !router.isQuickAddOpen
+                router.sheet == nil && !router.isMenuOpen && !router.isQuickAddOpen && router.iCloudTip == nil
             }
             #if DEBUG
             DebugLaunchRoute.apply(to: router, today: appState.today, context: modelContext)
@@ -251,6 +262,24 @@ struct RootView: View {
             try? await Task.sleep(for: .seconds(0.45))
             AppReview.open(openURL: openURL, requestReview: requestReview)
         }
+    }
+
+    // MARK: iCloud tip
+
+    private func closeICloudTip() {
+        withAnimation(.easeOut(duration: 0.25)) { router.iCloudTip = nil }
+        Haptics.tap()
+    }
+
+    /// The glowing switch was tapped: the tip goes, and iCloud Sync turns on when it is off (as
+    /// the switch would). When it is already on, nothing else happens: no "Stop syncing?" question
+    /// right after a tip about keeping memories safe.
+    private func syncFromICloudTip() {
+        closeICloudTip()
+        guard !store.syncsWithICloud else { return }
+        // The store closes for a moment: nothing open may hold one of its items.
+        router.closeAll()
+        Task { await store.setSyncsWithICloud(true) }
     }
 
     private func refreshDay() {
