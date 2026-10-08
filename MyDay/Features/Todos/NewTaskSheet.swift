@@ -46,6 +46,12 @@ struct NewTaskSheet: View {
     @State private var isLoadingPhoto = false
     @FocusState private var focusedField: Field?
 
+    @AppStorage(Prefs.didShowReminderTip) private var didShowReminderTip = false
+    @State private var showsReminderTip = false
+    /// The Reminder row and the sheet's height, in the sheet's space (for the reminder tip).
+    @State private var reminderFrame: CGRect = .zero
+    @State private var sheetHeight: CGFloat = 0
+
     private enum Field {
         case title, note
     }
@@ -113,6 +119,7 @@ struct NewTaskSheet: View {
             .presentationCornerRadius(32)
             .presentationBackground(Self.background)
             .task { focusTitleIfNeeded() }
+            .task { await showReminderTipIfNew() }
     }
 
     private static let background = LinearGradient(
@@ -133,7 +140,16 @@ struct NewTaskSheet: View {
                 await scrollToFocus(with: scroller)
             }
         }
+        .coordinateSpace(.named(Self.space))
+        .onGeometryChange(for: CGFloat.self) { geometry in
+            geometry.size.height
+        } action: { height in
+            sheetHeight = height
+        }
     }
+
+    /// The sheet's own space, where the Reminder row is measured.
+    private static let space = "taskSheet"
 
     private var formContent: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -156,6 +172,13 @@ struct NewTaskSheet: View {
     /// Keeps the reminder and the title hint in step, and loads a picked photo.
     private var withChangeHandlers: some View {
         form
+            .overlayPreferenceValue(ReminderRowAnchorKey.self) { anchor in
+                reminderTip(anchor)
+            }
+            .onChange(of: detent) { _, newDetent in
+                // Pulled down to half height, the cloud no longer fits under the row.
+                if newDetent != .large, showsReminderTip { closeReminderTip() }
+            }
             .onChange(of: reminderEnabled) { _, isOn in
                 if isOn { askForNotifications() }
             }
@@ -222,6 +245,55 @@ struct NewTaskSheet: View {
         guard let focus, focus != .title, focus != .photo else { return }
         try? await Task.sleep(for: .milliseconds(300))
         withAnimation { scroller.scrollTo(focus, anchor: .center) }
+    }
+
+    // MARK: Reminder tip
+
+    /// The first time a to-do's details open (one without a reminder), the sheet rises to full
+    /// height, as in the design, and a tip points at Reminder. It waits for another to-do when
+    /// something else is going on, or when the cloud would not fit under the row.
+    private func showReminderTipIfNew() async {
+        guard task != nil, focus == nil, canShowReminderTip else { return }
+        try? await Task.sleep(for: .seconds(0.6))
+        guard !Task.isCancelled, canShowReminderTip else { return }
+        if detent != .large {
+            withAnimation(.snappy) { detent = .large }
+            try? await Task.sleep(for: .seconds(0.6))
+        }
+        guard !Task.isCancelled, canShowReminderTip,
+              ReminderTip.fits(rowFrame: reminderFrame, height: sheetHeight)
+        else { return }
+        didShowReminderTip = true
+        withAnimation(.easeOut(duration: 0.3)) { showsReminderTip = true }
+    }
+
+    /// Nothing else is going on: no keyboard, open panel, photo screen or question.
+    private var canShowReminderTip: Bool {
+        !didShowReminderTip && !showsReminderTip && !reminderEnabled && focusedField == nil && expanded == nil
+            && !showsLibrary && !showsCamera && !showsViewer && !confirmDelete
+    }
+
+    @ViewBuilder
+    private func reminderTip(_ anchor: Anchor<CGRect>?) -> some View {
+        if showsReminderTip, let anchor {
+            GeometryReader { proxy in
+                ReminderTip(rowFrame: proxy[anchor], size: proxy.size,
+                            onTry: openReminderFromTip, onDismiss: closeReminderTip)
+            }
+            .ignoresSafeArea()
+            .transition(.opacity)
+        }
+    }
+
+    private func closeReminderTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsReminderTip = false }
+        Haptics.tap()
+    }
+
+    /// The glowing row was tapped: the tip goes and the reminder opens.
+    private func openReminderFromTip() {
+        withAnimation(.easeOut(duration: 0.25)) { showsReminderTip = false }
+        toggle(.reminder)
     }
 
     private func hideTitleHint(for newTitle: String) {
@@ -323,6 +395,12 @@ struct NewTaskSheet: View {
             toggle(.reminder)
         } panel: {
             reminderPanel
+        }
+        .anchorPreference(key: ReminderRowAnchorKey.self, value: .bounds) { $0 }
+        .onGeometryChange(for: CGRect.self) { geometry in
+            geometry.frame(in: .named(Self.space))
+        } action: { frame in
+            reminderFrame = frame
         }
         .id(TaskSheetFocus.reminder)
     }

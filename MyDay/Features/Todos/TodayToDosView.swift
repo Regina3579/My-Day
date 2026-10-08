@@ -369,6 +369,12 @@ struct TodayToDosView: View {
         case "confetti":
             try? await Task.sleep(for: .seconds(9.4))
             celebrate()
+        case "reminder-tip":
+            // Task Details for the first to-do without a reminder, where the reminder tip shows.
+            try? await Task.sleep(for: .seconds(0.5))
+            if let first = (openRows + doneRows).first(where: { !$0.reminderEnabled }) {
+                sheet = .edit(first, nil)
+            }
         case "voice-shopping":
             // Shopping is the chip chosen, so the spoken to-do goes to Shopping.
             filter = .builtIn(.shopping)

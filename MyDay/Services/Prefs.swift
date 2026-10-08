@@ -19,6 +19,9 @@ enum Prefs {
     /// Set once the first-time "Not sure what to write?" tip has been shown on the journal's
     /// writing page, pointing at Get a Prompt.
     static let didShowPromptTip = "didShowJournalPromptTip"
+    /// Set once the first-time "Task Reminders" tip has been shown on a to-do's Task Details,
+    /// pointing at Reminder.
+    static let didShowReminderTip = "didShowTaskReminderTip"
     /// The "Enjoying My Day?" rating card (see `RatingPrompt`): the days My Day has been used,
     /// the last of them, how many times the card has asked, when it last asked, and whether
     /// "Rate Now" (or Settings → Rate My Day) was tapped.
