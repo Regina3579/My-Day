@@ -14,9 +14,9 @@ struct ICloudTipTarget: Equatable {
         let content = status.isEmpty ? toggle : toggle.union(status)
         let margin: CGSize
         if #available(iOS 26, *) {
-            margin = CGSize(width: 14, height: 12)
+            margin = CGSize(width: 15, height: 15)
         } else {
-            margin = CGSize(width: 20, height: 7)
+            margin = CGSize(width: 20, height: 11)
         }
         return content.insetBy(dx: -margin.width, dy: -margin.height)
     }

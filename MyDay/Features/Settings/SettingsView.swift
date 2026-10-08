@@ -23,7 +23,8 @@ struct SettingsView: View {
     /// Where Settings → iCloud is, and the part of the screen the list shows (between the
     /// navigation bar and the tab bar), for the first-time iCloud tip.
     @State private var iCloudTarget = ICloudTipTarget()
-    @State private var visibleFrame: CGRect = .zero
+    @State private var visibleTop: CGFloat = 0
+    @State private var visibleBottom: CGFloat = 0
     #if DEBUG
     /// Screenshot runs only: why the iCloud tip did not fit (temporary, while it is checked).
     @State private var iCloudTipProblem: String?
@@ -176,13 +177,17 @@ struct SettingsView: View {
                     LabeledContent("Made with", value: "💖 for beautiful days")
                 }
             }
-            .onGeometryChange(for: CGRect.self) { geometry in
-                let frame = geometry.frame(in: .global)
-                let insets = geometry.safeAreaInsets
-                return CGRect(x: frame.minX, y: frame.minY + insets.top, width: frame.width,
-                              height: max(0, frame.height - insets.top - insets.bottom))
-            } action: { visible in
-                visibleFrame = visible
+            // Where the list shows (below the navigation bar, above the tab bar), read from two
+            // empty markers at its edges: the list's own geometry does not say.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                Color.clear
+                    .frame(height: 0)
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { visibleTop = $0 }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear
+                    .frame(height: 0)
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { visibleBottom = $0 }
             }
             .task(id: router.tab) {
                 await showICloudTipIfNew(scrollingWith: reader)
@@ -283,6 +288,11 @@ struct SettingsView: View {
     }
 
     // MARK: Tips
+
+    /// The part of the screen the list shows.
+    private var visibleFrame: CGRect {
+        CGRect(x: 0, y: visibleTop, width: 1, height: max(0, visibleBottom - visibleTop))
+    }
 
     /// The first time Settings opens: after a moment, a tip points at Sync with iCloud. The list
     /// scrolls first when the iCloud card and the tip's card above it don't both fit on screen;
