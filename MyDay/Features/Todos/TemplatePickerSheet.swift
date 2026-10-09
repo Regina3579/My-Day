@@ -2,9 +2,10 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// ▦ Templates: ready-made lists (the starters and the person's own) to add in one go. Every
-/// template has ⋯ with Edit and Delete, and can be pressed and held to move it around; the
-/// starters can be brought back if deleted.
+/// ▦ Templates: ready-made lists (the starters and the person's own) whose to-dos can be ticked
+/// off right there, like the day's list, or added to the day. Every template has ⋯ with Edit
+/// and Delete, and can be pressed and held to move it around; the starters can be brought back
+/// if deleted.
 struct TemplatePickerSheet: View {
     let day: Date
     /// Titles of the day's to-dos, offered when saving a new template.
@@ -26,7 +27,7 @@ struct TemplatePickerSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Pick a list and choose what to add ✨")
+                        Text("Open a list to tick off its to-dos or add them to My Day ✨")
                         if templates.count > 1 {
                             Label("Press and hold a card to move it around.", systemImage: "hand.draw.fill")
                                 .foregroundStyle(Palette.grape)
@@ -95,6 +96,17 @@ struct TemplatePickerSheet: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         TemplateLibrary.move(last, to: first, in: templates)
                     }
+                }
+                // `todos-template-checklist`: the first template with its first two to-dos
+                // ticked and Completed open, for the screenshot.
+                if DebugLaunchRoute.takeTemplateChecklist(), let first = templates.first {
+                    first.untickAll()
+                    first.setDone(0, true)
+                    first.setDone(1, true)
+                    UserDefaults.standard.set(true, forKey: Prefs.showCompletedTemplateItems)
+                    try? await Task.sleep(for: .seconds(0.5))
+                    path = [.detail(first.id)]
+                    return
                 }
                 // `todos-template-edit`: opens the first template's editor for the screenshot.
                 guard DebugLaunchRoute.takeTemplateEdit() else { return }
@@ -176,6 +188,7 @@ struct TemplatePickerSheet: View {
             if let template = templates.first(where: { $0.id == id }) {
                 TemplateDetailView(template: template,
                                    onAdd: { titles in add(titles, from: template) },
+                                   onAddOne: { title in addOne(title, from: template) },
                                    onEdit: { path.append(.edit(id)) },
                                    onDelete: { delete(template) })
             }
@@ -198,6 +211,11 @@ struct TemplatePickerSheet: View {
         Haptics.success()
         onAdded(titles.count)
         dismiss()
+    }
+
+    /// ＋ on one of a template's to-dos: it is added to the day and Templates stays open.
+    private func addOne(_ title: String, from template: TaskTemplate) {
+        TaskActions.add(titles: [title], category: template.category, to: day, in: context)
     }
 
     private func delete(_ template: TaskTemplate) {
@@ -258,7 +276,9 @@ private struct TemplateCard: View {
                 .multilineTextAlignment(.leading)
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
-            Text("\(template.items.count) to-dos · \(template.category.label)")
+            Text(template.doneCount > 0
+                 ? "\(template.doneCount) of \(template.items.count) done · \(template.category.label)"
+                 : "\(template.items.count) to-dos · \(template.category.label)")
                 .font(.rounded(.caption, weight: .semibold))
                 .foregroundStyle(tint.accent)
             if template.starterID.isEmpty {
@@ -319,115 +339,72 @@ private struct NewTemplateCard: View {
 
 // MARK: - Checklist
 
-/// A template's to-dos, each ticked on by default. Untick what you don't need, then add.
-/// Edit and Delete sit at the top.
+/// A template's to-dos, like the day's list: tick a to-do done (two little hearts pop) and it
+/// moves under "› Completed"; tap it there to untick it. ＋ on a row adds that to-do to My Day,
+/// and the button at the bottom adds every one not done yet. Edit and Delete sit at the top.
 private struct TemplateDetailView: View {
     let template: TaskTemplate
+    /// Adds these to-dos to the day and closes Templates.
     let onAdd: ([String]) -> Void
+    /// Adds one to-do to the day; Templates stays open.
+    let onAddOne: (String) -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
-    @State private var selected: Set<Int>
+    @AppStorage(Prefs.showCompletedTemplateItems) private var showCompleted = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var confirmDelete = false
+    /// Just-ticked to-dos stay in place for a moment (so their hearts can pop) before they
+    /// move down to Completed.
+    @State private var settling: Set<Int> = []
+    /// Goes up each time a to-do is ticked; every change pops its two little hearts.
+    @State private var tickPops: [Int: Int] = [:]
+    /// To-dos just added to My Day with ＋ (their ＋ shows a tick for a moment).
+    @State private var added: Set<Int> = []
 
-    init(template: TaskTemplate, onAdd: @escaping ([String]) -> Void, onEdit: @escaping () -> Void,
-         onDelete: @escaping () -> Void) {
-        self.template = template
-        self.onAdd = onAdd
-        self.onEdit = onEdit
-        self.onDelete = onDelete
-        _selected = State(initialValue: Set(template.items.indices))
+    /// To-dos not done yet, in the template's order (a just-ticked one still sits here).
+    private var openIndices: [Int] {
+        template.items.indices.filter { !template.isDone($0) || settling.contains($0) }
     }
 
-    private var chosenTitles: [String] {
-        template.items.indices.filter { selected.contains($0) }.map { template.items[$0] }
+    private var doneIndices: [Int] {
+        template.items.indices.filter { template.isDone($0) && !settling.contains($0) }
     }
 
-    private var allSelected: Bool { selected.count == template.items.count }
+    /// What the button at the bottom adds: every to-do not ticked done.
+    private var titlesToAdd: [String] {
+        template.items.indices.filter { !template.isDone($0) }.map { template.items[$0] }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    Text(template.emoji)
-                        .font(.system(size: 40))
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(template.name)
-                            .font(.rounded(.title2, weight: .heavy))
-                            .foregroundStyle(Palette.ink)
-                        Text("\(template.category.emoji) \(template.category.label)")
-                            .font(.rounded(.subheadline, weight: .semibold))
-                            .foregroundStyle(template.category.color)
-                    }
+                header
+                progressLine
+                ForEach(openIndices, id: \.self) { index in
+                    row(index)
                 }
-                .padding(.bottom, 6)
-
-                HStack {
-                    Text("\(selected.count) of \(template.items.count) selected")
-                        .font(.rounded(.subheadline, weight: .semibold))
-                        .foregroundStyle(Palette.inkSoft)
-                    Spacer()
-                    Button(allSelected ? "Select None" : "Select All") {
-                        Haptics.tap()
-                        withAnimation(.snappy) {
-                            selected = allSelected ? [] : Set(template.items.indices)
-                        }
-                    }
-                    .font(.rounded(.subheadline, weight: .bold))
-                    .foregroundStyle(Palette.hotPink)
-                    .frame(minHeight: 44)
+                if openIndices.isEmpty && !template.items.isEmpty {
+                    allDoneNote
                 }
-
-                ForEach(Array(template.items.enumerated()), id: \.offset) { index, item in
-                    let isOn = selected.contains(index)
-                    let tint = RowTint.at(index)
-                    Button {
-                        Haptics.tap()
-                        withAnimation(.snappy) {
-                            if isOn { selected.remove(index) } else { selected.insert(index) }
-                        }
-                    } label: {
-                        HStack(spacing: 12) {
-                            CheckBubble(isOn: isOn, tint: tint.accent, size: 26)
-                            Text(item)
-                                .font(.rounded(.body, weight: .semibold))
-                                .foregroundStyle(isOn ? Palette.ink : Palette.inkSoft)
-                                .multilineTextAlignment(.leading)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(minHeight: 54)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(isOn ? tint.fill : Color.white.opacity(0.6))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .strokeBorder(isOn ? tint.edge : Color.white, lineWidth: 1.2)
-                        )
-                        .contentShape(Rectangle())
+                let done = doneIndices
+                if !done.isEmpty {
+                    CompletedHeader(count: done.count, isOpen: showCompleted) {
+                        withAnimation(.snappy) { showCompleted.toggle() }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(item)
-                    .accessibilityValue(isOn ? "Selected" : "Not selected")
-                    .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
+                    .padding(.top, openIndices.isEmpty ? 0 : 6)
+                    if showCompleted {
+                        ForEach(done, id: \.self) { index in
+                            row(index)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Button {
-                onAdd(chosenTitles)
-            } label: {
-                Text(chosenTitles.isEmpty ? "Choose at least one" : "Add to My Day (\(chosenTitles.count)) ✨")
-            }
-            .buttonStyle(PillButtonStyle())
-            .disabled(chosenTitles.isEmpty)
-            .opacity(chosenTitles.isEmpty ? 0.6 : 1)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
+            addButton
         }
         .navigationTitle(template.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -439,9 +416,11 @@ private struct TemplateDetailView: View {
                 }
             }
         }
-        // After an edit, every to-do starts ticked again.
-        .onChange(of: template.items) { _, items in
-            selected = Set(items.indices)
+        // After an edit the rows may have moved: nothing is mid-tick any more.
+        .onChange(of: template.items) { _, _ in
+            settling = []
+            tickPops = [:]
+            added = []
         }
         .confirmationDialog("Delete this template?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete “\(template.name)”", role: .destructive, action: onDelete)
@@ -449,6 +428,199 @@ private struct TemplateDetailView: View {
             Text(template.starterID.isEmpty
                  ? "This can't be undone."
                  : "You can bring the starter templates back at the bottom of the list.")
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            Text(template.emoji)
+                .font(.system(size: 40))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(template.name)
+                    .font(.rounded(.title2, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                Text("\(template.category.emoji) \(template.category.label)")
+                    .font(.rounded(.subheadline, weight: .semibold))
+                    .foregroundStyle(template.category.color)
+            }
+        }
+        .padding(.bottom, 6)
+    }
+
+    /// "2 of 5 completed", with Untick All once something is ticked.
+    private var progressLine: some View {
+        HStack {
+            Text("\(template.doneCount) of \(template.items.count) completed")
+                .font(.rounded(.subheadline, weight: .semibold))
+                .foregroundStyle(Palette.inkSoft)
+                .contentTransition(.numericText(value: Double(template.doneCount)))
+            Spacer()
+            if template.doneCount > 0 {
+                Button {
+                    Haptics.tap()
+                    settling = []
+                    tickPops = [:]
+                    withAnimation(.snappy) { template.untickAll() }
+                } label: {
+                    Label("Untick All", systemImage: "arrow.counterclockwise")
+                }
+                .font(.rounded(.subheadline, weight: .bold))
+                .foregroundStyle(Palette.hotPink)
+                .frame(minHeight: 44)
+                .accessibilityHint("Marks every to-do in this list as not done")
+            }
+        }
+        .animation(.snappy, value: template.doneCount)
+    }
+
+    private var allDoneNote: some View {
+        Text("✨ All done! Every to-do in this list is ticked.")
+            .font(.rounded(.subheadline, weight: .heavy))
+            .foregroundStyle(Palette.berry)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(Capsule().fill(Color.white.opacity(0.72)))
+            .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.14), lineWidth: 1))
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+    }
+
+    /// One to-do: tap it to tick it done (or not done); ＋ adds it to My Day.
+    private func row(_ index: Int) -> some View {
+        let item = template.items[index]
+        let isDone = template.isDone(index)
+        let tint = RowTint.at(index)
+        return HStack(spacing: 4) {
+            Button {
+                toggle(index)
+            } label: {
+                HStack(spacing: 4) {
+                    CheckBubble(isOn: isDone, tint: tint.accent, size: 26)
+                        .frame(width: 44, height: 44)
+                    Text(item)
+                        .font(.rounded(.body, weight: .semibold))
+                        .foregroundStyle(isDone ? Palette.inkSoft.opacity(0.75) : Palette.ink)
+                        .strikethrough(isDone, color: tint.accent.opacity(0.7))
+                        .multilineTextAlignment(.leading)
+                        .padding(.vertical, 12)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(item)
+            .accessibilityValue(isDone ? "Done" : "Not done")
+            .accessibilityHint(isDone ? "Marks the to-do as not done" : "Marks the to-do as done")
+
+            if !isDone {
+                addOneButton(index, item: item, tint: tint)
+            }
+        }
+        .padding(.leading, 4)
+        .padding(.trailing, 2)
+        .frame(minHeight: 52)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(LinearGradient(colors: [tint.fill.opacity(0.75), tint.fill],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(tint.edge, lineWidth: 1.2)
+        )
+        .shadow(color: tint.edge.opacity(0.45), radius: 6, x: 0, y: 3)
+        .opacity(isDone ? 0.8 : 1)
+        .overlay(alignment: .leading) {
+            // Over the tick box (after the fade above, so the hearts stay bright).
+            if let pops = tickPops[index] {
+                TickPop()
+                    .id(pops)
+                    .frame(width: 44, height: 44)
+                    .padding(.leading, 4)
+            }
+        }
+    }
+
+    /// ＋: adds this one to-do to My Day (a tick shows for a moment).
+    private func addOneButton(_ index: Int, item: String, tint: RowTint) -> some View {
+        let isAdded = added.contains(index)
+        return Button {
+            addOne(index)
+        } label: {
+            Image(systemName: isAdded ? "checkmark" : "plus")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(isAdded ? Color.white : tint.accent)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(isAdded ? AnyShapeStyle(tint.accent) : AnyShapeStyle(Color.white.opacity(0.85))))
+                .overlay(Circle().strokeBorder(tint.edge, lineWidth: 1))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.86))
+        .disabled(isAdded)
+        .accessibilityLabel("Add “\(item)” to My Day")
+    }
+
+    private var addButton: some View {
+        let titles = titlesToAdd
+        return Button {
+            onAdd(titles)
+        } label: {
+            Text(titles.isEmpty ? "All done ✨" : "Add to My Day (\(titles.count)) ✨")
+        }
+        .buttonStyle(PillButtonStyle())
+        .disabled(titles.isEmpty)
+        .opacity(titles.isEmpty ? 0.6 : 1)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .accessibilityHint(titles.isEmpty ? "" : "Adds the to-dos not done yet")
+    }
+
+    // MARK: Actions
+
+    /// Ticks a to-do done, with the soft "ting" (the all-done chime for the last one), or
+    /// unticks it.
+    private func toggle(_ index: Int) {
+        let isFinishing = !template.isDone(index)
+        let pops = isFinishing && !reduceMotion
+        if pops {
+            // It stays in place while its hearts pop.
+            settling.insert(index)
+            tickPops[index, default: 0] += 1
+        } else {
+            settling.remove(index)
+        }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            template.setDone(index, isFinishing)
+        }
+        if isFinishing {
+            CompletionFeedback.completed(finishingAll: template.doneCount == template.items.count)
+        } else {
+            Haptics.tap()
+        }
+        guard pops else { return }
+        // Let the tick and its hearts show, then move it down to Completed. (The hearts go
+        // too, so they don't pop again when Completed is opened.)
+        let settle = TickPop.settleDelay
+        Task {
+            try? await Task.sleep(for: .seconds(settle))
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                _ = settling.remove(index)
+            }
+            tickPops[index] = nil
+        }
+    }
+
+    private func addOne(_ index: Int) {
+        let item = template.items[index]
+        onAddOne(item)
+        Haptics.success()
+        AccessibilityNotification.Announcement("Added “\(item)” to My Day").post()
+        withAnimation(.snappy) { _ = added.insert(index) }
+        Task {
+            try? await Task.sleep(for: .seconds(1.6))
+            withAnimation(.snappy) { _ = added.remove(index) }
         }
     }
 }
@@ -474,6 +646,8 @@ private struct TemplateEditorView: View {
     private struct Item: Identifiable {
         let id = UUID()
         var text: String
+        /// Ticked done in the template (kept through the edit).
+        var isDone = false
     }
 
     private enum Field: Hashable {
@@ -502,7 +676,9 @@ private struct TemplateEditorView: View {
         _name = State(initialValue: template.name)
         _emoji = State(initialValue: template.emoji)
         _category = State(initialValue: template.category)
-        _items = State(initialValue: template.items.map { Item(text: $0) })
+        _items = State(initialValue: template.items.indices.map {
+            Item(text: template.items[$0], isDone: template.isDone($0))
+        })
     }
 
     private var isEditing: Bool { template != nil }
@@ -513,8 +689,11 @@ private struct TemplateEditorView: View {
         return [current] + Self.emojis
     }
 
-    private var cleanItems: [String] {
-        (items.map(\.text) + [newItem]).map(\.trimmed).filter { !$0.isEmpty }
+    /// The to-dos to save (blank ones left out), each with whether it is ticked done.
+    private var cleanItems: [Item] {
+        (items + [Item(text: newItem)])
+            .map { Item(text: $0.text.trimmed, isDone: $0.isDone) }
+            .filter { !$0.text.isEmpty }
     }
 
     private var canSave: Bool { !name.trimmed.isEmpty && !cleanItems.isEmpty }
@@ -671,12 +850,13 @@ private struct TemplateEditorView: View {
 
     private func save() {
         guard canSave else { return }
-        let titles = cleanItems
+        let titles = cleanItems.map(\.text)
         if let template {
             template.name = name.trimmed
             template.emoji = emoji
             template.category = category
             template.items = titles
+            template.itemsDone = cleanItems.map(\.isDone)
         } else {
             let template = TaskTemplate(name: name.trimmed, emoji: emoji, category: category, items: titles)
             // A new template goes at the end.

@@ -189,6 +189,9 @@ enum DebugLaunchRoute {
     /// Move the last template to the front in Templates, as a press-and-hold drag would
     /// ("todos-template-move").
     @MainActor private static var templateMove = false
+    /// Open the first template with two to-dos ticked and Completed open
+    /// ("todos-template-checklist").
+    @MainActor private static var templateChecklist = false
     /// Tick the first priority once Today's Priority appears ("priority-hearts").
     @MainActor private static var priorityTick = false
     /// Tick every priority left once Today's Priority appears ("priority-alldone").
@@ -227,6 +230,12 @@ enum DebugLaunchRoute {
     static func takeTemplateMove() -> Bool {
         defer { templateMove = false }
         return templateMove
+    }
+
+    @MainActor
+    static func takeTemplateChecklist() -> Bool {
+        defer { templateChecklist = false }
+        return templateChecklist
     }
 
     @MainActor
@@ -475,6 +484,7 @@ enum DebugLaunchRoute {
             holdsTickPop = route == "todos-hearts"
             templateEdit = route == "todos-template-edit"
             templateMove = route == "todos-template-move"
+            templateChecklist = route == "todos-template-checklist"
             router.open(.todos(today))
         default: break
         }

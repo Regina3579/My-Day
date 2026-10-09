@@ -7,6 +7,8 @@ enum Prefs {
     static let showCompleted = "showCompletedTasks"
     /// Whether Today's Priority's Completed list is open.
     static let showCompletedPriorities = "showCompletedPriorities"
+    /// Whether a template's Completed list is open (in Templates).
+    static let showCompletedTemplateItems = "showCompletedTemplateItems"
     /// Set once the first-time "Add your task with your voice" tip has been shown on To-Dos.
     static let didShowVoiceTip = "didShowVoiceAddTip"
     /// Set once the first-time "A New Quote Every Day!" tip has been shown on To-Dos.

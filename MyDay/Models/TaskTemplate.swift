@@ -10,6 +10,8 @@ final class TaskTemplate {
     var emoji: String = "✨"
     var categoryRaw: String = "personal"
     var items: [String] = []
+    /// Which of `items` are ticked done, by position (a missing value is not done).
+    var itemsDone: [Bool] = []
     var createdAt: Date = Date()
     /// Which starter template this began as ("" for one the person made).
     var starterID: String = ""
@@ -29,6 +31,30 @@ final class TaskTemplate {
     var category: TaskCategory {
         get { TaskCategory(storedValue: categoryRaw) }
         set { categoryRaw = newValue.rawValue }
+    }
+
+    func isDone(_ index: Int) -> Bool {
+        itemsDone.indices.contains(index) && itemsDone[index]
+    }
+
+    func setDone(_ index: Int, _ isDone: Bool) {
+        guard items.indices.contains(index) else { return }
+        var done = itemsDone
+        if done.count < items.count {
+            done += Array(repeating: false, count: items.count - done.count)
+        }
+        done[index] = isDone
+        itemsDone = Array(done.prefix(items.count))
+    }
+
+    /// How many of the to-dos are ticked done.
+    var doneCount: Int {
+        items.indices.filter { isDone($0) }.count
+    }
+
+    /// Unticks every to-do, ready to go through the list again.
+    func untickAll() {
+        itemsDone = []
     }
 }
 
@@ -125,7 +151,7 @@ enum TemplateLibrary {
         }
     }
 
-    /// Whether a starter is no longer as it was added: renamed, edited or moved.
+    /// Whether a starter is no longer as it was added: renamed, edited, moved or ticked.
     private static func isChanged(_ template: TaskTemplate) -> Bool {
         guard let index = TemplateBlueprint.starters.firstIndex(where: { $0.id == template.starterID }) else {
             return true
@@ -133,7 +159,7 @@ enum TemplateLibrary {
         let starter = TemplateBlueprint.starters[index]
         return template.name != starter.name || template.emoji != starter.emoji
             || template.categoryRaw != starter.category.rawValue || template.items != starter.items
-            || template.sortOrder != Double(index) - 1000
+            || template.sortOrder != Double(index) - 1000 || template.itemsDone.contains(true)
     }
 
     static func isMissingStarters(among templates: [TaskTemplate]) -> Bool {
