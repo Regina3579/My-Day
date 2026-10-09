@@ -1,0 +1,109 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish_screenshots:
+        description: "Commit small JPEG screenshots to docs/screenshots"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-build-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build for iOS Simulator
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build
+        run: |
+          set +e
+          xcodebuild build \
+            -project MyDay.xcodeproj \
+            -scheme MyDay \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -warn-long-expression-type-checking=200' \
+            > build.log 2>&1
+          status=$?
+          echo "---- errors and warnings ----"
+          grep -E "(error|warning): " build.log | grep -v "took [0-9]*ms to type-check" | sort -u | head -300
+          # Expressions that are slow to type-check here can fail outright
+          # ("unable to type-check this expression in reasonable time") on older Xcode versions.
+          echo "---- slow to type-check (over 200 ms) ----"
+          grep -E "took [0-9]+ms to type-check" build.log | sort -u | head -50
+          echo "---- tail ----"
+          tail -n 30 build.log
+          exit $status
+
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-log
+          path: build.log
+
+  screenshots:
+    name: Simulator screenshots
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 70
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run the app and capture every screen
+        run: ./scripts/screenshots.sh screenshots
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: screenshots
+          path: screenshots/
+          if-no-files-found: warn
+
+      - name: Publish screenshots to docs/screenshots
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_screenshots
+        run: |
+          shots="$RUNNER_TEMP/shots"
+          mkdir -p "$shots"
+          for file in screenshots/*.png; do
+            name="$(basename "${file%.png}")"
+            # Every screen on the main device; just the home screen on the others.
+            case "$name" in
+              iphone-17-pro-[0-9]*|*-01-home) ;;
+              *) continue ;;
+            esac
+            sips -Z 1100 -s format jpeg -s formatOptions 78 "$file" --out "$shots/$name.jpg" >/dev/null
+          done
+          ls -la "$shots"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="${GITHUB_REF_NAME}"
+          # Commit on top of the newest branch, which may have moved on during the run.
+          for attempt in 1 2 3; do
+            git fetch --depth=1 origin "$branch"
+            git checkout -q -B "$branch" FETCH_HEAD
+            mkdir -p docs/screenshots
+            rm -f docs/screenshots/*.jpg
+            cp "$shots"/*.jpg docs/screenshots/
+            git add -A docs/screenshots
+            git commit -q -m "Update app screenshots" || exit 0
+            git push origin "HEAD:$branch" && exit 0
+            sleep 5
+          done
+          exit 1
