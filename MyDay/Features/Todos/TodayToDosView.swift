@@ -239,7 +239,6 @@ struct TodayToDosView: View {
                 .plainListRow()
             CategoryChipBar(selection: $filter)
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
-            progressLine
             taskRows
             if pinsActions {
                 // A little room between the last to-do and the pinned panel.
@@ -431,15 +430,6 @@ struct TodayToDosView: View {
         )
     }
 
-    /// Daily Progress: how many of the day's to-dos are done (hidden while the day is empty).
-    @ViewBuilder
-    private var progressLine: some View {
-        if !tasks.isEmpty {
-            DailyProgressLine(day: day, done: doneCount, total: tasks.count)
-                .plainListRow(EdgeInsets(top: 0, leading: 16, bottom: 6, trailing: 16))
-        }
-    }
-
     /// Open to-dos, then "› Completed" with the finished ones under it while it is open.
     @ViewBuilder
     private var taskRows: some View {
@@ -568,8 +558,8 @@ struct TodayToDosView: View {
         AccessibilityNotification.Announcement(task.isImportant ? "Marked important" : "No longer important").post()
     }
 
-    /// Everything is done: "All done for today!" and the big confetti (a happy moment, when
-    /// the rating card may come once the confetti is over).
+    /// Everything is done: the big confetti, while Today's Progress says "All Done!" (a happy
+    /// moment, when the rating card may come once the confetti is over).
     private func celebrate() {
         celebration += 1
         AccessibilityNotification.Announcement("All done for \(day.isToday ? "today" : "the day")!").post()
