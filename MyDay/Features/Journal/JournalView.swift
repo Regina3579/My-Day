@@ -48,6 +48,10 @@ struct JournalPagesHome: View {
     @AppStorage(Prefs.didShowJournalMenuTip) private var didShowMenuTip = false
     @AppStorage(Prefs.didShowJournalThemeTip) private var didShowThemeTip = false
     @State private var tip: JournalMenuTip.Kind?
+    @AppStorage(Prefs.journalLock) private var lockEnabled = false
+    @State private var showsLockTip = false
+    /// This opening of the journal has been counted (coming back from a page is not a new one).
+    @State private var countedOpening = false
     /// Where ⋮ and the menu's Journal Theme are on screen, for the tips.
     @State private var moreFrame = CGRect.zero
     @State private var themeRowFrame = CGRect.zero
@@ -86,7 +90,21 @@ struct JournalPagesHome: View {
         .environment(\.journalTheme, theme)
         .overlay(alignment: .topTrailing) { menuCard }
         .overlay { menuTips }
-        .task(id: isOpening) { await offerMenuTip() }
+        .overlay {
+            if showsLockTip {
+                JournalLockTip {
+                    JournalLockTipSchedule.finish()
+                    showsLockTip = false
+                } onLater: {
+                    JournalLockTipSchedule.later()
+                    showsLockTip = false
+                }
+            }
+        }
+        .task(id: isOpening) {
+            await offerLockTip()
+            await offerMenuTip()
+        }
         .overlay {
             if isOpening {
                 JournalOpeningView(frozenAt: debugOpeningMoment) {
@@ -522,9 +540,21 @@ struct JournalPagesHome: View {
 
     // MARK: First-time tips
 
+    /// The Journal Lock tip, on the second opening of the journal (and once more 7 days after
+    /// Maybe Later), never while Lock My Journal is on. While "More options here!" is still to
+    /// come, that tip goes first and this one waits for the next opening.
+    private func offerLockTip() async {
+        guard !isOpening, !countedOpening else { return }
+        countedOpening = true
+        guard JournalLockTipSchedule.countOpeningAndCheck(lockEnabled: lockEnabled), didShowMenuTip else { return }
+        try? await Task.sleep(for: .seconds(0.8))
+        guard !Task.isCancelled, !lockEnabled, !showsMenu, !isFiltering, !choosesTheme, tip == nil else { return }
+        showsLockTip = true
+    }
+
     /// "More options here!", once, a moment after the journal opens (when nothing else is open).
     private func offerMenuTip() async {
-        guard !isOpening, !didShowMenuTip else { return }
+        guard !isOpening, !didShowMenuTip, !showsLockTip else { return }
         try? await Task.sleep(for: .seconds(0.8))
         guard !Task.isCancelled, !isOpening, !didShowMenuTip, !showsMenu, !isFiltering, !choosesTheme,
               moreFrame != .zero else { return }

@@ -23,6 +23,11 @@ enum Prefs {
     static let didShowPromptTip = "didShowJournalPromptTip"
     static let didShowJournalMenuTip = "didShowJournalMenuTip"
     static let didShowQuickAddTip = "didShowQuickAddTip"
+    /// How many times the journal has opened, and the Journal Lock tip's state (see
+    /// `JournalLockTipSchedule`).
+    static let journalOpenings = "journalOpenings"
+    static let journalLockTipDone = "journalLockTipDone"
+    static let journalLockTipRemindAt = "journalLockTipRemindAt"
     static let didShowJournalThemeTip = "didShowJournalThemeTip"
     /// Set once the first-time "Task Reminders" tip has been shown on a to-do's Task Details,
     /// pointing at Reminder.

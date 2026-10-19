@@ -424,6 +424,10 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-menu-tip", forKey: Prefs.didShowJournalMenuTip)
         UserDefaults.standard.set(arguments[index + 1] != "quickadd-tip", forKey: Prefs.didShowQuickAddTip)
+        // The Journal Lock tip shows only in `journal-lock-tip` (as the journal's second opening).
+        UserDefaults.standard.set(arguments[index + 1] != "journal-lock-tip", forKey: Prefs.journalLockTipDone)
+        UserDefaults.standard.set(1, forKey: Prefs.journalOpenings)
+        UserDefaults.standard.set(0.0, forKey: Prefs.journalLockTipRemindAt)
         UserDefaults.standard.set(arguments[index + 1] != "journal-theme-tip", forKey: Prefs.didShowJournalThemeTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
         UserDefaults.standard.set(arguments[index + 1] != "settings-icloud-tip", forKey: Prefs.didShowICloudTip)
@@ -472,7 +476,7 @@ enum DebugLaunchRoute {
         case "journal-menu", "journal-theme-tip":
             journalMenu = true
             router.open(.journal)
-        case "journal-menu-tip":
+        case "journal-menu-tip", "journal-lock-tip":
             router.open(.journal)
         case "journal-filter":
             journalShelf = JournalShelf.all.rawValue
