@@ -38,7 +38,7 @@ struct JournalPagesMenu: View {
         .padding(.horizontal, 8)
         .padding(.top, 16)
         .padding(.bottom, 8)
-        .frame(width: 236)
+        .frame(width: 262)
         .background(card)
         .overlay(alignment: .top) {
             Image("JournalMenuBow")
