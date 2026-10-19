@@ -130,7 +130,7 @@ enum ProFeature: String, Identifiable {
         case .unlimitedWriting:
             "A free page holds 1,000 characters. With My Day Pro, write as much as your heart wants, every single day."
         case .themes:
-            "Dress your journal in Heavenly Angel Wishes 👼, Enchanted Fairy Garden 🧚, Rainbow Glow Unicorn 🦄, Rose Gold Elegance 🌹, Cozy Rainy Day ☔ and every new theme as it arrives."
+            "Dress your journal in Heavenly Angel Wishes 👼, Enchanted Fairy Garden 🧚, Rainbow Glow Unicorn 🦄, Rose Gold Elegance 🌹, Cozy Rainy Day ☔, Candy Cloud Kingdom 🍭 and every new theme as it arrives."
         }
     }
 }

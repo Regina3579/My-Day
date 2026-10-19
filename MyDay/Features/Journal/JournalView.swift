@@ -24,8 +24,9 @@ struct JournalView: View {
 /// the bottom. Written pages scroll behind the search bar. It is drawn in the journal theme
 /// (Blush Blossom, or with My Day Pro, Heavenly Angel Wishes: the castle in the clouds at the
 /// top and the cards in the sky; Enchanted Fairy Garden: the fairies' sign at the top and the
-/// cards in a flower garden; or Rainbow Glow Unicorn: the unicorns' castle at the top and the
-/// cards among rainbows and clouds).
+/// cards in a flower garden; Rainbow Glow Unicorn: the unicorns' castle at the top and the
+/// cards among rainbows and clouds; Rose Gold Elegance; Cozy Rainy Day; or Candy Cloud Kingdom:
+/// the candy castle at the top and frosted cards among lollipops and candy canes).
 struct JournalPagesHome: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
@@ -71,6 +72,7 @@ struct JournalPagesHome: View {
             case .rainbowGlowUnicorn: UnicornBackdrop()
             case .roseGoldElegance: RoseBackdrop()
             case .cozyRainyDay: RainyBackdrop()
+            case .candyCloudKingdom: CandyBackdrop()
             case .blushBlossom: JournalBackdrop()
             }
         }
@@ -142,6 +144,8 @@ struct JournalPagesHome: View {
                         RoseHeader(width: proxy.size.width, statusBar: statusBar)
                     case .cozyRainyDay:
                         JournalHero(scene: .rainy, width: proxy.size.width, statusBar: statusBar)
+                    case .candyCloudKingdom:
+                        JournalHero(scene: .candy, width: proxy.size.width, statusBar: statusBar)
                     case .blushBlossom:
                         JournalHero(scene: .pages, width: proxy.size.width, statusBar: statusBar)
                     }
@@ -277,6 +281,7 @@ struct JournalPagesHome: View {
         case .rainbowGlowUnicorn: -28
         case .roseGoldElegance: 2
         case .cozyRainyDay: -4
+        case .candyCloudKingdom: -10
         }
     }
 
@@ -285,7 +290,25 @@ struct JournalPagesHome: View {
     /// asleep on a cloud, two butterflies or the little unicorn).
     @ViewBuilder
     private func listHeader(title: String) -> some View {
-        if let art = theme.monthArt {
+        if theme == .candyCloudKingdom {
+            // Candy Cloud Kingdom: the candy castle and its rainbow in the clouds, behind the
+            // month and All Time, as in the design.
+            HStack(spacing: 8) {
+                monthTitle(title)
+                Spacer(minLength: 14)
+                JournalPeriodMenu(period: $period)
+                    .padding(.trailing, 4)
+            }
+            .background(alignment: .trailing) {
+                Image("CandyMonthCastle")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 116, height: 61)
+                    .padding(.trailing, 98)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        } else if let art = theme.monthArt {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 0) {
                     monthTitle(title)

@@ -3,12 +3,13 @@ import SwiftUI
 /// What each journal theme brings to My Journal Pages' words and colours.
 extension JournalTheme {
     /// The headings ("My week in moods", "October 2026"): rounded in Blush Blossom, Rainbow Glow
-    /// Unicorn, Rose Gold Elegance and Cozy Rainy Day, a bold serif in Heavenly Angel Wishes and
-    /// Enchanted Fairy Garden.
+    /// Unicorn, Rose Gold Elegance, Cozy Rainy Day and Candy Cloud Kingdom, a bold serif in
+    /// Heavenly Angel Wishes and Enchanted Fairy Garden.
     func headingFont(_ style: Font.TextStyle) -> Font {
         switch self {
         case .heavenlyAngelWishes, .enchantedFairyGarden: .system(style, design: .serif, weight: .bold)
-        case .blushBlossom, .rainbowGlowUnicorn, .roseGoldElegance, .cozyRainyDay: .rounded(style, weight: .heavy)
+        case .blushBlossom, .rainbowGlowUnicorn, .roseGoldElegance, .cozyRainyDay, .candyCloudKingdom:
+            .rounded(style, weight: .heavy)
         }
     }
 
@@ -21,6 +22,7 @@ extension JournalTheme {
         case .rainbowGlowUnicorn: UnicornStyle.title
         case .roseGoldElegance: RoseStyle.title
         case .cozyRainyDay: RainyStyle.title
+        case .candyCloudKingdom: CandyStyle.title
         }
     }
 
@@ -33,6 +35,7 @@ extension JournalTheme {
         case .rainbowGlowUnicorn: UnicornStyle.month
         case .roseGoldElegance: RoseStyle.month
         case .cozyRainyDay: RainyStyle.month
+        case .candyCloudKingdom: CandyStyle.month
         }
     }
 
@@ -45,6 +48,7 @@ extension JournalTheme {
         case .rainbowGlowUnicorn: UnicornStyle.base
         case .roseGoldElegance: RoseStyle.base
         case .cozyRainyDay: RainyStyle.base
+        case .candyCloudKingdom: CandyStyle.base
         }
     }
 
@@ -57,12 +61,18 @@ extension JournalTheme {
         case .rainbowGlowUnicorn: ("UnicornMonth", CGSize(width: 60, height: 40))
         case .roseGoldElegance: ("RoseMonthHearts", CGSize(width: 62, height: 36))
         case .cozyRainyDay: ("RainyMonthUmbrella", CGSize(width: 50, height: 44))
+        // Candy Cloud Kingdom's castle is bigger, behind the month and All Time (see the list header).
+        case .candyCloudKingdom: nil
         }
     }
 
-    /// The margin at the sides of My Journal Pages: wider in Cozy Rainy Day, so the window
-    /// shows beside the cards, as in its design.
+    /// The margin at the sides of My Journal Pages: wider in Cozy Rainy Day and Candy Cloud
+    /// Kingdom, so the window or the candy shows beside the cards, as in their designs.
     var sideInset: CGFloat {
-        self == .cozyRainyDay ? 26 : 16
+        switch self {
+        case .cozyRainyDay: 26
+        case .candyCloudKingdom: 18
+        default: 16
+        }
     }
 }

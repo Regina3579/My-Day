@@ -160,7 +160,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Journal")
                 } footer: {
-                    Text("Journal Theme dresses My Journal Pages: Blush Blossom for everyone; Heavenly Angel Wishes, Enchanted Fairy Garden, Rainbow Glow Unicorn, Rose Gold Elegance, Cozy Rainy Day and the themes to come with My Day Pro. " + lockFooter)
+                    Text("Journal Theme dresses My Journal Pages: Blush Blossom for everyone; Heavenly Angel Wishes, Enchanted Fairy Garden, Rainbow Glow Unicorn, Rose Gold Elegance, Cozy Rainy Day, Candy Cloud Kingdom and the themes to come with My Day Pro. " + lockFooter)
                 }
 
                 Section {

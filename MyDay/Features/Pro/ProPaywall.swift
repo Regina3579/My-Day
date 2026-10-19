@@ -47,7 +47,7 @@ private struct ProPaywallHeader: View {
         Perk(emoji: "⭐️", text: "All 30 moods and journal prompts"),
         Perk(emoji: "🎀", text: "Every sticker collection"),
         Perk(emoji: "🎵", text: "Beautiful reminder melodies"),
-        Perk(emoji: "🦄", text: "Journal themes: angels, fairies, unicorns, rose gold, rainy days and more"),
+        Perk(emoji: "🦄", text: "Journal themes: angels, fairies, unicorns, rose gold, rainy days, candy and more"),
     ]
 
     var body: some View {

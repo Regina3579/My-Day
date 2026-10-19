@@ -45,6 +45,11 @@ private struct JournalPagesCard: ViewModifier {
             card.background(RoseCardBackground(radius: radius))
         case .cozyRainyDay:
             card.background(RainyCardBackground(radius: radius))
+        case .candyCloudKingdom:
+            // A little more room at the top, under the icing.
+            card
+                .padding(.top, 6)
+                .background(CandyCardBackground(radius: radius))
         case .blushBlossom:
             card
                 .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
@@ -130,6 +135,20 @@ struct WriteNewPageRow: View {
                     .accessibilityHidden(true)
                 button
             }
+        case .candyCloudKingdom:
+            // Candy Cloud Kingdom: the bunny cloud with a pink bow and a star wand, hugging a
+            // heart in front of the button's end.
+            ZStack(alignment: .leading) {
+                button
+                    .padding(.leading, 52)
+                Image("CandyWrite")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 90, height: 82)
+                    .offset(x: -6)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         case .rainbowGlowUnicorn:
             HStack(spacing: 0) {
                 Image("UnicornWrite")
@@ -176,10 +195,21 @@ struct WriteNewPageRow: View {
                     .background(Circle().fill(Color.white))
             }
             .foregroundStyle(Color.white)
-            .padding(.leading, 20)
+            // Candy Cloud Kingdom: clear of the heart the bunny holds over the button's end.
+            .padding(.leading, theme == .candyCloudKingdom ? 40 : 20)
             .padding(.trailing, 12)
             .frame(maxWidth: .infinity, minHeight: theme == .blushBlossom ? 66 : 58)
-            .background(Capsule().fill(JournalPagesStyle.writeButton))
+            .background {
+                ZStack(alignment: .top) {
+                    Capsule().fill(JournalPagesStyle.writeButton)
+                    if theme == .candyCloudKingdom {
+                        // Vanilla icing with sprinkles, dripping over the top of the button.
+                        CandyIcing(band: 7, dripLength: 7, seed: 5)
+                            .padding(.horizontal, 20)
+                    }
+                }
+                .clipShape(Capsule())
+            }
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5))
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "sparkle")
@@ -194,6 +224,8 @@ struct WriteNewPageRow: View {
                     Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.5)
                 } else if theme == .roseGoldElegance {
                     Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 2)
+                } else if theme == .candyCloudKingdom {
+                    CandyStripes().mask(Capsule().strokeBorder(lineWidth: 4))
                 }
             }
             .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
@@ -270,6 +302,11 @@ struct MoodWeekCard: View {
                             Capsule()
                                 .fill(RoseStyle.calendarFill)
                                 .overlay(Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.6))
+                        } else if theme == .candyCloudKingdom {
+                            Capsule()
+                                .fill(CandyStyle.calendarFill)
+                                .overlay(Capsule().strokeBorder(Color(hex: 0xF7A8CF), lineWidth: 1.5))
+                                .overlay(Capsule().inset(by: 1.5).strokeBorder(Color.white, lineWidth: 1))
                         } else {
                             Capsule().fill(JournalPagesStyle.calendarFill)
                         }
@@ -344,6 +381,40 @@ struct MoodWeekCard: View {
                     .offset(x: 30, y: -7)
             }
         }
+        .overlay(alignment: .topLeading) {
+            if theme == .candyCloudKingdom {
+                // A little rainbow on two clouds, sitting on the frosting.
+                Image("CandyRainbowCloud")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 62, height: 45)
+                    .offset(x: 4, y: -28)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if theme == .candyCloudKingdom {
+                Image("CandyMoodsHearts")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 50, height: 50)
+                    .offset(x: -14, y: 16)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if theme == .candyCloudKingdom {
+                Image("CandyMoodsLollipop")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 50, height: 52)
+                    .offset(x: 18, y: 18)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .overlay(alignment: .top) {
             if fairy {
                 Image("FairyButterflyPink")
@@ -392,6 +463,8 @@ struct MoodWeekCard: View {
                 } else if theme == .cozyRainyDay {
                     RainyCloudFace(day: day)
                         .frame(width: 46, height: 40)
+                } else if theme == .candyCloudKingdom {
+                    CandyEmptyStar()
                 } else {
                     Image(systemName: "star.fill")
                         .font(.system(size: 30))
@@ -508,6 +581,7 @@ private struct JournalTabTile: View {
 
     var body: some View {
         let heavenly = theme == .heavenlyAngelWishes
+        let candy = theme == .candyCloudKingdom
         VStack(spacing: 4) {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .bold))
@@ -538,8 +612,16 @@ private struct JournalTabTile: View {
         .padding(.bottom, 6)
         .background(
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(isOn ? AnyShapeStyle(JournalPagesStyle.writeButton) : AnyShapeStyle(Color.white.opacity(0.9)))
+                .fill(isOn ? AnyShapeStyle(JournalPagesStyle.writeButton)
+                      : AnyShapeStyle(Color.white.opacity(candy ? 0 : 0.9)))
         )
+        .background {
+            if candy && !isOn {
+                // Candy Cloud Kingdom: frosted, with icing and sprinkles.
+                CandyCardBackground(radius: 15, seed: label.unicodeScalars.reduce(0) { $0 + Int($1.value) },
+                                    ring: 5, stripes: false, icing: 6, dripLength: 4)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 15, style: .continuous)
                 .strokeBorder(isOn ? Color.white : heavenly ? Color(hex: 0xF9D7C6)
@@ -550,6 +632,9 @@ private struct JournalTabTile: View {
             if theme == .roseGoldElegance {
                 RoundedRectangle(cornerRadius: 17, style: .continuous)
                     .strokeBorder(RoseStyle.roseGold, lineWidth: 1.6)
+                    .padding(-2)
+            } else if candy && isOn {
+                CandyGlowRim(shape: RoundedRectangle(cornerRadius: 17, style: .continuous), lineWidth: 2.4)
                     .padding(-2)
             }
         }
@@ -594,6 +679,8 @@ struct JournalPeriodMenu: View {
                     Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.3)
                 } else if theme == .roseGoldElegance {
                     Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
+                } else if theme == .candyCloudKingdom {
+                    CandyGlowRim(shape: Capsule())
                 } else {
                     Capsule().strokeBorder(JournalPagesStyle.calendarFill, lineWidth: 1.5)
                 }
@@ -700,6 +787,8 @@ struct JournalEntryCard: View {
         }
         .padding(12)
         .padding(.bottom, 2)
+        // Candy Cloud Kingdom: room under the icing.
+        .padding(.top, theme == .candyCloudKingdom ? 6 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             switch theme {
@@ -708,6 +797,7 @@ struct JournalEntryCard: View {
             case .rainbowGlowUnicorn: unicornBackground
             case .roseGoldElegance: roseBackground
             case .cozyRainyDay: rainyBackground
+            case .candyCloudKingdom: candyBackground
             case .blushBlossom: RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill)
             }
         }
@@ -791,6 +881,15 @@ struct JournalEntryCard: View {
         .clipShape(shape)
         .overlay(shape.strokeBorder(Color.white, lineWidth: 1.5))
         .shadow(color: RainyStyle.glow.opacity(0.3), radius: 9, x: 0, y: 3)
+    }
+
+    /// Candy Cloud Kingdom: frosting, drips and sprinkles inside a candy-cane edge, and in the
+    /// corner a candy castle with lollipops, or a bunny asleep in the clouds under a rainbow
+    /// (day by day).
+    private var candyBackground: some View {
+        let day = entry.date.dayNumber
+        return CandyCardBackground(radius: 26, seed: day,
+                                   scene: inTrash ? nil : day.isMultiple(of: 2) ? "CandySceneCastle" : "CandySceneBunny")
     }
 
     /// Rose Gold Elegance: a rose-gold frame, with roses, leaves and a bow in the bottom corner.
@@ -998,8 +1097,46 @@ struct JournalDateTile: View {
         case .rainbowGlowUnicorn: unicorn(ribbon)
         case .roseGoldElegance: roseGold(ribbon)
         case .cozyRainyDay: rainy(ribbon)
+        case .candyCloudKingdom: candy(ribbon)
         case .blushBlossom: blush(ribbon)
         }
+    }
+
+    /// Candy Cloud Kingdom: the date on a frosted tile with sprinkles, under a swirl lollipop
+    /// (pink, lemon or blue, day by day), with a candy cane at its side.
+    private func candy(_ ribbon: Ribbon) -> some View {
+        VStack(spacing: 0) {
+            Text(date.formatted(.dateTime.day()))
+                .font(.rounded(.title, weight: .heavy))
+                .foregroundStyle(Palette.berry)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(.rounded(.subheadline, weight: .heavy))
+                .foregroundStyle(JournalPagesStyle.weekday)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.top, 14)
+        .frame(width: 64, height: 88)
+        .background(CandyCardBackground(radius: 16, seed: date.dayNumber &+ 3, ring: 6, icing: 8, dripLength: 6))
+        .overlay(alignment: .top) {
+            Image(ribbon == .pink ? "CandyLollipopPink" : ribbon == .purple ? "CandyLollipopYellow" : "CandyLollipopBlue")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40, height: 46)
+                .offset(x: -3, y: -30)
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .trailing) {
+            Image("CandyCane")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 17, height: 28)
+                .offset(x: 9, y: 10)
+                .accessibilityHidden(true)
+        }
+        .padding(.top, 18)
     }
 
     /// Cozy Rainy Day: an umbrella over the date (pink, blue or purple, day by day) instead of
@@ -1347,6 +1484,8 @@ struct JournalSearchBar: View {
             .overlay {
                 if theme == .roseGoldElegance {
                     Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
+                } else if theme == .candyCloudKingdom {
+                    CandyGlowRim(shape: Capsule())
                 }
             }
             .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
@@ -1367,6 +1506,8 @@ struct JournalSearchBar: View {
                 .overlay {
                     if theme == .roseGoldElegance {
                         Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
+                    } else if theme == .candyCloudKingdom {
+                        CandyGlowRim(shape: Capsule())
                     }
                 }
                 .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
@@ -1396,6 +1537,8 @@ struct JournalSearchBar: View {
         .background(alignment: .bottom) {
             if theme == .cozyRainyDay {
                 RainySearchBarTrim()
+            } else if theme == .candyCloudKingdom {
+                CandySearchBarTrim()
             }
         }
         .background(alignment: .bottom) {
