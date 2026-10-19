@@ -11,6 +11,8 @@ struct MyDayApp: App {
     @State private var store = DataStore()
     /// When the "Enjoying My Day?" card asks for a rating.
     @State private var rating = RatingPrompt()
+    /// Whether My Day Pro is active (asked of the App Store at launch and kept up to date).
+    @State private var pro = MyDayPro()
 
     init() {
         Appearance.configure()
@@ -34,6 +36,7 @@ struct MyDayApp: App {
             .environment(appState)
             .environment(store)
             .environment(rating)
+            .environment(pro)
             .launchSplash()
             .tint(Palette.hotPink)
             .preferredColorScheme(.light)

@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.taskCompletionSound) private var completionSound = true
     @AppStorage(Prefs.moodStarSound) private var moodStarSound = true
     @AppStorage(Prefs.reminderSound) private var reminderSound: ReminderSound = .gentleBloom
+    @Environment(MyDayPro.self) private var pro
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
     @AppStorage(Prefs.didShowICloudTip) private var didShowICloudTip = false
@@ -59,6 +60,8 @@ struct SettingsView: View {
                     .padding(.vertical, 6)
                 }
                 .listRowBackground(Color.clear)
+
+                ProSettingsSection()
 
                 Section("About you") {
                     TextField("Your name", text: $userName)
@@ -103,7 +106,7 @@ struct SettingsView: View {
                             Label("Reminder Sound", systemImage: "music.note")
                                 .layoutPriority(1)
                             Spacer()
-                            Text(reminderSound.title)
+                            Text(reminderSound.applying(pro: pro.isActive).title)
                                 .foregroundStyle(Palette.inkSoft)
                                 .lineLimit(1)
                         }
@@ -115,6 +118,12 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    LabeledContent {
+                        Text(JournalTheme.blushBlossom.title)
+                            .foregroundStyle(Palette.inkSoft)
+                    } label: {
+                        Label("Journal Theme", systemImage: "paintpalette.fill")
+                    }
                     Toggle(isOn: lockToggle) {
                         Label("Lock My Journal", systemImage: "lock.fill")
                     }
@@ -142,7 +151,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Journal")
                 } footer: {
-                    Text(lockFooter)
+                    Text(lockFooter + " More journal themes are on the way 🌸")
                 }
 
                 Section {
@@ -231,7 +240,8 @@ struct SettingsView: View {
                     // `settings-icloud-tip`: as in its design, the status says it has just synced.
                     store.syncStatus.showForScreenshot(.upToDate(Date()))
                 }
-                let anchor: String? = DebugLaunchRoute.takeSettingsSounds() ? "sounds"
+                let anchor: String? = DebugLaunchRoute.takeSettingsPro() ? "pro"
+                    : DebugLaunchRoute.takeSettingsSounds() ? "sounds"
                     : DebugLaunchRoute.takeSettingsLock() ? "lock" : showsICloud ? "icloud"
                     : DebugLaunchRoute.takeSettingsTips() ? "tips"
                     : DebugLaunchRoute.takeSettingsRate() ? "rate" : nil

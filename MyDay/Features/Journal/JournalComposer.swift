@@ -165,6 +165,7 @@ struct JournalComposer: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(RatingPrompt.self) private var rating
+    @Environment(MyDayPro.self) private var pro
     @Environment(\.hostTab) private var hostTab
 
     /// The page being edited: nil for a new page until it is first saved.
@@ -193,6 +194,8 @@ struct JournalComposer: View {
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var isLoadingPhotos = false
     @State private var extra: Extra?
+    /// A Pro feature tapped by a free account: its My Day Pro pop-up.
+    @State private var proOffer: ProFeature?
     @State private var heroIsVisible = true
     @State private var toast: String?
     @FocusState private var headingFocused: Bool
@@ -276,6 +279,7 @@ struct JournalComposer: View {
             .sheet(item: $extra) { extra in
                 extraSheet(extra)
             }
+            .proOffer($proOffer)
             .onChange(of: pickerItems) { _, items in
                 loadPhotos(items)
             }
@@ -323,6 +327,11 @@ struct JournalComposer: View {
                         guard let anchor = DebugLaunchRoute.takeJournalAnchor() else { return }
                         try? await Task.sleep(for: .seconds(1))
                         reader.scrollTo(anchor, anchor: anchor == "save" ? .bottom : .top)
+                        if let offer = DebugLaunchRoute.takeProOffer() {
+                            // `pro-reflections`: a free account tapped a reflection.
+                            try? await Task.sleep(for: .seconds(1))
+                            proOffer = offer
+                        }
                     }
                 #endif
             }
@@ -405,7 +414,16 @@ struct JournalComposer: View {
 
     private func openMoodsFromTip() {
         closeMoodTip()
-        extra = .moods
+        openMoreMoods()
+    }
+
+    /// ＋ and "Tap to change": all thirty moods, with My Day Pro.
+    private func openMoreMoods() {
+        if pro.isActive {
+            extra = .moods
+        } else {
+            proOffer = .moreMoods
+        }
     }
 
     /// The Get a Prompt tip, once, when no other tip or sheet is open. It needs the button on
@@ -436,7 +454,7 @@ struct JournalComposer: View {
 
     private func tryPromptFromTip() {
         closePromptTip()
-        addPrompt()
+        promptTapped()
     }
 
     /// The picture, then the cards on their panel.
@@ -577,10 +595,14 @@ struct JournalComposer: View {
             HStack(spacing: 8) {
                 cardTitle(date.isToday ? "How are you feeling today?" : "How were you feeling?", color: JournalStyle.plum)
                 Spacer(minLength: 4)
-                Button {
-                    extra = .moods
-                } label: {
+                Button(action: openMoreMoods) {
                     PlusBubble(diameter: 38)
+                        .overlay(alignment: .topTrailing) {
+                            if !pro.isActive {
+                                ProCrown(size: 18)
+                                    .offset(x: 6, y: -6)
+                            }
+                        }
                 }
                 .buttonStyle(PressScaleStyle())
                 .anchorPreference(key: MoodPlusAnchorKey.self, value: .bounds) { $0 }
@@ -603,9 +625,7 @@ struct JournalComposer: View {
 
     /// A mood picked with ＋ (one of the six shows as selected in the grid instead).
     private var chosenMood: some View {
-        Button {
-            extra = .moods
-        } label: {
+        Button(action: openMoreMoods) {
             HStack(spacing: 12) {
                 Image(mood.artName)
                     .resizable()
@@ -714,10 +734,13 @@ struct JournalComposer: View {
     }
 
     private var promptButton: some View {
-        Button(action: addPrompt) {
+        Button(action: promptTapped) {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                 Text("Get a Prompt")
+                if !pro.isActive {
+                    ProCrown(size: 20)
+                }
             }
             .font(.rounded(.headline, weight: .heavy))
             .foregroundStyle(JournalStyle.pink)
@@ -803,9 +826,8 @@ struct JournalComposer: View {
                           status: stickers.isEmpty ? nil : "\(Sticker.list(from: stickers).count) added") {
                     extra = .sticker
                 }
-                extraTile("Voice Note", art: "ExtraVoice", status: voiceNoteStatus) {
-                    voiceContinuing = nil
-                    extra = .voice
+                extraTile("Voice Note", art: "ExtraVoice", status: voiceNoteStatus, locked: !pro.isActive) {
+                    recordVoiceNote(continuing: nil)
                 }
                 extraTile("Location", art: "ExtraLocation", status: place.trimmed.isEmpty ? nil : place.trimmed) {
                     extra = .place
@@ -819,7 +841,20 @@ struct JournalComposer: View {
         .journalCard()
     }
 
+    /// Add Photo: the photo library, with My Day Pro (the photos already on the page stay).
+    @ViewBuilder
     private var photoTile: some View {
+        if pro.isActive {
+            photoPicker
+        } else {
+            extraTile("Add Photo", art: "ExtraPhoto",
+                      status: photos.isEmpty ? nil : "\(photos.count)/\(Self.maxPhotos)", locked: true) {
+                proOffer = .journalPhotos
+            }
+        }
+    }
+
+    private var photoPicker: some View {
         PhotosPicker(selection: $pickerItems, maxSelectionCount: max(1, Self.maxPhotos - photos.count),
                      matching: .images) {
             tileLabel("Add Photo", art: "ExtraPhoto",
@@ -834,11 +869,19 @@ struct JournalComposer: View {
         .disabled(photos.count >= Self.maxPhotos || isLoadingPhotos)
     }
 
-    private func extraTile(_ title: String, art: String, status: String?, action: @escaping () -> Void) -> some View {
+    private func extraTile(_ title: String, art: String, status: String?, locked: Bool = false,
+                           action: @escaping () -> Void) -> some View {
         Button(action: action) {
             tileLabel(title, art: art, status: status)
+                .overlay(alignment: .topTrailing) {
+                    if locked {
+                        ProCrown(size: 22)
+                            .padding(7)
+                    }
+                }
         }
         .buttonStyle(PressScaleStyle())
+        .accessibilityValue(locked ? "My Day Pro" : "")
     }
 
     private func tileLabel(_ title: String, art: String, status: String?) -> some View {
@@ -888,8 +931,7 @@ struct JournalComposer: View {
             VoiceNotePlayer(data: note.audio, title: VoiceNoteDraft.title(index: index, count: voiceNotes.count),
                             duration: note.duration, recordedAt: note.recordedAt,
                             onContinue: {
-                                voiceContinuing = note.id
-                                extra = .voice
+                                recordVoiceNote(continuing: note.id)
                             },
                             onDelete: {
                                 withAnimation(.snappy) { voiceNotes.removeAll { $0.id == note.id } }
@@ -975,6 +1017,10 @@ struct JournalComposer: View {
                         .font(.system(size: 12))
                         .foregroundStyle(JournalStyle.pink)
                         .accessibilityHidden(true)
+                    if !pro.isActive {
+                        Spacer(minLength: 0)
+                        ProCrown(size: 20)
+                    }
                 }
                 reflectionField(placeholder, text: text)
             }
@@ -982,7 +1028,47 @@ struct JournalComposer: View {
         .journalCard()
     }
 
+    /// A reflection to write in, or, for a free account, locked: what was written before still
+    /// shows, with a little lock, and a tap offers My Day Pro.
+    @ViewBuilder
     private func reflectionField(_ placeholder: String, text: Binding<String>) -> some View {
+        if pro.isActive {
+            reflectionTextField(placeholder, text: text)
+        } else {
+            lockedReflection(placeholder, text: text.wrappedValue)
+        }
+    }
+
+    private func lockedReflection(_ placeholder: String, text: String) -> some View {
+        Button {
+            proOffer = .reflections
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Text(text.trimmed.isEmpty ? placeholder : text)
+                    .font(.rounded(.body, weight: .medium))
+                    .foregroundStyle(text.trimmed.isEmpty ? JournalStyle.placeholder : JournalStyle.ink)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(5)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(JournalStyle.pink.opacity(0.75))
+                    .padding(.top, 2)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(JournalStyle.fieldFill))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(JournalStyle.pink.opacity(0.18), lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue("Locked, My Day Pro")
+        .accessibilityHint("Shows what My Day Pro unlocks")
+    }
+
+    private func reflectionTextField(_ placeholder: String, text: Binding<String>) -> some View {
         TextField(placeholder, text: text,
                   prompt: Text(placeholder).foregroundStyle(JournalStyle.placeholder),
                   axis: .vertical)
@@ -1006,9 +1092,15 @@ struct JournalComposer: View {
                 .overlay(Circle().strokeBorder(Palette.butter, lineWidth: 1.5))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 10) {
-                Text(date.isToday ? "Today's Little Win" : "My Little Win")
-                    .font(.rounded(.headline, weight: .heavy))
-                    .foregroundStyle(Palette.cocoa)
+                HStack(spacing: 6) {
+                    Text(date.isToday ? "Today's Little Win" : "My Little Win")
+                        .font(.rounded(.headline, weight: .heavy))
+                        .foregroundStyle(Palette.cocoa)
+                    if !pro.isActive {
+                        Spacer(minLength: 0)
+                        ProCrown(size: 20)
+                    }
+                }
                 reflectionField("🌟 My little win \(date.isToday ? "today" : "that day")…", text: $littleWin)
             }
         }
@@ -1119,6 +1211,26 @@ struct JournalComposer: View {
     }
 
     // MARK: Actions
+
+    /// Get a Prompt: a prompt, with My Day Pro.
+    private func promptTapped() {
+        if pro.isActive {
+            addPrompt()
+        } else {
+            proOffer = .prompts
+        }
+    }
+
+    /// Voice Note (and a note's Continue): recording, with My Day Pro. The notes already on the
+    /// page play for everyone.
+    private func recordVoiceNote(continuing note: VoiceNoteDraft.ID?) {
+        guard pro.isActive else {
+            proOffer = .voiceNotes
+            return
+        }
+        voiceContinuing = note
+        extra = .voice
+    }
 
     private func addPrompt() {
         let unused = JournalPresets.prompts.filter { !text.contains($0) }

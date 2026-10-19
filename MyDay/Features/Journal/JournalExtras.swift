@@ -65,8 +65,12 @@ private struct ExtraSheet<Content: View>: View {
 
 /// "Add Stickers": the sticker sheet's groups as tabs (Hearts & Love, Mood & Feelings, …,
 /// Emoji), each a grid of its stickers; tap one to add it to the page.
+/// For a free account, the ten free stickers can be added and the rest wear a crown: a tap
+/// offers My Day Pro. The stickers already on a page stay there (and can be taken off).
 struct StickerPickerSheet: View {
     @Binding var stickers: String
+    @Environment(MyDayPro.self) private var pro
+    @State private var proOffer: ProFeature?
     /// The tab last opened, kept for next time.
     @AppStorage(Prefs.stickerCategory) private var categoryID = StickerCatalog.categories[0].id
 
@@ -92,9 +96,19 @@ struct StickerPickerSheet: View {
                     }
                 }
                 tabs
+                if !pro.isActive {
+                    Text("10 stickers are free to use 💖 The ones with a crown come with My Day Pro.")
+                        .font(.rounded(.subheadline, weight: .semibold))
+                        .foregroundStyle(JournalStyle.soft)
+                }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
                     ForEach(category.stickers, id: \.self) { sticker in
+                        let locked = !pro.isActive && !StickerCatalog.free.contains(sticker)
                         Button {
+                            guard !locked else {
+                                proOffer = .stickers
+                                return
+                            }
                             guard !isFull else { return }
                             stickers = Sticker.text(for: onPage + [sticker])
                             Haptics.tap()
@@ -102,9 +116,16 @@ struct StickerPickerSheet: View {
                             StickerView(sticker: sticker, size: 52)
                                 .frame(maxWidth: .infinity, minHeight: 76)
                                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+                                .overlay(alignment: .topTrailing) {
+                                    if locked {
+                                        ProCrown(size: 18)
+                                            .padding(5)
+                                    }
+                                }
                         }
                         .buttonStyle(PressScaleStyle())
                         .accessibilityLabel("Add \(sticker.name)")
+                        .accessibilityValue(locked ? "My Day Pro" : "")
                     }
                 }
                 .opacity(isFull ? 0.5 : 1)
@@ -115,6 +136,7 @@ struct StickerPickerSheet: View {
                 }
             }
         }
+        .proOffer($proOffer)
     }
 
     /// The groups, as pills in the sheet's colours; the open one has a pink edge.

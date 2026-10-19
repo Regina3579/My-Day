@@ -13,6 +13,9 @@ struct NewTaskSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
+    @Environment(MyDayPro.self) private var pro
+    /// Taking or choosing a photo, by a free account: the My Day Pro pop-up.
+    @State private var proOffer: ProFeature?
     private let task: TaskItem?
     private let focus: TaskSheetFocus?
     private let onSaved: ((TaskItem) -> Void)?
@@ -114,6 +117,7 @@ struct NewTaskSheet: View {
     // The body is split into small steps so the compiler can type-check each one quickly.
     var body: some View {
         withDialogs
+            .proOffer($proOffer)
             .presentationDetents([.medium, .large], selection: $detent)
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(32)
@@ -414,11 +418,18 @@ struct NewTaskSheet: View {
         .id(TaskSheetFocus.repeatRule)
     }
 
+    /// Photo. For a free account it opens only to see or remove a photo added before; adding one
+    /// offers My Day Pro.
     private var photoRow: some View {
-        let value = thumbnail == nil ? "None" : "Added"
+        let locked = !pro.isActive && thumbnail == nil
+        let value = locked ? "👑 My Day Pro" : thumbnail == nil ? "None" : "Added"
         return OptionRow(emoji: "📷", title: "Photo", value: value, thumbnail: thumbnailImage,
                          isExpanded: expanded == .photo) {
-            toggle(.photo)
+            if locked {
+                proOffer = .taskPhotos
+            } else {
+                toggle(.photo)
+            }
         } panel: {
             photoPanel
         }
@@ -455,8 +466,8 @@ struct NewTaskSheet: View {
         TaskPhotoPanel(
             image: thumbnailImage,
             isLoading: isLoadingPhoto,
-            onTake: { takePhoto() },
-            onChoose: { showsLibrary = true },
+            onTake: { addPhoto { takePhoto() } },
+            onChoose: { addPhoto { showsLibrary = true } },
             onView: { showsViewer = true },
             onRemove: { removePhoto() }
         )
@@ -607,6 +618,15 @@ struct NewTaskSheet: View {
                 reminderEnabled = false
                 showsNotificationAlert = true
             }
+        }
+    }
+
+    /// Taking, choosing or replacing a photo: with My Day Pro.
+    private func addPhoto(_ action: () -> Void) {
+        if pro.isActive {
+            action()
+        } else {
+            proOffer = .taskPhotos
         }
     }
 

@@ -10,6 +10,7 @@ struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(DataStore.self) private var store
     @Environment(RatingPrompt.self) private var rating
+    @Environment(MyDayPro.self) private var pro
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.requestReview) private var requestReview
@@ -93,6 +94,11 @@ struct RootView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             refreshDay()
+        }
+        .onChange(of: pro.isActive) { _, _ in
+            // The Reminder Sound is a Pro one, or back to Gentle Bloom: reminders already set
+            // take the sound that now applies.
+            ReminderCenter.syncAll(in: modelContext)
         }
         .onChange(of: store.syncStatus.imports) { _, _ in
             // Changes came from iCloud: from another device, or everything coming back after

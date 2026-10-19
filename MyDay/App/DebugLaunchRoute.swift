@@ -10,6 +10,15 @@ enum DebugLaunchRoute {
         ProcessInfo.processInfo.arguments.contains("-screenshotRoute")
     }
 
+    /// Whether to pretend My Day Pro is on (true) or off (false). Screenshot runs pretend it is
+    /// on, so every screen shows its features, except the `pro-` routes, which show a free
+    /// account's crowns, locks and pop-ups. Otherwise Settings → My Day Pro → Pretend Pro decides
+    /// (nil: the App Store's own answer).
+    static var proOverride: Bool? {
+        if let route { return !route.hasPrefix("pro-") }
+        return UserDefaults.standard.object(forKey: Prefs.debugPretendPro) as? Bool
+    }
+
     /// The launch page: "splash" keeps it on screen. Every other screenshot skips it.
     static var holdsSplash: Bool {
         route == "splash"
@@ -170,8 +179,13 @@ enum DebugLaunchRoute {
     @MainActor private static var journalStickers = false
     /// Scroll Settings to Sounds & Haptics ("settings-sounds").
     @MainActor private static var settingsSounds = false
-    /// Open Settings → Reminder Sound ("settings-reminder-sound").
+    /// Open Settings → Reminder Sound ("settings-reminder-sound", and "pro-sounds" for a free
+    /// account).
     @MainActor private static var settingsReminderSound = false
+    /// Scroll Settings to My Day Pro ("pro-settings").
+    @MainActor private static var settingsPro = false
+    /// The My Day Pro pop-up a screen shows once it is ready ("pro-reflections").
+    @MainActor private static var proOffer: ProFeature?
     /// Scroll Settings to the journal lock ("settings-lock"), or open Lock My Journal
     /// ("settings-lock-choose").
     @MainActor private static var settingsLock = false
@@ -250,6 +264,18 @@ enum DebugLaunchRoute {
     static func takeSettingsReminderSound() -> Bool {
         defer { settingsReminderSound = false }
         return settingsReminderSound
+    }
+
+    @MainActor
+    static func takeSettingsPro() -> Bool {
+        defer { settingsPro = false }
+        return settingsPro
+    }
+
+    @MainActor
+    static func takeProOffer() -> ProFeature? {
+        defer { proOffer = nil }
+        return proOffer
     }
 
     @MainActor
@@ -457,9 +483,24 @@ enum DebugLaunchRoute {
         case "settings-sounds":
             settingsSounds = true
             router.tab = .settings
-        case "settings-reminder-sound":
+        case "settings-reminder-sound", "pro-sounds":
             settingsReminderSound = true
             router.tab = .settings
+        case "pro-settings":
+            settingsPro = true
+            router.tab = .settings
+        case "pro-journal":
+            // A free account's page: crowns on ＋, Get a Prompt, Add Photo and Voice Note.
+            journalAnchor = "write"
+            openTodaysPage(router, today: today, context: context)
+        case "pro-reflections":
+            // A free account taps a reflection: the page's own reflections stay, locked.
+            journalAnchor = "save"
+            proOffer = .reflections
+            openTodaysPage(router, today: today, context: context)
+        case "pro-stickers":
+            journalStickers = true
+            openTodaysPage(router, today: today, context: context)
         case "journal-lock-pattern":
             JournalLock.enable(.pattern, secret: "0-3-6-7-8")
             router.open(.journal)

@@ -45,6 +45,10 @@ enum Prefs {
     /// Settings → Sounds & Haptics → Reminder Sound: the `ReminderSound` a to-do's reminder
     /// arrives with (Gentle Bloom when unset).
     static let reminderSound = "reminderSound"
+    /// Whether My Day Pro was active when the App Store was last asked (see `MyDayPro`).
+    static let proActive = "myDayProActive"
+    /// Debug builds only: Settings → My Day Pro → Pretend Pro (on, off, or unset for the App Store's answer).
+    static let debugPretendPro = "debugPretendPro"
     /// The sticker picker's tab last opened (a `StickerCategory` id).
     static let stickerCategory = "journalStickerCategory"
     static let journalLock = "journalLockEnabled"

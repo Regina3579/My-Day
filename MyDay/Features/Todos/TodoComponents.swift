@@ -597,6 +597,8 @@ struct TodosActionBar: View {
     let onVoice: () -> Void
     let onPhoto: () -> Void
     let onTemplate: () -> Void
+    /// Photos come with My Day Pro: a free account sees a crown on Photo.
+    var photoLocked = false
 
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -658,7 +660,8 @@ struct TodosActionBar: View {
     }
 
     private var photoButton: some View {
-        SoftActionButton(title: "Photo", symbol: "camera.fill", tint: Color(hex: 0x7A4FE0), action: onPhoto)
+        SoftActionButton(title: "Photo", symbol: "camera.fill", tint: Color(hex: 0x7A4FE0), locked: photoLocked,
+                         action: onPhoto)
     }
 
     private var templateButton: some View {
@@ -781,6 +784,8 @@ private struct SoftActionButton: View {
     let title: String
     let symbol: String
     let tint: Color
+    /// A Pro button, for a free account: a little crown on its corner.
+    var locked = false
     let action: () -> Void
 
     var body: some View {
@@ -802,10 +807,17 @@ private struct SoftActionButton: View {
             .frame(maxWidth: .infinity, minHeight: 36)
             .background(Capsule().fill(Color.white.opacity(0.75)))
             .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1))
+            .overlay(alignment: .topTrailing) {
+                if locked {
+                    ProCrown(size: 16)
+                        .offset(x: 3, y: -5)
+                }
+            }
             .contentShape(Capsule())
         }
         .buttonStyle(PressScaleStyle(scale: 0.95))
         .accessibilityLabel(title)
+        .accessibilityValue(locked ? "My Day Pro" : "")
     }
 }
 

@@ -23,6 +23,20 @@ enum ReminderSound: String, CaseIterable, Identifiable {
         UserDefaults.standard.string(forKey: Prefs.reminderSound).flatMap(ReminderSound.init) ?? .gentleBloom
     }
 
+    /// The sound reminders arrive with: the one chosen, or Gentle Bloom while a Pro sound waits
+    /// for My Day Pro (the choice is kept for when Pro is back).
+    static var current: ReminderSound {
+        chosen.applying(pro: MyDayPro.wasActive)
+    }
+
+    /// Every sound but Gentle Bloom comes with My Day Pro.
+    var isPro: Bool { self != .gentleBloom }
+
+    /// This sound, or Gentle Bloom if it needs My Day Pro and `pro` is off.
+    func applying(pro: Bool) -> ReminderSound {
+        isPro && !pro ? .gentleBloom : self
+    }
+
     var title: String {
         switch self {
         case .gentleBloom: "Gentle Bloom"

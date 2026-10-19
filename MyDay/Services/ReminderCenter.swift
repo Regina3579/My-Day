@@ -65,10 +65,11 @@ enum ReminderCenter {
     private static func identifier(for taskID: UUID) -> String { "task-\(taskID.uuidString)" }
 
     /// The Reminder Sound chosen in Settings (Gentle Bloom, a 3-second music box, until another is
-    /// chosen), which iOS plays when a to-do's reminder arrives. A reminder keeps the sound it was
-    /// scheduled with, so choosing another reschedules them all (`syncAll`).
+    /// chosen, and while a Pro sound waits for My Day Pro), which iOS plays when a to-do's
+    /// reminder arrives. A reminder keeps the sound it was scheduled with, so choosing another,
+    /// or Pro starting or ending, reschedules them all (`syncAll`).
     private static var taskSound: UNNotificationSound {
-        let sound = ReminderSound.chosen
+        let sound = ReminderSound.current
         installIfNeeded(sound)
         return UNNotificationSound(named: UNNotificationSoundName(sound.fileName))
     }

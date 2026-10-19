@@ -3,9 +3,13 @@ import SwiftData
 
 /// Settings → Sounds & Haptics → Reminder Sound: the nine sounds a to-do's reminder can arrive
 /// with. Tapping one plays it and chooses it; the reminders already set are rescheduled with it.
+/// Gentle Bloom is free; the other eight come with My Day Pro, so for a free account they wear
+/// a crown, and tapping one plays it and offers Pro.
 struct ReminderSoundView: View {
     @Environment(\.modelContext) private var context
+    @Environment(MyDayPro.self) private var pro
     @AppStorage(Prefs.reminderSound) private var chosen: ReminderSound = .gentleBloom
+    @State private var proOffer: ProFeature?
     /// The sound playing, for its row's moving speaker, and the taps so far (each tap starts it
     /// over, even on the same sound).
     @State private var playing: ReminderSound?
@@ -18,12 +22,13 @@ struct ReminderSoundView: View {
                     Button {
                         choose(sound)
                     } label: {
-                        ReminderSoundRow(sound: sound, isOn: sound == chosen, isPlaying: sound == playing)
+                        ReminderSoundRow(sound: sound, isOn: sound == current, isPlaying: sound == playing,
+                                         isLocked: sound.isPro && !pro.isActive)
                     }
                     .accessibilityHint("Plays the sound and chooses it")
                 }
             } footer: {
-                Text("Tap a sound to hear it and choose it. Your to-do reminders arrive with it, following your iPhone's notification settings. With Silent on, reminders and the sounds here stay quiet.")
+                Text("Tap a sound to hear it and choose it. Your to-do reminders arrive with it, following your iPhone's notification settings. With Silent on, reminders and the sounds here stay quiet." + (pro.isActive ? "" : " The sounds with a crown come with My Day Pro."))
             }
         }
         .font(.rounded(.body))
@@ -44,12 +49,20 @@ struct ReminderSoundView: View {
         .onDisappear {
             SoundEffects.stopPreview()
         }
+        .proOffer($proOffer)
     }
+
+    /// The sound reminders arrive with now: Gentle Bloom while a Pro sound waits for Pro.
+    private var current: ReminderSound { chosen.applying(pro: pro.isActive) }
 
     private func choose(_ sound: ReminderSound) {
         SoundEffects.preview(sound)
         playing = sound
         taps += 1
+        if sound.isPro && !pro.isActive {
+            proOffer = .reminderSounds
+            return
+        }
         guard sound != chosen else { return }
         chosen = sound
         // A reminder keeps the sound it was scheduled with.
@@ -63,6 +76,8 @@ struct ReminderSoundRow: View {
     let sound: ReminderSound
     var isOn = false
     var isPlaying = false
+    /// A Pro sound, for a free account: a crown on its icon.
+    var isLocked = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -72,6 +87,12 @@ struct ReminderSoundRow: View {
                 .symbolEffect(.variableColor.iterative, isActive: isPlaying && !reduceMotion)
                 .frame(width: 38, height: 38)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(sound.tint.gradient))
+                .overlay(alignment: .topTrailing) {
+                    if isLocked {
+                        ProCrown(size: 18)
+                            .offset(x: 6, y: -6)
+                    }
+                }
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(sound.title)
@@ -92,6 +113,7 @@ struct ReminderSoundRow: View {
         .padding(.vertical, 2)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        .accessibilityValue(isLocked ? "My Day Pro" : "")
         .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
     }
 }

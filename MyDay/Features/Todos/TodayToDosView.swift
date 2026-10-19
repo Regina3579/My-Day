@@ -6,6 +6,7 @@ import SwiftUI
 struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
     @Environment(RatingPrompt.self) private var rating
+    @Environment(MyDayPro.self) private var pro
     @Environment(\.tabBarClearance) private var tabBarClearance
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -25,6 +26,8 @@ struct TodayToDosView: View {
     @Query private var tasks: [TaskItem]
     @State private var filter: CategoryChoice?
     @State private var sheet: TodoSheet?
+    /// Photo, tapped by a free account: the My Day Pro pop-up.
+    @State private var proOffer: ProFeature?
     @State private var pendingDelete: TaskItem?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
@@ -227,7 +230,16 @@ struct TodayToDosView: View {
 
     private func tryPhotoFromTip() {
         closePhotoTip()
-        sheet = .compose(filter, .photo)
+        addPhotoTask()
+    }
+
+    /// Photo: a new to-do that starts with its photo, with My Day Pro.
+    private func addPhotoTask() {
+        if pro.isActive {
+            sheet = .compose(filter, .photo)
+        } else {
+            proOffer = .taskPhotos
+        }
     }
 
     /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete
@@ -339,6 +351,7 @@ struct TodayToDosView: View {
             .sheet(item: $sheet) { sheet in
                 sheetContent(sheet)
             }
+            .proOffer($proOffer)
             .confirmationDialog("Delete this to-do?", isPresented: deleteBinding, titleVisibility: .visible,
                                 presenting: pendingDelete) { task in
                 Button("Delete “\(task.title)”", role: .destructive) { delete(task) }
@@ -425,8 +438,9 @@ struct TodayToDosView: View {
         TodosActionBar(
             onAdd: { sheet = .compose(filter, nil) },
             onVoice: { sheet = .voice(sample: nil) },
-            onPhoto: { sheet = .compose(filter, .photo) },
-            onTemplate: { sheet = .templates }
+            onPhoto: addPhotoTask,
+            onTemplate: { sheet = .templates },
+            photoLocked: !pro.isActive
         )
     }
 

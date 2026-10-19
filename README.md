@@ -39,6 +39,10 @@ are pieces of the app's own pictures); the app itself starts empty.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | <img src="docs/screenshots/iphone-17-pro-52-settings-tips.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-53-rating-card.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-54-settings-rate.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-55-journal-prompt-tip.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-56-todos-reminder-tip.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-57-settings-icloud-tip.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-58-todos-template-checklist.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-59-settings-reminder-sound.jpg" width="170"> |
 
+| My Day Pro: journal crowns | Daily Reflections pop-up | Stickers (10 free) | Reminder Sounds | Settings → My Day Pro |
+| --- | --- | --- | --- | --- |
+| <img src="docs/screenshots/iphone-17-pro-60-pro-journal.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-61-pro-reflections.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-62-pro-stickers.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-63-pro-sounds.jpg" width="170"> | <img src="docs/screenshots/iphone-17-pro-64-pro-settings.jpg" width="170"> |
+
 ## Features
 
 | Screen | What you can do |
@@ -51,6 +55,7 @@ are pieces of the app's own pictures); the app itself starts empty.
 | **Calendar** | The illustrated header from the design ("Calendar — Every day is a new page" with the girl, the puppy and the kitten) and a white **Today** button. The month card has pink ‹ › buttons, "♥ September 2026 ♥", pink weekday pills, the days around the month in grey, a pink ring for today and a pink circle for the selected day; small markers show to-dos (a dot, green when all are done), priorities (a star) and journal pages (a heart). Swipe the card to change month. The selected day's card shows its date, a chip such as "☀️ Today" or "Tomorrow", and three tinted rows: **Priorities** (pink), **To-Dos** (lilac) and **Journal** (pink), each with a picture and a round ＋. The day's items are listed under their row; tick them there. |
 | **Insights** | Done today, day streak, a weekly bar chart and a 30-day mood chart (Swift Charts). |
 | **Settings** | Your name, **iCloud** (Sync with iCloud; the first time Settings opens, a one-time tip from its design points at it: the iCloud card glows white with a pink edge and yellow rays by its switch, a pink cloud card with a little smiling cloud resting on it says “Your memories are safe ☁️ · Turn on **iCloud Sync** to keep your journal, to-dos, photos, and voice notes safely backed up. · Even if you change phones, your precious moments can come back.”, and a thin white arrow curls down to the switch among twinkling sparkles; tapping the switch turns iCloud Sync on when it is off, a tap anywhere else closes the tip, and on a small iPhone the list first scrolls so both cards fit), morning and evening reminders, carrying unfinished items over to today, showing finished to-dos (the Completed list open or closed), **Sounds & Haptics** (Task Completion Sound, Mood Star Sound, gentle haptics, and **Reminder Sound**, which opens the nine sounds a to-do's reminder can arrive with: tapping one plays it and chooses it), the journal lock (**Lock My Journal**, then choose Face ID, Pattern or Number Passcode; a new pattern or passcode is asked for twice, and changing the method or turning the lock off first asks for the current one), **Show tips again** (all seven first-time tips come back, one at a time, and To-Dos opens to show the first three; the Reminder tip comes on the next to-do opened, the journal's two on the next page written, and the iCloud tip on the next visit to Settings), data clean-up, and **Rate My Day ⭐️** (always there: it opens Apple's page to rate My Day, and the rating card won't ask again). |
+| **My Day Pro** | An auto-renewable subscription (monthly or yearly; product IDs in `MyDayPro.productIDs`) that adds premium features, while to-dos and journal writing stay free for everyone. **Pro unlocks:** the eight reminder melodies beside Gentle Bloom; photos on to-dos (adding, replacing, taking) and on journal pages; journal voice notes; the 24 moods behind ＋ (the six on the page stay free); Get a Prompt; every sticker beyond the ten free ones (the first sticker of each of the first ten groups); and the four **Daily Reflections** (Today I'm grateful for…, A highlight of my day…, Tomorrow I look forward to…, Today's Little Win). A free account sees a small gold crown on each Pro button, tile, sound and sticker, and a lock on each reflection; tapping one brings the pop-up from the design: the screen frosts over and a pink card rises with the girl and her puppy among hearts and sparkles, a gold "👑 My Day Pro" badge, "Unlock …" for the feature tapped with a line on what it brings, **Maybe Later** and **👑 Unlock Pro**, which opens Apple's subscription sheet (prices and lengths from the App Store, Restore Purchases, terms and privacy policy). Nothing is deleted when a subscription ends: photos, voice notes, stickers, moods and reflections already saved stay to see and play (and can be removed); only adding or changing Pro things waits, and a Pro reminder sound gives way to Gentle Bloom until Pro is back. Everything unlocks at once when the App Store says Pro is active (`Transaction.currentEntitlements`, kept up to date with `Transaction.updates`). Settings → **My Day Pro** shows Unlock My Day Pro, or for members Manage Subscription; Restore Purchases is always there. Settings → Journal names the journal's theme, **Blush Blossom 🌷**. |
 | **Enjoying My Day?** | A rating card from the design, kept rare so it never gets in the way. The screen takes a soft shade and a pink card rises with the girl and her puppy resting on its cloud edge, hearts, a speech bubble, five gold stars, **Rate Now ›**, **Maybe Later** and ✕. It comes only after My Day has been used on **7 different days**, and only **2.6 seconds after a happy moment**: every to-do of the day done, every priority of the day done, or a new journal page that makes 5 pages or a 3-day writing streak (never over a sheet or the menu). **Maybe Later** (or ✕, or a tap outside) means not again for **30 days**; a second "later" means not for **60 more days**; it asks **3 times at most**. **Rate Now** (or Settings → Rate My Day) opens Apple's page to rate My Day, and the card never comes again. The stars are only a picture: they can't be tapped, so My Day never sees or filters a rating (Apple's guideline 5.6.1). |
 | **iCloud sync** | Settings → iCloud → **Sync with iCloud** is on from the start. Your to-dos, priorities, templates, categories and journal pages (with their photos and voice notes) are kept on the iPhone and in your private iCloud database, so if you delete My Day and install it again, or sign in on a new iPhone with the same Apple ID, they all come back, and they stay the same on all your devices. Under the switch, My Day shows what iCloud is doing: "Syncing with iCloud…", "Up to date · Last synced 2 minutes ago", or why it can't sync (not signed in to iCloud, iCloud storage full, or no internet). Turning it off asks first, then keeps new changes on this iPhone only; everything already saved stays both on the iPhone and in iCloud. Turning it on again uploads what was added meanwhile. **Erase everything** says when it will erase from iCloud too. |
 | **Opening My Day** | Every time the app starts, the design's loading page shows for 0.9 seconds (tap to skip): the happy My Day icon (the girl, her puppy and kitten smiling with their eyes closed) in a soft glow with light rays, "Make today beautiful 💗" and glossy hearts above it, and "Loading your happy space…" over a full pink heart bar with its three hearts lit. It fades in from the launch screen's plain pink (so nothing jumps), then fades into Home over 0.3 seconds. |
@@ -133,6 +138,28 @@ provided API to prompt users to review your app"). My Day uses two of them:
 To see the card without waiting 7 days, a build run from Xcode has **Settings → Tips → Preview
 the rating card** (a preview changes nothing).
 
+### Set up My Day Pro
+
+My Day Pro is an auto-renewable subscription, sold with StoreKit 2 and Apple's own subscription
+sheet (`SubscriptionStoreView`, iOS 17), so prices, lengths, Restore Purchases and the terms
+come from the App Store as Apple's guidelines ask (3.1.2: describe what the user gets for the
+price; 3.1.1: a restore mechanism).
+
+1. In [App Store Connect](https://appstoreconnect.apple.com), under My Day → *Subscriptions*,
+   create a subscription group named **My Day Pro** with two subscriptions:
+   `com.regina3579.myday.pro.monthly` (1 month) and `com.regina3579.myday.pro.yearly` (1 year),
+   with their prices, a display name and a description each. To use other product IDs, change
+   `MyDayPro.productIDs` (`MyDay/Services/MyDayPro.swift`).
+2. Add the **In-App Purchase** capability in *Signing & Capabilities*, and a privacy policy URL
+   in App Store Connect (the subscription sheet links to it; the terms link to Apple's standard
+   licence agreement).
+3. To test purchases from Xcode, create a StoreKit configuration file synced with App Store
+   Connect (*File → New → File from Template → StoreKit Configuration File*) and choose it in
+   *Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration*. Sandbox testers
+   (App Store Connect → *Users and Access*) can buy on a device.
+4. Without a subscription, a build run from Xcode has **Settings → My Day Pro → Pretend Pro
+   (Debug)**: App Store, On or Off, to see every screen as a member or as a free account.
+
 ## Project structure
 
 ```
@@ -144,7 +171,8 @@ MyDay/
 │                   TaskDraft (an unsaved to-do)
 ├── Services/       iCloud sync status, reminders, speech (SpeechTranscriber, VoiceTaskParser),
 │                   journal lock (Face ID, pattern, passcode; Keychain), haptics,
-│                   when to ask for a rating (RatingPrompt), day rollover, helpers
+│                   when to ask for a rating (RatingPrompt), My Day Pro (MyDayPro, StoreKit 2),
+│                   reminder sounds (ReminderSound), day rollover, helpers
 ├── Theme/          Colours from the artwork, fonts, shared components, tip arrows
 ├── Features/
 │   ├── Root/       RootView, BottomTabBar, side menu
@@ -163,6 +191,8 @@ MyDay/
 │   │               MoodChooserSheet, JournalDetailView, NewJournalEntrySheet, lock screen
 │   ├── Calendar/   CalendarView, CalendarComponents
 │   ├── Insights/   InsightsView
+│   ├── Pro/        ProUnlockCard (the My Day Pro pop-up), ProOffer (.proOffer, ProCrown),
+│   │               ProPaywall (Apple's subscription sheet), ProSettingsSection
 │   ├── Rating/     RatingCard ("Enjoying My Day?")
 │   └── Settings/   SettingsView, ICloudSettings, ICloudTip, RemindersView, JournalLockSettings
 └── Assets.xcassets App icon, home, to-dos, priority and calendar illustrations, kitten, colours

@@ -273,6 +273,11 @@ enum StickerCatalog {
     ]
 
     /// Every picture sticker's name, by id.
+    /// The ten stickers free for everyone, the first of each of the first ten groups: a pink
+    /// heart, a happy face, the sun, a lotus, a growth chart, an airplane, coffee, a sunny day, a
+    /// kitten and a pink bow. Every other sticker comes with My Day Pro.
+    static let free: Set<Sticker> = Set(categories.prefix(10).compactMap(\.stickers.first))
+
     static let names: [String: String] = categories.reduce(into: [:]) { all, category in
         all.merge(category.names) { first, _ in first }
     }
