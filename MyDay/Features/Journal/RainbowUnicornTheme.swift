@@ -4,7 +4,7 @@ import SwiftUI
 /// rainbows, clouds, golden stars and pink hearts, the castle with "My Journal Pages" and two
 /// unicorns at the top, a unicorn peeking beside Write a new page and over My week in moods, a
 /// rainbow star with a face for each day with no page, a little unicorn beside the month, dates
-/// under ribbon bows on clouds, and a unicorn on every page card in front of a rainbow. The
+/// under a cute rainbow cloud, and a unicorn on every page card in front of a rainbow. The
 /// unicorns, the castle and the stars with faces are art from the design; the rainbows, the
 /// clouds, the hearts and the cards are drawn here.
 enum UnicornStyle {
@@ -92,6 +92,69 @@ struct RainbowArc: View {
         }
         .opacity(0.85)
         .blur(radius: 1.2)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A cute rainbow cloud: a little pastel rainbow resting on two smiling clouds, for the top of
+/// a page's date.
+struct RainbowCloud: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width
+            let h = proxy.size.height
+            let arc = w * 0.78
+            ZStack {
+                // The top half of the rainbow, its ends resting on the clouds.
+                RainbowArc(band: arc * 0.06)
+                    .frame(width: arc, height: arc)
+                    .frame(width: arc, height: arc * 0.5, alignment: .top)
+                    .clipped()
+                    .position(x: w / 2, y: h - arc * 0.25 - h * 0.18)
+                SmilingCloud()
+                    .frame(width: w * 0.42, height: h * 0.5)
+                    .position(x: w * 0.23, y: h * 0.72)
+                SmilingCloud()
+                    .frame(width: w * 0.42, height: h * 0.5)
+                    .position(x: w * 0.77, y: h * 0.72)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// A small fluffy white cloud with a sleepy smile and rosy cheeks.
+struct SmilingCloud: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width
+            let h = proxy.size.height
+            ZStack {
+                Group {
+                    Circle().frame(width: w * 0.46, height: w * 0.46).position(x: w * 0.3, y: h * 0.52)
+                    Circle().frame(width: w * 0.56, height: w * 0.56).position(x: w * 0.56, y: h * 0.42)
+                    Circle().frame(width: w * 0.4, height: w * 0.4).position(x: w * 0.78, y: h * 0.58)
+                    Capsule().frame(width: w * 0.92, height: h * 0.42).position(x: w * 0.52, y: h * 0.72)
+                }
+                .foregroundStyle(LinearGradient(colors: [Color.white, Color(hex: 0xF4ECFF)],
+                                                startPoint: .top, endPoint: .bottom))
+                .shadow(color: UnicornStyle.glow.opacity(0.45), radius: 1.2, x: 0, y: 0.5)
+                // The face: two little eyes, a smile and pink cheeks.
+                Circle().fill(Color(hex: 0x3A2340)).frame(width: w * 0.07, height: w * 0.07)
+                    .position(x: w * 0.42, y: h * 0.6)
+                Circle().fill(Color(hex: 0x3A2340)).frame(width: w * 0.07, height: w * 0.07)
+                    .position(x: w * 0.64, y: h * 0.6)
+                Path { path in
+                    path.move(to: CGPoint(x: w * 0.48, y: h * 0.68))
+                    path.addQuadCurve(to: CGPoint(x: w * 0.58, y: h * 0.68), control: CGPoint(x: w * 0.53, y: h * 0.76))
+                }
+                .stroke(Color(hex: 0xE2557F), style: StrokeStyle(lineWidth: max(0.8, w * 0.035), lineCap: .round))
+                Ellipse().fill(Color(hex: 0xFF9EC4).opacity(0.7)).frame(width: w * 0.11, height: w * 0.07)
+                    .position(x: w * 0.33, y: h * 0.68)
+                Ellipse().fill(Color(hex: 0xFF9EC4).opacity(0.7)).frame(width: w * 0.11, height: w * 0.07)
+                    .position(x: w * 0.73, y: h * 0.68)
+            }
+        }
         .accessibilityHidden(true)
     }
 }

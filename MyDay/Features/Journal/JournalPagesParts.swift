@@ -894,22 +894,44 @@ struct JournalDateTile: View {
         }
     }
 
-    /// Rainbow Glow Unicorn: the ribbon bow, with a cloud at its foot and little golden stars.
+    /// Rainbow Glow Unicorn: a cute rainbow cloud on top (a little rainbow resting on two smiling
+    /// clouds) and little golden stars, with the day and weekday clear below.
     private func unicorn(_ ribbon: Ribbon) -> some View {
-        blush(ribbon)
-            .overlay(alignment: .bottom) {
-                PuffCloud()
-                    .scaleEffect(0.42)
-                    .frame(width: 70, height: 26)
-                    .offset(y: 4)
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .leading) {
-                HeavenlyStarView(size: 11).offset(x: 3, y: -6)
-            }
-            .overlay(alignment: .trailing) {
-                HeavenlyStarView(size: 12).offset(x: -3, y: -12)
-            }
+        VStack(spacing: 0) {
+            Text(date.formatted(.dateTime.day()))
+                .font(.rounded(.title, weight: .heavy))
+                .foregroundStyle(Palette.berry)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(.rounded(.subheadline, weight: .heavy))
+                .foregroundStyle(JournalPagesStyle.weekday)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.top, 14)
+        .frame(width: 64, height: 88)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white, ribbon.fill], startPoint: .top, endPoint: .bottom))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(ribbon.edge, lineWidth: 1.5)
+        )
+        .overlay(alignment: .top) {
+            RainbowCloud()
+                .frame(width: 58, height: 32)
+                .offset(y: -17)
+        }
+        .overlay(alignment: .leading) {
+            HeavenlyStarView(size: 10).offset(x: 3, y: -4)
+        }
+        .overlay(alignment: .trailing) {
+            HeavenlyStarView(size: 11).offset(x: -3, y: -10)
+        }
+        .padding(.top, 10)
+        .shadow(color: ribbon.edge.opacity(0.35), radius: 4, x: 0, y: 2)
     }
 
     /// Enchanted Fairy Garden: a little wooden frame with vines and flowers, a butterfly on top
