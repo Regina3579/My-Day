@@ -281,11 +281,12 @@ struct MoodWeekCard: View {
         }
         .overlay(alignment: .topTrailing) {
             if theme == .rainbowGlowUnicorn {
+                // Peeking in from the screen's edge, as in the design.
                 Image("UnicornPeek")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 58, height: 60)
-                    .offset(x: 30, y: -14)
+                    .frame(width: 44, height: 66)
+                    .offset(x: 16, y: -13)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -693,8 +694,9 @@ struct JournalEntryCard: View {
                     Image(entry.date.dayNumber.isMultiple(of: 2) ? "FairyCardFairyKnees" : "FairyCardFairyViolet")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 88, height: 70)
-                        .offset(x: 4, y: 2)
+                        .frame(width: 88, height: 72)
+                        // The grass fades out just at the card's bottom edge.
+                        .offset(x: 4, y: -1)
                         .accessibilityHidden(true)
                 }
             }
@@ -715,7 +717,7 @@ struct JournalEntryCard: View {
                             .scaledToFit()
                             .frame(width: 84, height: 76)
                     }
-                    .offset(x: 4, y: 2)
+                    .offset(x: 4, y: -1)
                     .accessibilityHidden(true)
                 }
             }
