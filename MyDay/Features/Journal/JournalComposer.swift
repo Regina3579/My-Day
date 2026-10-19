@@ -196,6 +196,9 @@ struct JournalComposer: View {
     @State private var extra: Extra?
     /// A Pro feature tapped by a free account: its My Day Pro pop-up.
     @State private var proOffer: ProFeature?
+    /// Whether this page has already offered unlimited writing (once, when the free limit is
+    /// first reached).
+    @State private var offeredUnlimitedWriting = false
     @State private var heroIsVisible = true
     @State private var toast: String?
     @FocusState private var headingFocused: Bool
@@ -284,9 +287,16 @@ struct JournalComposer: View {
                 loadPhotos(items)
             }
             .onChange(of: text) { old, new in
-                // Keep new writing within the limit (an older, longer page stays as it is).
+                // Without My Day Pro, keep new writing within the limit (an older, longer page
+                // stays as it is) and, the first time, offer unlimited writing. Pro has no limit.
+                guard !pro.isActive else { return }
                 if new.count > Self.textLimit, old.count <= Self.textLimit {
                     text = String(new.prefix(Self.textLimit))
+                    if !offeredUnlimitedWriting {
+                        offeredUnlimitedWriting = true
+                        textFocused = false
+                        proOffer = .unlimitedWriting
+                    }
                 }
             }
             .onChange(of: title) { old, new in
@@ -787,7 +797,9 @@ struct JournalComposer: View {
         )
     }
 
-    /// Two little hearts, the character count, and the yellow 🎙 to speak instead of typing. The
+    /// Two little hearts, the character count (out of 1,000 without My Day Pro, with a crown to
+    /// unlock unlimited writing once the page is nearly full; with Pro, no limit: "1,234 / ∞"),
+    /// and the yellow 🎙 to speak instead of typing. The
     /// 🎙 sits bottom right, where the thumb rests and where the keyboard's own dictation key is;
     /// what is said is added after what is already written. Journal pauses are longer, so it
     /// waits 4 seconds of quiet before it stops by itself.
@@ -800,15 +812,42 @@ struct JournalComposer: View {
             .foregroundStyle(Color(hex: 0xFF8CC6))
             .accessibilityHidden(true)
             Spacer(minLength: 8)
-            Text("\(text.count)/\(Self.textLimit)")
-                .font(.rounded(.footnote, weight: .bold))
-                .monospacedDigit()
-                .foregroundStyle(JournalStyle.soft)
+            writingCount
             DictationButton(text: $text, diameter: 44, isListening: $isDictating, look: .yellow,
                             pauseAfterSpeech: .seconds(4)) {
                 headingFocused = false
                 textFocused = false
             }
+        }
+    }
+
+    @ViewBuilder
+    private var writingCount: some View {
+        if pro.isActive {
+            Text("\(text.count.formatted()) / ∞")
+                .font(.rounded(.footnote, weight: .bold))
+                .monospacedDigit()
+                .foregroundStyle(JournalStyle.soft)
+                .accessibilityLabel("\(text.count) characters, no limit")
+        } else {
+            let nearlyFull = text.count >= Self.textLimit * 9 / 10
+            Button {
+                proOffer = .unlimitedWriting
+            } label: {
+                HStack(spacing: 5) {
+                    if nearlyFull {
+                        ProCrown(size: 16)
+                    }
+                    Text("\(text.count)/\(Self.textLimit)")
+                        .font(.rounded(.footnote, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(nearlyFull ? JournalStyle.pink : JournalStyle.soft)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(!nearlyFull)
+            .accessibilityLabel("\(text.count) of \(Self.textLimit) characters")
+            .accessibilityHint(nearlyFull ? "Write without a limit with My Day Pro" : "")
         }
     }
 

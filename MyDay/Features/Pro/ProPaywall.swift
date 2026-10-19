@@ -41,6 +41,7 @@ private struct ProPaywallHeader: View {
 
     private static let perks = [
         Perk(emoji: "💝", text: "Daily Reflections: gratitude, highlights, little wins and tomorrow"),
+        Perk(emoji: "✍️", text: "Unlimited writing on every journal page"),
         Perk(emoji: "📸", text: "Photos on your to-dos and journal pages"),
         Perk(emoji: "🎙️", text: "Voice notes in your journal"),
         Perk(emoji: "⭐️", text: "All 30 moods and journal prompts"),

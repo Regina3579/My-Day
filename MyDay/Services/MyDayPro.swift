@@ -88,6 +88,7 @@ final class MyDayPro {
 /// What My Day Pro unlocks, each with the words of its "Unlock …" pop-up.
 enum ProFeature: String, Identifiable {
     case reminderSounds, taskPhotos, moreMoods, prompts, journalPhotos, voiceNotes, stickers, reflections, themes
+    case unlimitedWriting
 
     var id: String { rawValue }
 
@@ -103,6 +104,7 @@ enum ProFeature: String, Identifiable {
         case .stickers: "Unlock All Stickers"
         case .reflections: "Unlock Daily Reflections"
         case .themes: "Unlock Journal Themes"
+        case .unlimitedWriting: "Unlock Unlimited Writing"
         }
     }
 
@@ -125,6 +127,8 @@ enum ProFeature: String, Identifiable {
             "Decorate your pages with every sticker collection: hearts, nature, food, cute animals and more."
         case .reflections:
             "Make your journal even more meaningful with gratitude, highlights, little wins, and hopes for tomorrow."
+        case .unlimitedWriting:
+            "A free page holds 1,000 characters. With My Day Pro, write as much as your heart wants, every single day."
         case .themes:
             "Dress your journal in Heavenly Angel Wishes 👼, Enchanted Fairy Garden 🧚, Rainbow Glow Unicorn 🦄, Rose Gold Elegance 🌹, Cozy Rainy Day ☔ and every new theme as it arrives."
         }
