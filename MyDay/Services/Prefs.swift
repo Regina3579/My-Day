@@ -42,6 +42,9 @@ enum Prefs {
     static let taskCompletionSound = "taskCompletionSoundOn"
     /// Settings → Sounds & Haptics → Mood Star Sound.
     static let moodStarSound = "moodStarSoundOn"
+    /// Settings → Sounds & Haptics → Reminder Sound: the `ReminderSound` a to-do's reminder
+    /// arrives with (Gentle Bloom when unset).
+    static let reminderSound = "reminderSound"
     /// The sticker picker's tab last opened (a `StickerCategory` id).
     static let stickerCategory = "journalStickerCategory"
     static let journalLock = "journalLockEnabled"

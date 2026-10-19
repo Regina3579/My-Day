@@ -64,27 +64,25 @@ enum ReminderCenter {
 
     private static func identifier(for taskID: UUID) -> String { "task-\(taskID.uuidString)" }
 
-    /// "Gentle Bloom" (`gentle_bloom.wav`, made by `scripts/make_sounds.py`): a 3-second music-box
-    /// melody that iOS plays when a to-do's reminder arrives. Apple's rules for a custom sound:
-    /// Linear PCM in a WAV (or AIFF, CAF), under 30 seconds, in the main bundle or in the app's
-    /// Library/Sounds folder.
-    static let taskSoundName = UNNotificationSoundName("gentle_bloom.wav")
-
+    /// The Reminder Sound chosen in Settings (Gentle Bloom, a 3-second music box, until another is
+    /// chosen), which iOS plays when a to-do's reminder arrives. A reminder keeps the sound it was
+    /// scheduled with, so choosing another reschedules them all (`syncAll`).
     private static var taskSound: UNNotificationSound {
-        installTaskSoundIfNeeded()
-        return UNNotificationSound(named: taskSoundName)
+        let sound = ReminderSound.chosen
+        installIfNeeded(sound)
+        return UNNotificationSound(named: UNNotificationSoundName(sound.fileName))
     }
 
     /// iOS looks for the sound at the bundle's top level. Should a build put it in a Sounds folder
     /// instead, a copy goes to Library/Sounds, where iOS also looks.
-    private static func installTaskSoundIfNeeded() {
+    private static func installIfNeeded(_ sound: ReminderSound) {
         let files = FileManager.default
-        guard Bundle.main.url(forResource: "gentle_bloom", withExtension: "wav") == nil,
-              let source = Bundle.main.url(forResource: "gentle_bloom", withExtension: "wav", subdirectory: "Sounds"),
+        guard Bundle.main.url(forResource: sound.rawValue, withExtension: "wav") == nil,
+              let source = Bundle.main.url(forResource: sound.rawValue, withExtension: "wav", subdirectory: "Sounds"),
               let library = files.urls(for: .libraryDirectory, in: .userDomainMask).first
         else { return }
         let folder = library.appendingPathComponent("Sounds", isDirectory: true)
-        let target = folder.appendingPathComponent(taskSoundName.rawValue)
+        let target = folder.appendingPathComponent(sound.fileName)
         guard !files.fileExists(atPath: target.path) else { return }
         try? files.createDirectory(at: folder, withIntermediateDirectories: true)
         try? files.copyItem(at: source, to: target)

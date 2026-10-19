@@ -170,6 +170,8 @@ enum DebugLaunchRoute {
     @MainActor private static var journalStickers = false
     /// Scroll Settings to Sounds & Haptics ("settings-sounds").
     @MainActor private static var settingsSounds = false
+    /// Open Settings → Reminder Sound ("settings-reminder-sound").
+    @MainActor private static var settingsReminderSound = false
     /// Scroll Settings to the journal lock ("settings-lock"), or open Lock My Journal
     /// ("settings-lock-choose").
     @MainActor private static var settingsLock = false
@@ -242,6 +244,12 @@ enum DebugLaunchRoute {
     static func takeSettingsSounds() -> Bool {
         defer { settingsSounds = false }
         return settingsSounds
+    }
+
+    @MainActor
+    static func takeSettingsReminderSound() -> Bool {
+        defer { settingsReminderSound = false }
+        return settingsReminderSound
     }
 
     @MainActor
@@ -448,6 +456,9 @@ enum DebugLaunchRoute {
         case "settings": router.tab = .settings
         case "settings-sounds":
             settingsSounds = true
+            router.tab = .settings
+        case "settings-reminder-sound":
+            settingsReminderSound = true
             router.tab = .settings
         case "journal-lock-pattern":
             JournalLock.enable(.pattern, secret: "0-3-6-7-8")

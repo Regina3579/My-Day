@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.haptics) private var haptics = true
     @AppStorage(Prefs.taskCompletionSound) private var completionSound = true
     @AppStorage(Prefs.moodStarSound) private var moodStarSound = true
+    @AppStorage(Prefs.reminderSound) private var reminderSound: ReminderSound = .gentleBloom
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
     @AppStorage(Prefs.didShowICloudTip) private var didShowICloudTip = false
@@ -29,6 +30,10 @@ struct SettingsView: View {
     @State private var lockGoal: JournalLockSetupSheet.Goal?
     @State private var confirmClearDone = false
     @State private var confirmEraseAll = false
+    #if DEBUG
+    /// `settings-reminder-sound`: Reminder Sound opened for the screenshot.
+    @State private var opensReminderSound = false
+    #endif
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -91,29 +96,22 @@ struct SettingsView: View {
                     Toggle(isOn: $haptics) {
                         Label("Gentle haptics", systemImage: "hand.tap.fill")
                     }
-                    Button {
-                        SoundEffects.play(.reminder)
+                    NavigationLink {
+                        ReminderSoundView()
                     } label: {
                         HStack {
-                            Label {
-                                Text("Reminder Sound")
-                                    .foregroundStyle(Palette.ink)
-                            } icon: {
-                                Image(systemName: "music.note")
-                            }
+                            Label("Reminder Sound", systemImage: "music.note")
+                                .layoutPriority(1)
                             Spacer()
-                            Text("Gentle Bloom")
+                            Text(reminderSound.title)
                                 .foregroundStyle(Palette.inkSoft)
-                            Image(systemName: "play.circle.fill")
-                                .foregroundStyle(Palette.hotPink)
+                                .lineLimit(1)
                         }
                     }
-                    .accessibilityLabel("Reminder Sound, Gentle Bloom")
-                    .accessibilityHint("Plays the sound")
                 } header: {
                     Text("Sounds & Haptics")
                 } footer: {
-                    Text("A soft “ting” when you tick off a to-do or a priority, a little chime when the day's last one is done, and a bubbly “pop… ting” when you pick a mood star in your journal. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music. To-do reminders arrive with “Gentle Bloom”, a 3-second music-box melody: tap Reminder Sound to hear it.")
+                    Text("A soft “ting” when you tick off a to-do or a priority, a little chime when the day's last one is done, and a bubbly “pop… ting” when you pick a mood star in your journal. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music. To-do reminders arrive with your Reminder Sound: tap it to hear all nine and choose one.")
                 }
 
                 Section {
@@ -212,12 +210,17 @@ struct SettingsView: View {
                 // `settings-sounds`, `settings-lock`, `settings-icloud`, `settings-tips` and
                 // `settings-rate`: show Sounds & Haptics, the journal lock, iCloud, Tips or Rate
                 // My Day for the screenshot;
-                // `settings-lock-choose` opens "Lock My Journal". Run when the route turns to
-                // Settings, as this tab may start before the route is read.
+                // `settings-lock-choose` opens "Lock My Journal" and `settings-reminder-sound`
+                // opens Reminder Sound. Run when the route turns to Settings, as this tab may
+                // start before the route is read.
                 guard router.tab == .settings else { return }
                 if DebugLaunchRoute.takeSettingsLockChoose() {
                     try? await Task.sleep(for: .seconds(1))
                     lockGoal = .turnOn
+                }
+                if DebugLaunchRoute.takeSettingsReminderSound() {
+                    try? await Task.sleep(for: .seconds(1))
+                    opensReminderSound = true
                 }
                 let showsICloud = DebugLaunchRoute.takeSettingsICloud()
                 if showsICloud {
@@ -235,6 +238,9 @@ struct SettingsView: View {
                 guard let anchor else { return }
                 try? await Task.sleep(for: .seconds(1))
                 reader.scrollTo(anchor, anchor: .top)
+            }
+            .navigationDestination(isPresented: $opensReminderSound) {
+                ReminderSoundView()
             }
             #endif
         }
