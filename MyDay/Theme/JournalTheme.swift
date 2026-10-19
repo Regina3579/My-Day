@@ -9,6 +9,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
     case enchantedFairyGarden
     case rainbowGlowUnicorn
     case roseGoldElegance
+    case cozyRainyDay
 
     var id: String { rawValue }
 
@@ -19,6 +20,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
         case .enchantedFairyGarden: "Enchanted Fairy Garden 🧚"
         case .rainbowGlowUnicorn: "Rainbow Glow Unicorn 🦄"
         case .roseGoldElegance: "Rose Gold Elegance 🌹"
+        case .cozyRainyDay: "Cozy Rainy Day ☔"
         }
     }
 
@@ -30,6 +32,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
         case .enchantedFairyGarden: "Fairies, butterflies and glowing lanterns in a flower garden."
         case .rainbowGlowUnicorn: "Little unicorns, rainbows, clouds and glowing hearts."
         case .roseGoldElegance: "Roses, pearls and rose-gold frames on blush pink."
+        case .cozyRainyDay: "Rain on the window, warm lanterns, cocoa and sleepy pets."
         }
     }
 
@@ -41,6 +44,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
         case .enchantedFairyGarden: "ThemePreviewFairyGarden"
         case .rainbowGlowUnicorn: "ThemePreviewUnicorn"
         case .roseGoldElegance: "ThemePreviewRoseGold"
+        case .cozyRainyDay: "ThemePreviewRainy"
         }
     }
 

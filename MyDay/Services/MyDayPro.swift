@@ -126,7 +126,7 @@ enum ProFeature: String, Identifiable {
         case .reflections:
             "Make your journal even more meaningful with gratitude, highlights, little wins, and hopes for tomorrow."
         case .themes:
-            "Dress your journal in Heavenly Angel Wishes 👼, Enchanted Fairy Garden 🧚, Rainbow Glow Unicorn 🦄, Rose Gold Elegance 🌹 and every new theme as it arrives."
+            "Dress your journal in Heavenly Angel Wishes 👼, Enchanted Fairy Garden 🧚, Rainbow Glow Unicorn 🦄, Rose Gold Elegance 🌹, Cozy Rainy Day ☔ and every new theme as it arrives."
         }
     }
 }

@@ -3,12 +3,12 @@ import SwiftUI
 /// What each journal theme brings to My Journal Pages' words and colours.
 extension JournalTheme {
     /// The headings ("My week in moods", "October 2026"): rounded in Blush Blossom, Rainbow Glow
-    /// Unicorn and Rose Gold Elegance, a bold serif in Heavenly Angel Wishes and Enchanted Fairy
-    /// Garden.
+    /// Unicorn, Rose Gold Elegance and Cozy Rainy Day, a bold serif in Heavenly Angel Wishes and
+    /// Enchanted Fairy Garden.
     func headingFont(_ style: Font.TextStyle) -> Font {
         switch self {
         case .heavenlyAngelWishes, .enchantedFairyGarden: .system(style, design: .serif, weight: .bold)
-        case .blushBlossom, .rainbowGlowUnicorn, .roseGoldElegance: .rounded(style, weight: .heavy)
+        case .blushBlossom, .rainbowGlowUnicorn, .roseGoldElegance, .cozyRainyDay: .rounded(style, weight: .heavy)
         }
     }
 
@@ -20,6 +20,7 @@ extension JournalTheme {
         case .enchantedFairyGarden: FairyStyle.title
         case .rainbowGlowUnicorn: UnicornStyle.title
         case .roseGoldElegance: RoseStyle.title
+        case .cozyRainyDay: RainyStyle.title
         }
     }
 
@@ -31,6 +32,7 @@ extension JournalTheme {
         case .enchantedFairyGarden: FairyStyle.month
         case .rainbowGlowUnicorn: UnicornStyle.month
         case .roseGoldElegance: RoseStyle.month
+        case .cozyRainyDay: RainyStyle.month
         }
     }
 
@@ -42,6 +44,7 @@ extension JournalTheme {
         case .enchantedFairyGarden: FairyStyle.base
         case .rainbowGlowUnicorn: UnicornStyle.base
         case .roseGoldElegance: RoseStyle.base
+        case .cozyRainyDay: RainyStyle.base
         }
     }
 
@@ -53,6 +56,13 @@ extension JournalTheme {
         case .enchantedFairyGarden: ("FairyButterflyPair", CGSize(width: 52, height: 36))
         case .rainbowGlowUnicorn: ("UnicornMonth", CGSize(width: 60, height: 40))
         case .roseGoldElegance: ("RoseMonthHearts", CGSize(width: 62, height: 36))
+        case .cozyRainyDay: ("RainyMonthUmbrella", CGSize(width: 50, height: 44))
         }
+    }
+
+    /// The margin at the sides of My Journal Pages: wider in Cozy Rainy Day, so the window
+    /// shows beside the cards, as in its design.
+    var sideInset: CGFloat {
+        self == .cozyRainyDay ? 26 : 16
     }
 }

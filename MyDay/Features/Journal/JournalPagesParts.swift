@@ -43,6 +43,8 @@ private struct JournalPagesCard: ViewModifier {
             card.background(UnicornCardBackground(radius: radius))
         case .roseGoldElegance:
             card.background(RoseCardBackground(radius: radius))
+        case .cozyRainyDay:
+            card.background(RainyCardBackground(radius: radius))
         case .blushBlossom:
             card
                 .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
@@ -118,6 +120,16 @@ struct WriteNewPageRow: View {
             .padding(.trailing, 10)
             .padding(.vertical, 10)
             .background(RoseCardBackground(radius: 30))
+        case .cozyRainyDay:
+            // Cozy Rainy Day: the bunny under her pink umbrella.
+            HStack(spacing: 2) {
+                Image("RainyBunny")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 92, height: 76)
+                    .accessibilityHidden(true)
+                button
+            }
         case .rainbowGlowUnicorn:
             HStack(spacing: 0) {
                 Image("UnicornWrite")
@@ -377,6 +389,9 @@ struct MoodWeekCard: View {
                         .frame(width: 40, height: 40)
                 } else if theme == .roseGoldElegance {
                     RoseEmptyStar()
+                } else if theme == .cozyRainyDay {
+                    RainyCloudFace(day: day)
+                        .frame(width: 46, height: 40)
                 } else {
                     Image(systemName: "star.fill")
                         .font(.system(size: 30))
@@ -692,6 +707,7 @@ struct JournalEntryCard: View {
             case .enchantedFairyGarden: fairyBackground
             case .rainbowGlowUnicorn: unicornBackground
             case .roseGoldElegance: roseBackground
+            case .cozyRainyDay: rainyBackground
             case .blushBlossom: RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill)
             }
         }
@@ -753,6 +769,28 @@ struct JournalEntryCard: View {
                         .accessibilityHidden(true)
                 }
             }
+    }
+
+    /// Cozy Rainy Day: a cosy rainy scene on the card's right, fading in from the left (a puppy
+    /// asleep under an umbrella with cocoa, or a kitten asleep on books among hydrangeas, day by
+    /// day).
+    private var rainyBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+        return ZStack(alignment: .trailing) {
+            shape.fill(RainyStyle.cardFill)
+            if !inTrash {
+                Image(entry.date.dayNumber.isMultiple(of: 2) ? "RainySceneCocoa" : "RainySceneKitten")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 128)
+                    .frame(maxHeight: .infinity)
+                    .clipped()
+                    .accessibilityHidden(true)
+            }
+        }
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Color.white, lineWidth: 1.5))
+        .shadow(color: RainyStyle.glow.opacity(0.3), radius: 9, x: 0, y: 3)
     }
 
     /// Rose Gold Elegance: a rose-gold frame, with roses, leaves and a bow in the bottom corner.
@@ -959,8 +997,46 @@ struct JournalDateTile: View {
         case .enchantedFairyGarden: fairy(ribbon)
         case .rainbowGlowUnicorn: unicorn(ribbon)
         case .roseGoldElegance: roseGold(ribbon)
+        case .cozyRainyDay: rainy(ribbon)
         case .blushBlossom: blush(ribbon)
         }
+    }
+
+    /// Cozy Rainy Day: an umbrella over the date (pink, blue or purple, day by day) instead of
+    /// the bow.
+    private func rainy(_ ribbon: Ribbon) -> some View {
+        VStack(spacing: 0) {
+            Text(date.formatted(.dateTime.day()))
+                .font(.rounded(.title, weight: .heavy))
+                .foregroundStyle(Palette.berry)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(.rounded(.subheadline, weight: .heavy))
+                .foregroundStyle(JournalPagesStyle.weekday)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.top, 16)
+        .frame(width: 64, height: 88)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white, ribbon.fill], startPoint: .top, endPoint: .bottom))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(ribbon.edge, lineWidth: 1.5)
+        )
+        .overlay(alignment: .top) {
+            Image(ribbon == .pink ? "RainyUmbrellaPink" : ribbon == .purple ? "RainyUmbrellaPurple" : "RainyUmbrellaBlue")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 74, height: 42)
+                .offset(x: 2, y: -20)
+                .accessibilityHidden(true)
+        }
+        .padding(.top, 14)
+        .shadow(color: ribbon.edge.opacity(0.35), radius: 4, x: 0, y: 2)
     }
 
     /// Rose Gold Elegance: the ribbon bow on a tile framed in rose gold, with a little heart at
@@ -1277,12 +1353,17 @@ struct JournalSearchBar: View {
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel(filterCount > 0 ? "Filter, \(filterCount) on" : "Filter")
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, theme.sideInset)
         .padding(.top, 10)
         .padding(.bottom, 6)
         .overlay(alignment: .bottom) {
             if theme == .roseGoldElegance {
                 RoseSearchBarTrim()
+            }
+        }
+        .background(alignment: .bottom) {
+            if theme == .cozyRainyDay {
+                RainySearchBarTrim()
             }
         }
         .background(alignment: .bottom) {
