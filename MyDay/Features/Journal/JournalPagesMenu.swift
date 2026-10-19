@@ -13,6 +13,8 @@ struct JournalPagesMenu: View {
     }
 
     let items: [Item]
+    /// Where Journal Theme is on screen (for its first-time tip).
+    var onThemeRowFrame: ((CGRect) -> Void)?
 
     private static let plum = Color(hex: 0x6B1442)
     private static let gold = LinearGradient(colors: [Color(hex: 0xF6D9A6), Color(hex: 0xE2A76B), Color(hex: 0xF4CF98),
@@ -89,6 +91,9 @@ struct JournalPagesMenu: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle(scale: 0.97))
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            if item.art == "JournalMenuTheme" { onThemeRowFrame?(frame) }
+        }
         .accessibilityLabel(item.title)
     }
 

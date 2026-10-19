@@ -45,6 +45,12 @@ struct JournalPagesHome: View {
     @State private var confirmEmptyTrash = false
     @State private var choosesTheme = false
     @State private var showsMenu = false
+    @AppStorage(Prefs.didShowJournalMenuTip) private var didShowMenuTip = false
+    @AppStorage(Prefs.didShowJournalThemeTip) private var didShowThemeTip = false
+    @State private var tip: JournalMenuTip.Kind?
+    /// Where ⋮ and the menu's Journal Theme are on screen, for the tips.
+    @State private var moreFrame = CGRect.zero
+    @State private var themeRowFrame = CGRect.zero
     @FocusState private var searchFocused: Bool
     /// The opening picture shows each time the journal opens (after the lock, when it is on).
     #if DEBUG
@@ -79,6 +85,8 @@ struct JournalPagesHome: View {
         }
         .environment(\.journalTheme, theme)
         .overlay(alignment: .topTrailing) { menuCard }
+        .overlay { menuTips }
+        .task(id: isOpening) { await offerMenuTip() }
         .overlay {
             if isOpening {
                 JournalOpeningView(frozenAt: debugOpeningMoment) {
@@ -437,11 +445,12 @@ struct JournalPagesHome: View {
     /// ⋮: opens (or closes) the menu card.
     private var moreMenu: some View {
         Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showsMenu.toggle() }
+            if showsMenu { closeMenu() } else { openMenu() }
             Haptics.tap()
         } label: {
             Image(uiImage: PriorityMoreSymbol.image)
                 .foregroundStyle(JournalStyle.pink)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { moreFrame = $0 }
         }
         .accessibilityLabel("More")
     }
@@ -456,7 +465,7 @@ struct JournalPagesHome: View {
                     .ignoresSafeArea()
                     .onTapGesture { closeMenu() }
                     .accessibilityHidden(true)
-                JournalPagesMenu(items: menuItems)
+                JournalPagesMenu(items: menuItems) { themeRowFrame = $0 }
                     .padding(.top, 30)
                     .padding(.trailing, 12)
                     .transition(.scale(scale: 0.85, anchor: .topTrailing).combined(with: .opacity))
@@ -489,8 +498,62 @@ struct JournalPagesHome: View {
         ]
     }
 
+    private func openMenu() {
+        if tip == .menu {
+            didShowMenuTip = true
+            withAnimation(.easeOut(duration: 0.2)) { tip = nil }
+        }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showsMenu = true }
+        // The first time the menu opens, the Journal Themes tip points at Journal Theme.
+        guard !didShowThemeTip else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(0.45))
+            if showsMenu, !didShowThemeTip, themeRowFrame != .zero { tip = .theme }
+        }
+    }
+
     private func closeMenu() {
+        if tip == .theme {
+            didShowThemeTip = true
+            tip = nil
+        }
         withAnimation(.easeOut(duration: 0.18)) { showsMenu = false }
+    }
+
+    // MARK: First-time tips
+
+    /// "More options here!", once, a moment after the journal opens (when nothing else is open).
+    private func offerMenuTip() async {
+        guard !isOpening, !didShowMenuTip else { return }
+        try? await Task.sleep(for: .seconds(0.8))
+        guard !Task.isCancelled, !isOpening, !didShowMenuTip, !showsMenu, !isFiltering, !choosesTheme,
+              moreFrame != .zero else { return }
+        tip = .menu
+    }
+
+    @ViewBuilder
+    private var menuTips: some View {
+        if let tip {
+            GeometryReader { proxy in
+                let origin = proxy.frame(in: .global).origin
+                let frame = tip == .menu ? moreFrame : themeRowFrame
+                JournalMenuTip(kind: tip, target: frame.offsetBy(dx: -origin.x, dy: -origin.y), size: proxy.size) {
+                    if tip == .menu {
+                        openMenu()
+                    } else {
+                        didShowThemeTip = true
+                        self.tip = nil
+                        closeMenu()
+                        choosesTheme = true
+                    }
+                } onDismiss: {
+                    if tip == .menu { didShowMenuTip = true } else { didShowThemeTip = true }
+                    withAnimation(.easeOut(duration: 0.2)) { self.tip = nil }
+                }
+            }
+            .ignoresSafeArea()
+            .transition(.opacity)
+        }
     }
 
     private func openCalendar() {
@@ -514,7 +577,7 @@ struct JournalPagesHome: View {
     private func applyDebugRoute(_ reader: ScrollViewProxy) async {
         if DebugLaunchRoute.takeJournalMenu() {
             try? await Task.sleep(for: .seconds(0.6))
-            showsMenu = true
+            openMenu()
             return
         }
         if DebugLaunchRoute.takeJournalPage(), let newest = live.first {

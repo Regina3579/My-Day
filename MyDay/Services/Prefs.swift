@@ -21,6 +21,8 @@ enum Prefs {
     /// Set once the first-time "Not sure what to write?" tip has been shown on the journal's
     /// writing page, pointing at Get a Prompt.
     static let didShowPromptTip = "didShowJournalPromptTip"
+    static let didShowJournalMenuTip = "didShowJournalMenuTip"
+    static let didShowJournalThemeTip = "didShowJournalThemeTip"
     /// Set once the first-time "Task Reminders" tip has been shown on a to-do's Task Details,
     /// pointing at Reminder.
     static let didShowReminderTip = "didShowTaskReminderTip"

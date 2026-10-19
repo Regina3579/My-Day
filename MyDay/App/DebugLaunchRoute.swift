@@ -422,6 +422,8 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(arguments[index + 1] != "todos-photo-tip", forKey: Prefs.didShowPhotoTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-mood-tip", forKey: Prefs.didShowMoodTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
+        UserDefaults.standard.set(arguments[index + 1] != "journal-menu-tip", forKey: Prefs.didShowJournalMenuTip)
+        UserDefaults.standard.set(arguments[index + 1] != "journal-theme-tip", forKey: Prefs.didShowJournalThemeTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
         UserDefaults.standard.set(arguments[index + 1] != "settings-icloud-tip", forKey: Prefs.didShowICloudTip)
         // Only the `heavenly-`, `fairy-`, `unicorn-`, `rose-`, `rainy-` and `candy-` routes dress the
@@ -466,8 +468,10 @@ enum DebugLaunchRoute {
             let name = arguments[index + 1].dropFirst("journal-".count)
             journalShelf = name == "pages" ? JournalShelf.all.rawValue : String(name)
             router.open(.journal)
-        case "journal-menu":
+        case "journal-menu", "journal-theme-tip":
             journalMenu = true
+            router.open(.journal)
+        case "journal-menu-tip":
             router.open(.journal)
         case "journal-filter":
             journalShelf = JournalShelf.all.rawValue
