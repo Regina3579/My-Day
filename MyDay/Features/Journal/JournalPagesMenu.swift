@@ -38,7 +38,7 @@ struct JournalPagesMenu: View {
         .padding(.horizontal, 8)
         .padding(.top, 16)
         .padding(.bottom, 8)
-        .frame(width: 262)
+        .frame(width: 290)
         .background(card)
         .overlay(alignment: .top) {
             Image("JournalMenuBow")
@@ -70,8 +70,8 @@ struct JournalPagesMenu: View {
                 Text(item.title)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(Self.plum)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: 2)
                 hearts
