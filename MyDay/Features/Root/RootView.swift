@@ -6,6 +6,11 @@ import StoreKit
 /// Hosts the four tabs, the floating tab bar (hidden under full-screen pages), the Quick Add
 /// menu, the side menu, the "Enjoying My Day?" rating card and the app-wide sheets.
 struct RootView: View {
+    @AppStorage(Prefs.didShowQuickAddTip) private var didShowQuickAddTip = false
+    @State private var showsQuickAddTip = false
+    /// Where Add Journal and the Quick Add button are on screen, for the tip.
+    @State private var journalChipFrame = CGRect.zero
+    @State private var quickAddButtonFrame = CGRect.zero
     @Environment(Router.self) private var router
     @Environment(AppState.self) private var appState
     @Environment(DataStore.self) private var store
@@ -173,7 +178,18 @@ struct RootView: View {
 
     private func quickAddLayer(aboveBottom: CGFloat) -> some View {
         ZStack(alignment: .bottomTrailing) {
-            if router.isQuickAddOpen {
+            if router.isQuickAddOpen, showsQuickAddTip {
+                GeometryReader { proxy in
+                    let origin = proxy.frame(in: .global).origin
+                    QuickAddTip(journalChip: journalChipFrame.offsetBy(dx: -origin.x, dy: -origin.y),
+                                button: quickAddButtonFrame.offsetBy(dx: -origin.x, dy: -origin.y),
+                                size: proxy.size) {
+                        setQuickAdd(open: false)
+                    }
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            } else if router.isQuickAddOpen {
                 // Tapping anywhere outside the menu closes it.
                 Color.black.opacity(0.15)
                     .ignoresSafeArea()
@@ -194,18 +210,33 @@ struct RootView: View {
                             router.writeInJournal(on: .now, context: modelContext,
                                                   isUnlocked: appState.isJournalUnlocked)
                         }
-                    )
+                    ) { journalChipFrame = $0 }
                     .transition(.scale(scale: 0.4, anchor: .bottomTrailing).combined(with: .opacity))
                 }
                 QuickAddButton(isOpen: router.isQuickAddOpen) {
                     setQuickAdd(open: !router.isQuickAddOpen)
                 }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { quickAddButtonFrame = $0 }
             }
             .padding(.trailing, 12)
             .padding(.bottom, aboveBottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: router.isQuickAddOpen, initial: true) { _, open in
+            if open {
+                // The first time Quick Add opens on My Day, its tip points at the choices.
+                guard !didShowQuickAddTip else { return }
+                Task {
+                    try? await Task.sleep(for: .seconds(0.4))
+                    guard router.isQuickAddOpen, !didShowQuickAddTip, journalChipFrame != .zero else { return }
+                    withAnimation(.easeOut(duration: 0.25)) { showsQuickAddTip = true }
+                }
+            } else if showsQuickAddTip {
+                didShowQuickAddTip = true
+                showsQuickAddTip = false
+            }
+        }
     }
 
     private func setQuickAdd(open: Bool) {

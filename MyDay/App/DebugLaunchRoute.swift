@@ -423,6 +423,7 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(arguments[index + 1] != "journal-mood-tip", forKey: Prefs.didShowMoodTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-menu-tip", forKey: Prefs.didShowJournalMenuTip)
+        UserDefaults.standard.set(arguments[index + 1] != "quickadd-tip", forKey: Prefs.didShowQuickAddTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-theme-tip", forKey: Prefs.didShowJournalThemeTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
         UserDefaults.standard.set(arguments[index + 1] != "settings-icloud-tip", forKey: Prefs.didShowICloudTip)
@@ -437,7 +438,7 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(theme.rawValue, forKey: Prefs.journalTheme)
 
         switch arguments[index + 1] {
-        case "quickadd": router.isQuickAddOpen = true
+        case "quickadd", "quickadd-tip": router.isQuickAddOpen = true
         case "menu": router.isMenuOpen = true
         case "todos": router.open(.todos(today))
         case "priority": router.open(.priority(today))

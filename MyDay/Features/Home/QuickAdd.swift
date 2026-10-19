@@ -36,12 +36,15 @@ struct QuickAddMenu: View {
     let onTask: () -> Void
     let onPriority: () -> Void
     let onJournal: () -> Void
+    /// Where Add Journal is on screen (for the first-time tip).
+    var onJournalFrame: ((CGRect) -> Void)?
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
             QuickAddChip(kind: .task, action: onTask)
             QuickAddChip(kind: .priority, action: onPriority)
             QuickAddChip(kind: .journal, action: onJournal)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { onJournalFrame?($0) }
         }
         .overlay(alignment: .bottomTrailing) {
             // Little pointer towards the + button.

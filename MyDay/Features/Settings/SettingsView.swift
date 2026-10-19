@@ -354,15 +354,15 @@ struct SettingsView: View {
             && !router.isMenuOpen && lockGoal == nil && !confirmClearDone && !confirmEraseAll && !rating.isShowing
     }
 
-    /// Marks the nine first-time tips as not seen and opens today's To-Dos, where the first three
+    /// Marks the ten first-time tips as not seen and opens today's To-Dos, where the first three
     /// come one at a time (the Reminder tip waits for the next to-do opened, the moods and Get a
-    /// Prompt tips for the next journal page, the ⋮ menu's two tips for the next visit to My Journal
+    /// Prompt tips for the next journal page, the Quick Add tip for the next time Quick Add opens, the ⋮ menu's two tips for the next visit to My Journal
     /// Pages, the iCloud tip for the next visit here). My Day
     /// goes back to its home screen first, so To-Dos opens afresh even when it was already open there.
     private func showTipsAgain() {
         for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip,
                     Prefs.didShowPromptTip, Prefs.didShowReminderTip, Prefs.didShowICloudTip,
-                    Prefs.didShowJournalMenuTip, Prefs.didShowJournalThemeTip] {
+                    Prefs.didShowJournalMenuTip, Prefs.didShowJournalThemeTip, Prefs.didShowQuickAddTip] {
             UserDefaults.standard.set(false, forKey: key)
         }
         Haptics.tap()

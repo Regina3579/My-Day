@@ -23,16 +23,20 @@ struct TipArrow: View {
     let control2: CGPoint
     let end: CGPoint
     var lineWidth: CGFloat = 6
+    var fill = TipArrow.hotPink
 
-    private static let fill = LinearGradient(colors: [Color(hex: 0xFF7BC0), Color(hex: 0xF2148E)],
-                                             startPoint: .top, endPoint: .bottom)
+    static let hotPink = LinearGradient(colors: [Color(hex: 0xFF7BC0), Color(hex: 0xF2148E)],
+                                        startPoint: .top, endPoint: .bottom)
+    /// The softer pink of the Quick Add tip's arrow.
+    static let softPink = LinearGradient(colors: [Color(hex: 0xFFC6DF), Color(hex: 0xFF8DC1)],
+                                         startPoint: .top, endPoint: .bottom)
 
     var body: some View {
         ZStack {
             curve.stroke(Color.white, style: StrokeStyle(lineWidth: lineWidth + 4, lineCap: .round))
             head.stroke(Color.white, style: StrokeStyle(lineWidth: lineWidth + 4, lineCap: .round, lineJoin: .round))
-            curve.stroke(Self.fill, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-            head.stroke(Self.fill, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            curve.stroke(fill, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            head.stroke(fill, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
         }
         .shadow(color: Palette.hotPink.opacity(0.3), radius: 3, x: 0, y: 2)
         .allowsHitTesting(false)

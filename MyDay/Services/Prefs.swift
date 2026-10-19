@@ -22,6 +22,7 @@ enum Prefs {
     /// writing page, pointing at Get a Prompt.
     static let didShowPromptTip = "didShowJournalPromptTip"
     static let didShowJournalMenuTip = "didShowJournalMenuTip"
+    static let didShowQuickAddTip = "didShowQuickAddTip"
     static let didShowJournalThemeTip = "didShowJournalThemeTip"
     /// Set once the first-time "Task Reminders" tip has been shown on a to-do's Task Details,
     /// pointing at Reminder.
