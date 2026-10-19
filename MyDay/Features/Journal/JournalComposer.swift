@@ -156,7 +156,8 @@ struct JournalComposer: View {
     }
 
     static let maxPhotos = 6
-    static let textLimit = 1000
+    /// Words on a page without My Day Pro (Pro has no limit).
+    static let wordLimit = 1000
     static let headingLimit = 60
 
     let presentation: Presentation
@@ -198,7 +199,6 @@ struct JournalComposer: View {
     @State private var proOffer: ProFeature?
     /// Whether this page has already offered unlimited writing (once, when the free limit is
     /// first reached).
-    @State private var offeredUnlimitedWriting = false
     @State private var heroIsVisible = true
     @State private var toast: String?
     @FocusState private var headingFocused: Bool
@@ -287,16 +287,16 @@ struct JournalComposer: View {
                 loadPhotos(items)
             }
             .onChange(of: text) { old, new in
-                // Without My Day Pro, keep new writing within the limit (an older, longer page
-                // stays as it is) and, the first time, offer unlimited writing. Pro has no limit.
+                // Without My Day Pro, a page holds 1,000 words: writing past them stops at the
+                // 1,000th (an older, longer page keeps its words but can't grow), and every time
+                // it happens the Unlock Unlimited Writing pop-up appears. Pro has no limit.
                 guard !pro.isActive else { return }
-                if new.count > Self.textLimit, old.count <= Self.textLimit {
-                    text = String(new.prefix(Self.textLimit))
-                    if !offeredUnlimitedWriting {
-                        offeredUnlimitedWriting = true
-                        textFocused = false
-                        proOffer = .unlimitedWriting
-                    }
+                let words = JournalWords.count(new)
+                guard words > Self.wordLimit, words > JournalWords.count(old) else { return }
+                text = JournalWords.count(old) <= Self.wordLimit ? JournalWords.prefix(new, words: Self.wordLimit) : old
+                textFocused = false
+                if proOffer == nil {
+                    proOffer = .unlimitedWriting
                 }
             }
             .onChange(of: title) { old, new in
@@ -823,14 +823,15 @@ struct JournalComposer: View {
 
     @ViewBuilder
     private var writingCount: some View {
+        let words = JournalWords.count(text)
         if pro.isActive {
-            Text("\(text.count.formatted()) / ∞")
+            Text("\(words.formatted()) words / ∞")
                 .font(.rounded(.footnote, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(JournalStyle.soft)
-                .accessibilityLabel("\(text.count) characters, no limit")
+                .accessibilityLabel("\(words) words, no limit")
         } else {
-            let nearlyFull = text.count >= Self.textLimit * 9 / 10
+            let nearlyFull = words >= Self.wordLimit * 9 / 10
             Button {
                 proOffer = .unlimitedWriting
             } label: {
@@ -838,7 +839,7 @@ struct JournalComposer: View {
                     if nearlyFull {
                         ProCrown(size: 16)
                     }
-                    Text("\(text.count)/\(Self.textLimit)")
+                    Text("\(words)/\(Self.wordLimit.formatted()) words")
                         .font(.rounded(.footnote, weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(nearlyFull ? JournalStyle.pink : JournalStyle.soft)
@@ -846,7 +847,7 @@ struct JournalComposer: View {
             }
             .buttonStyle(.plain)
             .disabled(!nearlyFull)
-            .accessibilityLabel("\(text.count) of \(Self.textLimit) characters")
+            .accessibilityLabel("\(words) of \(Self.wordLimit) words")
             .accessibilityHint(nearlyFull ? "Write without a limit with My Day Pro" : "")
         }
     }
@@ -1457,5 +1458,41 @@ struct JournalDateSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(28)
+    }
+}
+
+/// Counting the words of a journal page (runs of letters, digits or marks between spaces and
+/// line breaks).
+enum JournalWords {
+    static func count(_ text: String) -> Int {
+        var words = 0
+        var inWord = false
+        for character in text {
+            if character.isWhitespace {
+                inWord = false
+            } else if !inWord {
+                inWord = true
+                words += 1
+            }
+        }
+        return words
+    }
+
+    /// The text up to the end of its `words`th word.
+    static func prefix(_ text: String, words limit: Int) -> String {
+        var words = 0
+        var inWord = false
+        for index in text.indices {
+            if text[index].isWhitespace {
+                inWord = false
+            } else if !inWord {
+                inWord = true
+                words += 1
+                if words > limit {
+                    return String(text[..<index])
+                }
+            }
+        }
+        return text
     }
 }
