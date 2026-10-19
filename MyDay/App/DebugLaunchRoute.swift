@@ -539,6 +539,11 @@ enum DebugLaunchRoute {
             // A free account's page: crowns on ＋, Get a Prompt, Add Photo and Voice Note.
             journalAnchor = "write"
             openTodaysPage(router, today: today, context: context)
+        case "pro-writing":
+            // A free account's page is full (1,000 words): Your Story Deserves More!
+            journalAnchor = "write"
+            proOffer = .unlimitedWriting
+            openTodaysPage(router, today: today, context: context)
         case "pro-reflections":
             // A free account taps a reflection: the page's own reflections stay, locked.
             journalAnchor = "save"

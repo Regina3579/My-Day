@@ -128,7 +128,7 @@ enum ProFeature: String, Identifiable {
         case .reflections:
             "Make your journal even more meaningful with gratitude, highlights, little wins, and hopes for tomorrow."
         case .unlimitedWriting:
-            "A free page holds 1,000 words. With My Day Pro, write as much as your heart wants, every single day."
+            "Every memory is worth telling. Unlock unlimited journal writing with My Day Pro! ✨"
         case .themes:
             "Dress your journal in Heavenly Angel Wishes 👼, Enchanted Fairy Garden 🧚, Rainbow Glow Unicorn 🦄, Rose Gold Elegance 🌹, Cozy Rainy Day ☔, Candy Cloud Kingdom 🍭 and every new theme as it arrives."
         }

@@ -37,7 +37,13 @@ struct ProUnlockCard: View {
                 .onTapGesture { close(then: onLater) }
                 .opacity(shown ? 1 : 0)
                 .accessibilityHidden(true)
-                card(place)
+                Group {
+                    if feature == .unlimitedWriting {
+                        storyCard(width: min(proxy.size.width * 0.9, 390))
+                    } else {
+                        card(place)
+                    }
+                }
                     .scaleEffect(shown ? 1 : 0.86)
                     .opacity(shown ? 1 : 0)
                     .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
@@ -64,6 +70,43 @@ struct ProUnlockCard: View {
             try? await Task.sleep(for: .seconds(0.18))
             action()
         }
+    }
+
+    // MARK: Your Story Deserves More!
+
+    /// The pop-up when a free page is full (1,000 words), from its design: the girl and her puppy
+    /// over a pink card with "My Day Pro", "Your Story Deserves More! 💖", "Every memory is worth
+    /// telling. Unlock unlimited journal writing with My Day Pro! ✨", **Unlock Pro 👑** and
+    /// **Maybe Later**. The whole card, words and buttons, is the design's own picture (cut out
+    /// and enlarged 4× with Real-ESRGAN), so its lettering is exactly the design's; the two
+    /// buttons are tappable where the picture shows them.
+    private func storyCard(width: CGFloat) -> some View {
+        // On the picture's own grid (719 × 1008 pixels): where the two buttons are.
+        let scale = width / 719
+        func spot(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> CGRect {
+            CGRect(x: x0 * scale, y: y0 * scale, width: (x1 - x0) * scale, height: (y1 - y0) * scale)
+        }
+        let unlock = spot(76, 780, 644, 887)
+        let later = spot(84, 902, 634, 982)
+        return Image("ProStoryCardArt")
+            .resizable()
+            .frame(width: width, height: 1008 * scale)
+            .accessibilityElement()
+            .accessibilityLabel("My Day Pro. Your Story Deserves More! Every memory is worth telling. Unlock unlimited journal writing with My Day Pro!")
+            .overlay(alignment: .topLeading) {
+                Button { close(then: onUnlock) } label: { Color.clear }
+                    .buttonStyle(StoryButtonStyle())
+                    .frame(width: unlock.width, height: unlock.height)
+                    .offset(x: unlock.minX, y: unlock.minY)
+                    .accessibilityLabel("Unlock Pro")
+            }
+            .overlay(alignment: .topLeading) {
+                Button { close(then: onLater) } label: { Color.clear }
+                    .buttonStyle(StoryButtonStyle())
+                    .frame(width: later.width, height: later.height)
+                    .offset(x: later.minX, y: later.minY)
+                    .accessibilityLabel("Maybe Later")
+            }
     }
 
     // MARK: The card
@@ -356,4 +399,15 @@ enum ProStyle {
     /// The small crown on a Pro button.
     static let crown = LinearGradient(colors: [Color(hex: 0xFFD95C), Color(hex: 0xF5A623)],
                                       startPoint: .top, endPoint: .bottom)
+}
+
+/// A button drawn in a picture: a soft white flash on it while it is pressed.
+private struct StoryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Capsule()
+            .fill(Color.white.opacity(configuration.isPressed ? 0.28 : 0.001))
+            .overlay(configuration.label)
+            .contentShape(Capsule())
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
 }
