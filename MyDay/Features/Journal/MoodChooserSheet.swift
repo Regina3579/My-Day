@@ -2,7 +2,8 @@ import SwiftUI
 
 /// "Choose your mood — How are you feeling today?", as in the design: the star hugging a
 /// heart, then all thirty little stars on pastel tiles (the page's six everyday moods too).
-/// Tap one, then Done.
+/// Tap one, then Done. Everyone sees all thirty; without My Day Pro the 24 beyond the page's
+/// six wear a small gold crown, and tapping one brings the My Day Pro pop-up.
 struct MoodChooserSheet: View {
     @Binding var mood: Mood
     @Binding var moodPicked: Bool
@@ -10,8 +11,10 @@ struct MoodChooserSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(MyDayPro.self) private var pro
     /// The star tapped here; the page takes it with Done.
     @State private var choice: Mood?
+    @State private var proOffer: ProFeature?
 
     init(mood: Binding<Mood>, moodPicked: Binding<Bool>, isToday: Bool) {
         _mood = mood
@@ -26,6 +29,11 @@ struct MoodChooserSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if !pro.isActive {
+                freeNote
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 8)
+            }
             ScrollView {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: columnCount),
                           spacing: 8) {
@@ -53,6 +61,47 @@ struct MoodChooserSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(32)
+        .proOffer($proOffer)
+    }
+
+    /// For a free account: which moods are free, and that the crowned ones come with Pro.
+    private var freeNote: some View {
+        Button {
+            proOffer = .moreMoods
+        } label: {
+            HStack(spacing: 10) {
+                ProCrown(size: 26)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("24 more moods with My Day Pro")
+                        .font(.rounded(.subheadline, weight: .heavy))
+                        .foregroundStyle(ProStyle.title)
+                    Text("Amazing, Happy, Calm, Sad, Stressed and Tired are free 💖")
+                        .font(.rounded(.caption, weight: .semibold))
+                        .foregroundStyle(MoodChooserStyle.subtitle)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 4)
+                Text("Unlock")
+                    .font(.rounded(.footnote, weight: .heavy))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(MoodChooserStyle.done))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color(hex: 0xFFF6DA)))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(ProStyle.badgeEdge.opacity(0.8), lineWidth: 1.2))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.98))
+        .accessibilityHint("Shows My Day Pro")
+    }
+
+    /// One of the 24 moods beyond the page's six, for an account without My Day Pro.
+    private func isLocked(_ option: Mood) -> Bool {
+        !pro.isActive && !Mood.pickerMoods.contains(option)
     }
 
     // MARK: Header
@@ -165,7 +214,13 @@ struct MoodChooserSheet: View {
     private func tile(_ option: Mood) -> some View {
         let isOn = option == choice
         let colors = option.chooserColors
+        let locked = isLocked(option)
         return Button {
+            if locked {
+                Haptics.tap()
+                proOffer = .moreMoods
+                return
+            }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { choice = option }
             Haptics.tap()
             SoundEffects.play(.moodStar)
@@ -197,6 +252,12 @@ struct MoodChooserSheet: View {
                     .strokeBorder(isOn ? JournalStyle.selectedMoodEdge : Color.white.opacity(0.9),
                                   lineWidth: isOn ? 2.5 : 1.5)
             )
+            .overlay(alignment: .topLeading) {
+                if locked {
+                    ProCrown(size: 17)
+                        .offset(x: -3, y: -4)
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 if isOn {
                     Image(systemName: "checkmark.circle.fill")
@@ -211,7 +272,7 @@ struct MoodChooserSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(option.label)
+        .accessibilityLabel(locked ? "\(option.label), with My Day Pro" : option.label)
         .accessibilityAddTraits(isOn ? AccessibilityTraits.isSelected : [])
     }
 

@@ -417,13 +417,10 @@ struct JournalComposer: View {
         openMoreMoods()
     }
 
-    /// ＋ and "Tap to change": all thirty moods, with My Day Pro.
+    /// ＋ and "Tap to change": all thirty moods, for everyone to see. Without My Day Pro the 24
+    /// beyond the page's six wear a crown there, and tapping one offers Pro.
     private func openMoreMoods() {
-        if pro.isActive {
-            extra = .moods
-        } else {
-            proOffer = .moreMoods
-        }
+        extra = .moods
     }
 
     /// The Get a Prompt tip, once, when no other tip or sheet is open. It needs the button on

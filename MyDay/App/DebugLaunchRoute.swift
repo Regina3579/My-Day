@@ -480,7 +480,8 @@ enum DebugLaunchRoute {
             }
             journalAnchor = "mood"
             openTodaysPage(router, today: today, context: context)
-        case "journal-moods":
+        case "journal-moods", "pro-moods":
+            // `pro-moods`: a free account's Choose your mood, with crowns on the 24 Pro moods.
             journalMoods = true
             openTodaysPage(router, today: today, context: context)
         case "journal-voice":
