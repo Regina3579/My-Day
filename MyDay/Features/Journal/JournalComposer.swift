@@ -157,7 +157,7 @@ struct JournalComposer: View {
 
     static let maxPhotos = 6
     /// Words on a page without My Day Pro (Pro has no limit).
-    static let wordLimit = 1000
+    static let wordLimit = 250
     static let headingLimit = 60
 
     let presentation: Presentation
@@ -287,8 +287,8 @@ struct JournalComposer: View {
                 loadPhotos(items)
             }
             .onChange(of: text) { old, new in
-                // Without My Day Pro, a page holds 1,000 words: writing past them stops at the
-                // 1,000th (an older, longer page keeps its words but can't grow), and every time
+                // Without My Day Pro, a page holds 250 words: writing past them stops at the
+                // 250th (an older, longer page keeps its words but can't grow), and every time
                 // it happens the Unlock Unlimited Writing pop-up appears. Pro has no limit.
                 guard !pro.isActive else { return }
                 let words = JournalWords.count(new)

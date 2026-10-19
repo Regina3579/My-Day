@@ -74,7 +74,7 @@ struct ProUnlockCard: View {
 
     // MARK: Your Story Deserves More!
 
-    /// The pop-up when a free page is full (1,000 words), from its design: the girl and her puppy
+    /// The pop-up when a free page is full (250 words), from its design: the girl and her puppy
     /// over a pink card with "My Day Pro", "Your Story Deserves More! 💖", "Every memory is worth
     /// telling. Unlock unlimited journal writing with My Day Pro! ✨", **Unlock Pro 👑** and
     /// **Maybe Later**. The whole card, words and buttons, is the design's own picture (cut out

@@ -541,7 +541,7 @@ enum DebugLaunchRoute {
             journalAnchor = "write"
             openTodaysPage(router, today: today, context: context)
         case "pro-writing":
-            // A free account's page is full (1,000 words): Your Story Deserves More!
+            // A free account's page is full (250 words): Your Story Deserves More!
             journalAnchor = "write"
             proOffer = .unlimitedWriting
             openTodaysPage(router, today: today, context: context)
