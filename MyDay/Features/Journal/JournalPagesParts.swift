@@ -17,65 +17,121 @@ enum JournalPagesStyle {
 }
 
 extension View {
-    /// A soft white card of My Journal Pages.
+    /// A card of My Journal Pages: soft white (in Heavenly Angel Wishes, cream with gold edges).
     func journalPagesCard(padding: CGFloat = 14, radius: CGFloat = 26) -> some View {
-        self.padding(padding)
+        modifier(JournalPagesCard(padding: padding, radius: radius))
+    }
+}
+
+private struct JournalPagesCard: ViewModifier {
+    @Environment(\.journalTheme) private var theme
+    let padding: CGFloat
+    let radius: CGFloat
+
+    func body(content: Content) -> some View {
+        let card = content
+            .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.white, lineWidth: 1.5))
-            .shadow(color: JournalStyle.pink.opacity(0.12), radius: 10, x: 0, y: 4)
+        if theme == .heavenlyAngelWishes {
+            card.background(HeavenlyCardBackground(radius: radius))
+        } else {
+            card
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
+                .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.white, lineWidth: 1.5))
+                .shadow(color: JournalStyle.pink.opacity(0.12), radius: 10, x: 0, y: 4)
+        }
     }
 }
 
 // MARK: - Write a new page
 
-/// The star waving beside the big pink "✏️ Write a new page ›". A journal is one page a day,
-/// so once today has a page it reads "Continue writing" and opens that page.
+/// The star waving beside the big pink "✏️ Write a new page ›" (in Heavenly Angel Wishes, an
+/// angel hugging a heart, on a gold-edged card). A journal is one page a day, so once today has
+/// a page it reads "Continue writing" and opens that page.
 struct WriteNewPageRow: View {
     /// Today's page, when it has been written.
     let todayPage: JournalEntry?
+    @Environment(\.journalTheme) private var theme
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image("JournalWriteStar")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 80, height: 72)
-                .accessibilityHidden(true)
-            NavigationLink(value: todayPage.map { AppRoute.editJournalPage($0) } ?? AppRoute.newJournalPage(nil)) {
-                HStack(spacing: 10) {
-                    Image(systemName: "pencil.line")
-                        .font(.system(size: 22, weight: .bold))
-                    Text(title)
-                        .font(.rounded(.title3, weight: .heavy))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 16, weight: .heavy))
-                        .foregroundStyle(JournalStyle.pink)
-                        .frame(width: 38, height: 38)
-                        .background(Circle().fill(Color.white))
-                }
-                .foregroundStyle(Color.white)
-                .padding(.leading, 20)
-                .padding(.trailing, 12)
-                .frame(maxWidth: .infinity, minHeight: 66)
-                .background(Capsule().fill(JournalPagesStyle.writeButton))
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5))
-                .overlay(alignment: .topTrailing) {
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.9))
-                        .padding(.top, 9)
-                        .padding(.trailing, 58)
-                        .accessibilityHidden(true)
-                }
-                .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
+        if theme == .heavenlyAngelWishes {
+            // Heavenly Angel Wishes: the angel hugging a heart, on a gold-edged card.
+            HStack(spacing: 2) {
+                Image("HeavenlyWriteAngel")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 86, height: 76)
+                    .overlay(alignment: .topLeading) { heavenlyHeart(size: 13).offset(x: -2, y: 8) }
+                    .overlay(alignment: .topTrailing) { heavenlyHeart(size: 12).offset(x: 4, y: 4) }
+                    .accessibilityHidden(true)
+                button
             }
-            .buttonStyle(PressScaleStyle(scale: 0.97))
-            .accessibilityLabel(todayPage == nil ? title : "Continue writing today's page")
+            .padding(.leading, 6)
+            .padding(.trailing, 10)
+            .padding(.vertical, 8)
+            .background(HeavenlyCardBackground(radius: 30))
+            .overlay(alignment: .bottomLeading) {
+                HeavenlyStarView(size: 20).rotationEffect(.degrees(-10)).offset(x: -8, y: 8)
+            }
+        } else {
+            HStack(spacing: 4) {
+                Image("JournalWriteStar")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 72)
+                    .accessibilityHidden(true)
+                button
+            }
         }
+    }
+
+    private func heavenlyHeart(size: CGFloat) -> some View {
+        Image(systemName: "heart.fill")
+            .font(.system(size: size))
+            .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFF9ACB), Color(hex: 0xF5459A)],
+                                            startPoint: .top, endPoint: .bottom))
+            .shadow(color: Color.white, radius: 1)
+    }
+
+    private var button: some View {
+        NavigationLink(value: todayPage.map { AppRoute.editJournalPage($0) } ?? AppRoute.newJournalPage(nil)) {
+            HStack(spacing: 10) {
+                Image(systemName: "pencil.line")
+                    .font(.system(size: 22, weight: .bold))
+                Text(title)
+                    .font(.rounded(.title3, weight: .heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 16, weight: .heavy))
+                    .foregroundStyle(JournalStyle.pink)
+                    .frame(width: 38, height: 38)
+                    .background(Circle().fill(Color.white))
+            }
+            .foregroundStyle(Color.white)
+            .padding(.leading, 20)
+            .padding(.trailing, 12)
+            .frame(maxWidth: .infinity, minHeight: theme == .heavenlyAngelWishes ? 58 : 66)
+            .background(Capsule().fill(JournalPagesStyle.writeButton))
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5))
+            .overlay(alignment: .topTrailing) {
+                Image(systemName: "sparkle")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.9))
+                    .padding(.top, 9)
+                    .padding(.trailing, 58)
+                    .accessibilityHidden(true)
+            }
+            .overlay {
+                if theme == .heavenlyAngelWishes {
+                    Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.5)
+                }
+            }
+            .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97))
+        .accessibilityLabel(todayPage == nil ? title : "Continue writing today's page")
     }
 
     /// Both fit the button: "Continue today's page" did not.
@@ -86,11 +142,16 @@ struct WriteNewPageRow: View {
 
 // MARK: - My week in moods
 
-/// The last seven days, each with the star of its latest page (tap one to open that page).
+/// The last seven days, each with the star of its latest page (tap one to open that page). In
+/// Heavenly Angel Wishes a moon hangs on its corner, an angel peeks over it, and a day with no
+/// page is a pink star with little wings.
 struct MoodWeekCard: View {
     let entries: [JournalEntry]
     let today: Date
     let onCalendar: () -> Void
+    @Environment(\.journalTheme) private var theme
+
+    private var heavenly: Bool { theme == .heavenlyAngelWishes }
 
     var body: some View {
         let days = (0..<7).reversed().map { today.adding(days: -$0) }
@@ -98,8 +159,8 @@ struct MoodWeekCard: View {
             HStack(spacing: 8) {
                 HStack(spacing: 6) {
                     Text("My week in moods")
-                        .font(.rounded(.headline, weight: .heavy))
-                        .foregroundStyle(JournalStyle.plum)
+                        .font(heavenly ? HeavenlyStyle.serif(.headline) : .rounded(.headline, weight: .heavy))
+                        .foregroundStyle(heavenly ? HeavenlyStyle.title : JournalStyle.plum)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Image(systemName: "heart.fill")
@@ -108,6 +169,7 @@ struct MoodWeekCard: View {
                         .accessibilityHidden(true)
                 }
                 .accessibilityAddTraits(.isHeader)
+                .padding(.leading, heavenly ? 14 : 0)
                 Spacer(minLength: 4)
                 Button(action: onCalendar) {
                     HStack(spacing: 6) {
@@ -127,9 +189,20 @@ struct MoodWeekCard: View {
                     }
                     .padding(.horizontal, 12)
                     .frame(minHeight: 38)
-                    .background(Capsule().fill(JournalPagesStyle.calendarFill))
+                    .background {
+                        if heavenly {
+                            Capsule()
+                                .fill(LinearGradient(colors: [Color.white, Color(hex: 0xFDE4F1)],
+                                                     startPoint: .top, endPoint: .bottom))
+                                .overlay(Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.2))
+                        } else {
+                            Capsule().fill(JournalPagesStyle.calendarFill)
+                        }
+                    }
+                    .angelWings(width: 13, y: -3, isShown: heavenly)
                 }
                 .buttonStyle(PressScaleStyle())
+                .padding(.trailing, heavenly ? 6 : 0)
                 .accessibilityLabel("View Calendar")
             }
             HStack(spacing: 0) {
@@ -140,6 +213,30 @@ struct MoodWeekCard: View {
             }
         }
         .journalPagesCard()
+        .overlay(alignment: .topLeading) {
+            if heavenly {
+                HeavenlyMoon()
+                    .frame(width: 26, height: 30)
+                    .rotationEffect(.degrees(-24))
+                    .offset(x: -5, y: -9)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if heavenly {
+                Image("HeavenlyPeekAngel")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 58, height: 58)
+                    .offset(x: 10, y: -42)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if heavenly {
+                HeavenlyStarView(size: 20).rotationEffect(.degrees(12)).offset(x: 8, y: 7)
+            }
+        }
     }
 
     @ViewBuilder
@@ -164,6 +261,8 @@ struct MoodWeekCard: View {
                     Image(mood.artName)
                         .resizable()
                         .scaledToFit()
+                } else if heavenly {
+                    WingedPinkStar()
                 } else {
                     Image(systemName: "star.fill")
                         .font(.system(size: 30))
@@ -239,7 +338,8 @@ struct JournalTabsRow: View {
     }
 }
 
-/// A tab: a round icon over its name on one line, pink when it is the open tab.
+/// A tab: a round icon over its name on one line, pink when it is the open tab. In Heavenly
+/// Angel Wishes the icon has little wings.
 private struct JournalTabTile: View {
     let symbol: String
     let label: String
@@ -247,8 +347,10 @@ private struct JournalTabTile: View {
     let isOn: Bool
     /// A small ＋ on the icon, on the ＋ More tile while it shows one of the tabs behind it.
     var showsPlus = false
+    @Environment(\.journalTheme) private var theme
 
     var body: some View {
+        let heavenly = theme == .heavenlyAngelWishes
         VStack(spacing: 4) {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .bold))
@@ -266,6 +368,7 @@ private struct JournalTabTile: View {
                             .offset(x: 4, y: -3)
                     }
                 }
+                .angelWings(width: 11, tucked: 0.35, y: -1, isShown: heavenly)
             // Small enough for six across; it shrinks a touch only on the narrowest iPhones.
             Text(label)
                 .font(.system(size: 10.5, weight: .bold, design: .rounded))
@@ -282,9 +385,11 @@ private struct JournalTabTile: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .strokeBorder(Color.white, lineWidth: isOn ? 2 : 1.5)
+                .strokeBorder(heavenly && !isOn ? Color(hex: 0xF9D7C6) : Color.white, lineWidth: isOn ? 2 : 1.5)
         )
-        .shadow(color: JournalStyle.pink.opacity(isOn ? 0.3 : 0.08), radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
+        .shadow(color: (heavenly && !isOn ? HeavenlyStyle.glow : JournalStyle.pink)
+                    .opacity(isOn ? 0.3 : heavenly ? 0.1 : 0.08),
+                radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
         .contentShape(Rectangle())
     }
 }
@@ -292,8 +397,10 @@ private struct JournalTabTile: View {
 /// "📅 This Month ⌄": which dates the list shows.
 struct JournalPeriodMenu: View {
     @Binding var period: JournalPeriod
+    @Environment(\.journalTheme) private var theme
 
     var body: some View {
+        let heavenly = theme == .heavenlyAngelWishes
         Menu {
             Picker("Show pages from", selection: $period) {
                 ForEach(JournalPeriod.allCases) { option in
@@ -316,8 +423,16 @@ struct JournalPeriodMenu: View {
             .padding(.horizontal, 12)
             .frame(minHeight: 40)
             .background(Capsule().fill(Color.white.opacity(0.92)))
-            .overlay(Capsule().strokeBorder(JournalPagesStyle.calendarFill, lineWidth: 1.5))
-            .shadow(color: JournalStyle.purple.opacity(0.12), radius: 5, x: 0, y: 2)
+            .overlay {
+                if heavenly {
+                    Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.3)
+                } else {
+                    Capsule().strokeBorder(JournalPagesStyle.calendarFill, lineWidth: 1.5)
+                }
+            }
+            .shadow(color: (heavenly ? HeavenlyStyle.glow : JournalStyle.purple).opacity(heavenly ? 0.3 : 0.12),
+                    radius: 5, x: 0, y: 2)
+            .angelWings(width: 15, y: -3, isShown: heavenly)
         }
         .accessibilityLabel("Show pages from: \(period.label)")
     }
@@ -335,10 +450,12 @@ struct JournalEntryCard: View {
     @Environment(Router.self) private var router
     @Environment(\.hostTab) private var hostTab
     @Environment(\.modelContext) private var context
+    @Environment(\.journalTheme) private var theme
     @State private var confirmDelete = false
     @State private var trashChoices = false
 
     private var inTrash: Bool { entry.isInTrash }
+    private var heavenly: Bool { theme == .heavenlyAngelWishes }
 
     var body: some View {
         Group {
@@ -388,7 +505,7 @@ struct JournalEntryCard: View {
                         .frame(width: 32, height: 30)
                         .accessibilityHidden(true)
                     Text(entry.displayTitle)
-                        .font(.rounded(.headline, weight: .heavy))
+                        .font(heavenly ? HeavenlyStyle.serif(.headline) : .rounded(.headline, weight: .heavy))
                         .foregroundStyle(JournalPagesStyle.heading)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -403,6 +520,8 @@ struct JournalEntryCard: View {
                             .lineSpacing(1)
                             .lineLimit(3)
                             .multilineTextAlignment(.leading)
+                            // Clear of the angel in the corner.
+                            .padding(.trailing, heavenly && entry.sortedPhotos.isEmpty && !inTrash ? 58 : 0)
                     }
                     Spacer(minLength: 0)
                     JournalCardPhoto(entry: entry)
@@ -413,9 +532,15 @@ struct JournalEntryCard: View {
         .padding(12)
         .padding(.bottom, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill))
+        .background {
+            if heavenly {
+                heavenlyBackground
+            } else {
+                RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill)
+            }
+        }
         .overlay(alignment: .bottomTrailing) {
-            if !inTrash {
+            if !heavenly && !inTrash {
                 Image("JournalFlowerCorner")
                     .resizable()
                     .scaledToFit()
@@ -425,11 +550,35 @@ struct JournalEntryCard: View {
                     .accessibilityHidden(true)
             }
         }
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white, lineWidth: 1.5))
-        .shadow(color: JournalStyle.pink.opacity(0.12), radius: 10, x: 0, y: 4)
+        .overlay {
+            if !heavenly {
+                RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white, lineWidth: 1.5)
+            }
+        }
+        .shadow(color: heavenly ? Color.clear : JournalStyle.pink.opacity(0.12), radius: heavenly ? 0 : 10, x: 0,
+                y: heavenly ? 0 : 4)
         .opacity(inTrash ? 0.9 : 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+
+    /// Heavenly Angel Wishes: gold edges, an angel hugging a star in the bottom corner (asleep or
+    /// awake, day by day) and a star on the top edge.
+    private var heavenlyBackground: some View {
+        HeavenlyCardBackground(radius: 26)
+            .overlay(alignment: .bottomTrailing) {
+                if !inTrash {
+                    Image(entry.date.dayNumber.isMultiple(of: 2) ? "HeavenlyCardAngelSleepy" : "HeavenlyCardAngelAwake")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 78, height: 70)
+                        .offset(x: 6, y: 6)
+                        .accessibilityHidden(true)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                HeavenlyStarView(size: 18).rotationEffect(.degrees(-8)).offset(x: -96, y: -9)
+            }
     }
 
     /// The page's first lines, or on some tabs the line the tab is about.
@@ -558,9 +707,11 @@ struct JournalEntryCard: View {
     }
 }
 
-/// The date on a page card: the day and weekday under a ribbon bow, pink, purple or blue.
+/// The date on a page card: the day and weekday under a ribbon bow, pink, purple or blue (in
+/// Heavenly Angel Wishes: with little wings, a gold moon and a star, edged in gold).
 struct JournalDateTile: View {
     let date: Date
+    @Environment(\.journalTheme) private var theme
 
     private enum Ribbon: Int {
         case pink, purple, blue
@@ -593,6 +744,51 @@ struct JournalDateTile: View {
     var body: some View {
         // Next days take turns: pink, purple, blue.
         let ribbon = Ribbon(rawValue: ((date.dayNumber % 3) + 3) % 3) ?? .pink
+        if theme == .heavenlyAngelWishes {
+            heavenly(ribbon)
+        } else {
+            blush(ribbon)
+        }
+    }
+
+    private func heavenly(_ ribbon: Ribbon) -> some View {
+        VStack(spacing: 0) {
+            Text(date.formatted(.dateTime.day()))
+                .font(.system(.title, design: .serif, weight: .bold))
+                .foregroundStyle(Palette.berry)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(.rounded(.subheadline, weight: .heavy))
+                .foregroundStyle(JournalPagesStyle.weekday)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.top, 6)
+        .frame(width: 62, height: 82)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white, ribbon.fill], startPoint: .top, endPoint: .bottom))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.3)
+        )
+        .angelWings(width: 16, tucked: 0.4, y: -18)
+        .overlay(alignment: .topLeading) {
+            HeavenlyMoon()
+                .frame(width: 20, height: 22)
+                .rotationEffect(.degrees(-20))
+                .offset(x: 2, y: -11)
+        }
+        .overlay(alignment: .topTrailing) {
+            HeavenlyStarView(size: 17).rotationEffect(.degrees(10)).offset(x: 5, y: -4)
+        }
+        .padding(.top, 8)
+        .shadow(color: HeavenlyStyle.glow.opacity(0.3), radius: 4, x: 0, y: 2)
+    }
+
+    private func blush(_ ribbon: Ribbon) -> some View {
         VStack(spacing: 0) {
             Text(date.formatted(.dateTime.day()))
                 .font(.rounded(.title, weight: .heavy))
@@ -693,8 +889,10 @@ struct JournalSearchBar: View {
     /// How many filters are on (shown on the Filter button).
     let filterCount: Int
     let onFilter: () -> Void
+    @Environment(\.journalTheme) private var theme
 
     var body: some View {
+        let heavenly = theme == .heavenlyAngelWishes
         HStack(spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
@@ -743,6 +941,7 @@ struct JournalSearchBar: View {
                 .background(Capsule().fill(Color.white.opacity(0.97)))
                 .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
                 .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
+                .angelWingTrailing(width: 15, tucked: 0.45, y: -6, isShown: heavenly)
                 .overlay(alignment: .topTrailing) {
                     if filterCount > 0 {
                         Text("\(filterCount)")
@@ -761,8 +960,8 @@ struct JournalSearchBar: View {
         .padding(.top, 10)
         .padding(.bottom, 6)
         .background(alignment: .bottom) {
-            LinearGradient(colors: [JournalBackdrop.base.opacity(0), JournalBackdrop.base.opacity(0.92)],
-                           startPoint: .top, endPoint: .center)
+            let base = heavenly ? HeavenlyStyle.base : JournalBackdrop.base
+            LinearGradient(colors: [base.opacity(0), base.opacity(0.92)], startPoint: .top, endPoint: .center)
                 .ignoresSafeArea(edges: .bottom)
                 .allowsHitTesting(false)
         }

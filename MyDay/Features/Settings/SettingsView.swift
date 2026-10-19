@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.taskCompletionSound) private var completionSound = true
     @AppStorage(Prefs.moodStarSound) private var moodStarSound = true
     @AppStorage(Prefs.reminderSound) private var reminderSound: ReminderSound = .gentleBloom
+    @AppStorage(Prefs.journalTheme) private var journalTheme: JournalTheme = .blushBlossom
     @Environment(MyDayPro.self) private var pro
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
@@ -34,6 +35,8 @@ struct SettingsView: View {
     #if DEBUG
     /// `settings-reminder-sound`: Reminder Sound opened for the screenshot.
     @State private var opensReminderSound = false
+    /// `settings-journal-theme` and `pro-themes`: Journal Theme opened for the screenshot.
+    @State private var opensJournalTheme = false
     #endif
 
     private var version: String {
@@ -118,11 +121,17 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    LabeledContent {
-                        Text(JournalTheme.blushBlossom.title)
-                            .foregroundStyle(Palette.inkSoft)
+                    NavigationLink {
+                        JournalThemeView()
                     } label: {
-                        Label("Journal Theme", systemImage: "paintpalette.fill")
+                        HStack {
+                            Label("Journal Theme", systemImage: "paintpalette.fill")
+                                .layoutPriority(1)
+                            Spacer()
+                            Text(journalTheme.applying(pro: pro.isActive).title)
+                                .foregroundStyle(Palette.inkSoft)
+                                .lineLimit(1)
+                        }
                     }
                     Toggle(isOn: lockToggle) {
                         Label("Lock My Journal", systemImage: "lock.fill")
@@ -151,7 +160,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Journal")
                 } footer: {
-                    Text(lockFooter + " More journal themes are on the way 🌸")
+                    Text("Journal Theme dresses My Journal Pages: Blush Blossom for everyone, Heavenly Angel Wishes and the themes to come with My Day Pro. " + lockFooter)
                 }
 
                 Section {
@@ -231,6 +240,10 @@ struct SettingsView: View {
                     try? await Task.sleep(for: .seconds(1))
                     opensReminderSound = true
                 }
+                if DebugLaunchRoute.takeSettingsJournalTheme() {
+                    try? await Task.sleep(for: .seconds(1))
+                    opensJournalTheme = true
+                }
                 let showsICloud = DebugLaunchRoute.takeSettingsICloud()
                 if showsICloud {
                     // The simulator has no iCloud account: a demo of the status after a sync.
@@ -251,6 +264,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $opensReminderSound) {
                 ReminderSoundView()
+            }
+            .navigationDestination(isPresented: $opensJournalTheme) {
+                JournalThemeView()
             }
             #endif
         }

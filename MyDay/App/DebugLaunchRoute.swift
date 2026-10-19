@@ -184,6 +184,8 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsReminderSound = false
     /// Scroll Settings to My Day Pro ("pro-settings").
     @MainActor private static var settingsPro = false
+    /// `settings-journal-theme` and `pro-themes`: Settings → Journal Theme.
+    @MainActor private static var settingsJournalTheme = false
     /// The My Day Pro pop-up a screen shows once it is ready ("pro-reflections").
     @MainActor private static var proOffer: ProFeature?
     /// Scroll Settings to the journal lock ("settings-lock"), or open Lock My Journal
@@ -264,6 +266,12 @@ enum DebugLaunchRoute {
     static func takeSettingsReminderSound() -> Bool {
         defer { settingsReminderSound = false }
         return settingsReminderSound
+    }
+
+    @MainActor
+    static func takeSettingsJournalTheme() -> Bool {
+        defer { settingsJournalTheme = false }
+        return settingsJournalTheme
     }
 
     @MainActor
@@ -408,6 +416,9 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
         UserDefaults.standard.set(arguments[index + 1] != "settings-icloud-tip", forKey: Prefs.didShowICloudTip)
+        // Only the `heavenly-` routes dress the journal in Heavenly Angel Wishes.
+        let theme: JournalTheme = arguments[index + 1].hasPrefix("heavenly-") ? .heavenlyAngelWishes : .blushBlossom
+        UserDefaults.standard.set(theme.rawValue, forKey: Prefs.journalTheme)
 
         switch arguments[index + 1] {
         case "quickadd": router.isQuickAddOpen = true
@@ -488,6 +499,19 @@ enum DebugLaunchRoute {
             router.tab = .settings
         case "pro-settings":
             settingsPro = true
+            router.tab = .settings
+        case "heavenly-journal":
+            router.open(.journal)
+        case "heavenly-pages":
+            journalShelf = JournalShelf.all.rawValue
+            router.open(.journal)
+        case "settings-journal-theme":
+            settingsJournalTheme = true
+            router.tab = .settings
+        case "pro-themes":
+            // A free account taps Heavenly Angel Wishes.
+            settingsJournalTheme = true
+            proOffer = .themes
             router.tab = .settings
         case "pro-journal":
             // A free account's page: crowns on ＋, Get a Prompt, Add Photo and Voice Note.

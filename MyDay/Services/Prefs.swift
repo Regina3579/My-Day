@@ -51,6 +51,8 @@ enum Prefs {
     static let debugPretendPro = "debugPretendPro"
     /// The sticker picker's tab last opened (a `StickerCategory` id).
     static let stickerCategory = "journalStickerCategory"
+    /// Settings → Journal → Journal Theme: a `JournalTheme` raw value (Blush Blossom when unset).
+    static let journalTheme = "journalTheme"
     static let journalLock = "journalLockEnabled"
     /// How the journal is unlocked: a `JournalLockMethod` raw value (Face ID when unset).
     static let journalLockMethod = "journalLockMethod"

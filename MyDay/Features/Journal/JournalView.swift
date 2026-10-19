@@ -21,13 +21,17 @@ struct JournalView: View {
 
 /// "My Journal Pages", as in the design: the picture, My Pages, Write a new page, My week in
 /// moods, the ten tabs, then the pages by month, with the search bar and Filter floating at
-/// the bottom. Written pages scroll behind the search bar.
+/// the bottom. Written pages scroll behind the search bar. It is drawn in the journal theme
+/// (Blush Blossom, or with My Day Pro, Heavenly Angel Wishes: the castle in the clouds at the
+/// top and the cards in the sky).
 struct JournalPagesHome: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
+    @Environment(MyDayPro.self) private var pro
     @Environment(\.hostTab) private var hostTab
     @Environment(\.modelContext) private var context
     @Query(sort: \JournalEntry.date, order: .reverse) private var allEntries: [JournalEntry]
+    @AppStorage(Prefs.journalTheme) private var chosenTheme: JournalTheme = .blushBlossom
 
     @State private var shelf: JournalShelf = .all
     @State private var period: JournalPeriod = .allTime
@@ -36,6 +40,7 @@ struct JournalPagesHome: View {
     @State private var isFiltering = false
     @State private var heroIsVisible = true
     @State private var confirmEmptyTrash = false
+    @State private var choosesTheme = false
     @FocusState private var searchFocused: Bool
     /// The opening picture shows each time the journal opens (after the lock, when it is on).
     #if DEBUG
@@ -43,6 +48,10 @@ struct JournalPagesHome: View {
     #else
     @State private var isOpening = true
     #endif
+
+    /// The theme drawn: Blush Blossom while a Pro theme waits for My Day Pro.
+    private var theme: JournalTheme { chosenTheme.applying(pro: pro.isActive) }
+    private var heavenly: Bool { theme == .heavenlyAngelWishes }
 
     var body: some View {
         GeometryReader { proxy in
@@ -53,7 +62,14 @@ struct JournalPagesHome: View {
                 #endif
             }
         }
-        .background(JournalBackdrop())
+        .background {
+            if heavenly {
+                HeavenlyBackdrop()
+            } else {
+                JournalBackdrop()
+            }
+        }
+        .environment(\.journalTheme, theme)
         .overlay {
             if isOpening {
                 JournalOpeningView(frozenAt: debugOpeningMoment) {
@@ -66,8 +82,8 @@ struct JournalPagesHome: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("My Journal Pages")
-                    .font(.rounded(.headline, weight: .bold))
-                    .foregroundStyle(JournalStyle.ink)
+                    .font(heavenly ? HeavenlyStyle.serif(.headline) : .rounded(.headline, weight: .bold))
+                    .foregroundStyle(heavenly ? HeavenlyStyle.title : JournalStyle.ink)
                     .opacity(heroIsVisible ? 0 : 1)
                     .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
                     .accessibilityHidden(heroIsVisible)
@@ -81,6 +97,16 @@ struct JournalPagesHome: View {
         .sheet(isPresented: $isFiltering) {
             JournalFilterSheet(filter: $filter, period: $period)
         }
+        .sheet(isPresented: $choosesTheme) {
+            NavigationStack {
+                JournalThemeView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { choosesTheme = false }
+                        }
+                    }
+            }
+        }
         .confirmationDialog("Empty Trash?", isPresented: $confirmEmptyTrash, titleVisibility: .visible) {
             Button(trashed.count == 1 ? "Delete 1 Page Forever" : "Delete \(trashed.count) Pages Forever",
                    role: .destructive, action: emptyTrash)
@@ -93,26 +119,35 @@ struct JournalPagesHome: View {
 
     // MARK: Layout
 
-    /// The picture, then the cards on their panel; the search bar floats at the bottom.
+    /// The picture, then the cards on their panel (in Heavenly Angel Wishes, the castle in the
+    /// clouds, then the cards in the sky); the search bar floats at the bottom.
     private func scroller(_ proxy: GeometryProxy) -> some View {
         let statusBar = JournalScene.windowStatusBar(fallback: max(0, proxy.safeAreaInsets.top - 44))
         return ScrollView {
             VStack(spacing: 0) {
-                JournalHero(scene: .pages, width: proxy.size.width, statusBar: statusBar)
-                    .onGeometryChange(for: Bool.self) { geometry in
-                        geometry.frame(in: .global).maxY > proxy.safeAreaInsets.top + 60
-                    } action: { isVisible in
-                        heroIsVisible = isVisible
+                Group {
+                    if heavenly {
+                        HeavenlyHeader(width: proxy.size.width, statusBar: statusBar)
+                    } else {
+                        JournalHero(scene: .pages, width: proxy.size.width, statusBar: statusBar)
                     }
+                }
+                .onGeometryChange(for: Bool.self) { geometry in
+                    geometry.frame(in: .global).maxY > proxy.safeAreaInsets.top + 60
+                } action: { isVisible in
+                    heroIsVisible = isVisible
+                }
                 content
                     .padding(.horizontal, 16)
-                    .padding(.top, 18)
+                    .padding(.top, heavenly ? 2 : 18)
                     .padding(.bottom, 20)
                     .frame(maxWidth: .infinity)
                     .background(alignment: .top) {
-                        JournalPanel()
+                        if !heavenly {
+                            JournalPanel()
+                        }
                     }
-                    .padding(.top, -JournalScene.pages.overlap(width: proxy.size.width))
+                    .padding(.top, heavenly ? 0 : -JournalScene.pages.overlap(width: proxy.size.width))
             }
         }
         .scrollDismissesKeyboard(.interactively)
@@ -210,24 +245,51 @@ struct JournalPagesHome: View {
         }
     }
 
-    /// The first heading: the month (or the tab), with the period menu beside it.
+    /// The first heading: the month (or the tab), with the period menu beside it (in Heavenly
+    /// Angel Wishes, with the angel asleep on a cloud between them when there is room).
+    @ViewBuilder
     private func listHeader(title: String) -> some View {
-        HStack(spacing: 8) {
-            monthTitle(title)
-            Spacer(minLength: 4)
-            Image(systemName: "sparkles")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(Color(hex: 0xF7C548))
-                .accessibilityHidden(true)
-            JournalPeriodMenu(period: $period)
+        if heavenly {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) {
+                    monthTitle(title)
+                        .fixedSize()
+                    Spacer(minLength: 2)
+                    Image("HeavenlyMonthAngel")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 62, height: 42)
+                        .accessibilityHidden(true)
+                    Spacer(minLength: 8)
+                    JournalPeriodMenu(period: $period)
+                        .fixedSize()
+                        .padding(.trailing, 6)
+                }
+                HStack(spacing: 8) {
+                    monthTitle(title)
+                    Spacer(minLength: 14)
+                    JournalPeriodMenu(period: $period)
+                        .padding(.trailing, 8)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                monthTitle(title)
+                Spacer(minLength: 4)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Color(hex: 0xF7C548))
+                    .accessibilityHidden(true)
+                JournalPeriodMenu(period: $period)
+            }
         }
     }
 
     private func monthTitle(_ title: String) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.rounded(.title3, weight: .heavy))
-                .foregroundStyle(Palette.berry)
+                .font(heavenly ? HeavenlyStyle.serif(.title3) : .rounded(.title3, weight: .heavy))
+                .foregroundStyle(heavenly ? HeavenlyStyle.month : Palette.berry)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             Image(systemName: "heart.fill")
@@ -323,6 +385,11 @@ struct JournalPagesHome: View {
             }
             Button(action: openCalendar) {
                 Label("View Calendar", systemImage: "calendar")
+            }
+            Button {
+                choosesTheme = true
+            } label: {
+                Label("Journal Theme", systemImage: "paintpalette")
             }
             Button {
                 withAnimation(.snappy) { shelf = .trash }
