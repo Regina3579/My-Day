@@ -36,24 +36,26 @@ enum JournalLockTipSchedule {
     }
 }
 
-/// The Journal Lock tip: the page softens and dims, and a pink card rises with the girl and her
-/// puppy resting on its edge, a pink lock, "Keep your journal private 🔒" and a line on Journal
-/// Lock (Face ID, a pattern or a passcode, in Settings → Journal → Lock My Journal), with
-/// **Got it** and **Maybe Later**.
+/// The Journal Lock tip, from its design: the page softens and dims, and a pink card rises
+/// with a kitten with a pink bow hugging a pink journal with a gold heart lock among hearts,
+/// sparkles and flowers, "Your Journal, Your Secret! 💗", "Your thoughts are precious! ✨ Keep
+/// your journal private with Journal Lock.", "Go to Settings → Journal Lock to turn it on. 🔒",
+/// **Maybe Later**, **Got it** and ✕. The whole card is the design's own picture (enlarged 4×
+/// with Real-ESRGAN), so its lettering is the design's; ✕ and the two buttons are tappable
+/// where the picture shows them (✕, like a tap outside, is Maybe Later).
 struct JournalLockTip: View {
     let onGotIt: () -> Void
     let onLater: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = false
-    @State private var floating = false
 
-    private static let plum = Color(hex: 0x6B1442)
-    private static let ink = Color(hex: 0x4A3150)
+    /// The picture's grid (750 × 828 pixels of the design).
+    private static let grid = CGSize(width: 750, height: 828)
 
     var body: some View {
         GeometryReader { proxy in
-            let width = min(proxy.size.width * 0.86, 350)
+            let width = min(proxy.size.width * 0.84, 360)
             ZStack {
                 ZStack {
                     Rectangle().fill(.ultraThinMaterial).opacity(0.4)
@@ -72,11 +74,8 @@ struct JournalLockTip: View {
         }
         .onAppear {
             SoundEffects.play(.tip)
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.72)) { shown = true }
-            if !reduceMotion {
-                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { floating = true }
-            }
-            UIAccessibility.post(notification: .screenChanged, argument: "Tip: keep your journal private with Journal Lock.")
+            withAnimation(.spring(response: reduceMotion ? 0.3 : 0.45, dampingFraction: 0.72)) { shown = true }
+            UIAccessibility.post(notification: .screenChanged, argument: "Tip: your journal, your secret. Keep it private with Journal Lock.")
         }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
@@ -92,79 +91,45 @@ struct JournalLockTip: View {
     }
 
     private func card(width: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 30, style: .continuous)
-        let artHeight = width * 484 / 1024
-        return VStack(spacing: 12) {
-            // The pink lock, on a soft white badge.
-            Image(systemName: "lock.heart.fill")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFF8AC4), Palette.hotPink],
-                                                startPoint: .top, endPoint: .bottom))
-                .frame(width: 62, height: 62)
-                .background(Circle().fill(Color.white))
-                .overlay(Circle().strokeBorder(Color(hex: 0xF9C6DC), lineWidth: 1.5))
-                .shadow(color: Palette.hotPink.opacity(0.25), radius: 8, x: 0, y: 3)
-                .overlay(alignment: .topTrailing) {
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(hex: 0xFFC94A))
-                        .offset(x: 8, y: -4)
+        let scale = width / Self.grid.width
+        func spot(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> CGRect {
+            CGRect(x: x0 * scale, y: y0 * scale, width: (x1 - x0) * scale, height: (y1 - y0) * scale)
+        }
+        return Image("JournalLockTipArt")
+            .resizable()
+            .frame(width: width, height: Self.grid.height * scale)
+            .accessibilityElement()
+            .accessibilityLabel("Your Journal, Your Secret! Your thoughts are precious! Keep your journal private with Journal Lock. Go to Settings, Journal Lock, to turn it on.")
+            .overlay(alignment: .topLeading) {
+                ZStack(alignment: .topLeading) {
+                    pictureButton("Maybe Later", spot(41, 687, 374, 780), shape: Capsule()) { close(then: onLater) }
+                    pictureButton("Got it", spot(399, 687, 712, 780), shape: Capsule()) { close(then: onGotIt) }
+                    pictureButton("Close", spot(655, 31, 727, 103), shape: Circle()) { close(then: onLater) }
                 }
-                .accessibilityHidden(true)
-            Text("Keep your journal private 🔒")
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundStyle(Self.plum)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            Text("Your thoughts are just for you. Turn on Journal Lock in Settings → Journal → Lock My Journal, and open it with Face ID, a pattern or a passcode. 💕")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(Self.ink)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-            VStack(spacing: 10) {
-                Button { close(then: onGotIt) } label: {
-                    Text("Got it 💗")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.white)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(Capsule().fill(JournalPagesStyle.writeButton))
-                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.6), lineWidth: 1.5))
-                        .shadow(color: Palette.hotPink.opacity(0.35), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(PressScaleStyle(scale: 0.96))
-                Button { close(then: onLater) } label: {
-                    Text("Maybe Later")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Palette.hotPink)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(Capsule().fill(Color.white))
-                        .overlay(Capsule().strokeBorder(Color(hex: 0xF7C3D9), lineWidth: 1.5))
-                }
-                .buttonStyle(PressScaleStyle(scale: 0.96))
             }
-            .padding(.top, 4)
+    }
+
+    private func pictureButton<S: Shape>(_ label: String, _ frame: CGRect, shape: S,
+                                         action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Color.clear
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 22)
-        .padding(.bottom, 20)
-        .frame(width: width)
-        .background(
-            shape
-                .fill(LinearGradient(colors: [Color(hex: 0xFFF5F9), Color(hex: 0xFDE3EE)], startPoint: .top, endPoint: .bottom))
-                .overlay(shape.strokeBorder(Color.white, lineWidth: 3))
-                .shadow(color: Palette.hotPink.opacity(0.35), radius: 22)
-        )
-        .padding(.top, artHeight * 0.62)
-        .overlay(alignment: .top) {
-            // The girl and her puppy resting on the card's top edge.
-            Image("RatingArt")
-                .resizable()
-                .scaledToFit()
-                .frame(width: width, height: artHeight)
-                .offset(y: floating ? -3 : 0)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
+        .buttonStyle(PictureButtonStyle(shape: shape))
+        .frame(width: frame.width, height: frame.height)
+        .offset(x: frame.minX, y: frame.minY)
+        .accessibilityLabel(label)
+    }
+}
+
+/// A button drawn in a picture: a soft white flash on it while it is pressed.
+private struct PictureButtonStyle<S: Shape>: ButtonStyle {
+    let shape: S
+
+    func makeBody(configuration: Configuration) -> some View {
+        shape
+            .fill(Color.white.opacity(configuration.isPressed ? 0.28 : 0.001))
+            .overlay(configuration.label)
+            .contentShape(shape)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
