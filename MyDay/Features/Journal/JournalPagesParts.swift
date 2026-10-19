@@ -778,8 +778,7 @@ struct JournalEntryCard: View {
                             .lineSpacing(1)
                             .lineLimit(3)
                             .multilineTextAlignment(.leading)
-                            // Clear of the angel in the corner.
-                            .padding(.trailing, !blush && entry.sortedPhotos.isEmpty && !inTrash ? 60 : 0)
+                            .padding(.trailing, previewClearance)
                     }
                     Spacer(minLength: 0)
                     JournalCardPhoto(entry: entry)
@@ -928,6 +927,13 @@ struct JournalEntryCard: View {
                     .accessibilityHidden(true)
                 }
             }
+    }
+
+    /// Room beside the first lines for the picture in the card's corner (the angel, the fairy;
+    /// Candy Cloud Kingdom's castle or bunny is wider).
+    private var previewClearance: CGFloat {
+        if blush || !entry.sortedPhotos.isEmpty || inTrash { return 0 }
+        return theme == .candyCloudKingdom ? 84 : 60
     }
 
     /// The page's first lines, or on some tabs the line the tab is about.

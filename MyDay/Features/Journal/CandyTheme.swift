@@ -251,20 +251,24 @@ struct CandyCardBackground: View {
     var dripLength: CGFloat = 11
     /// A picture in the bottom corner, under the frosting.
     var scene: String?
-    var sceneWidth: CGFloat = 140
+    var sceneWidth: CGFloat = 118
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         ZStack(alignment: .top) {
             shape.fill(CandyStyle.cardFill)
             if let scene {
-                Image(scene)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: sceneWidth)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding([.bottom, .trailing], 5)
-                    .accessibilityHidden(true)
+                // Whole, below the icing: on a short card the picture gets smaller rather than
+                // tucking its top (the castle's spires, the rainbow) under the frosting.
+                GeometryReader { proxy in
+                    Image(scene)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: sceneWidth, maxHeight: max(0, proxy.size.height - icing - dripLength - 6))
+                        .frame(width: max(0, proxy.size.width - 6), height: max(0, proxy.size.height - 6),
+                               alignment: .bottomTrailing)
+                }
+                .accessibilityHidden(true)
             }
             shape
                 .strokeBorder(CandyStyle.frosting, lineWidth: ring)
