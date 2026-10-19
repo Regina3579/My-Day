@@ -70,7 +70,7 @@ struct WriteNewPageRow: View {
                 Image("HeavenlyWriteAngel")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 86, height: 76)
+                    .frame(width: 88, height: 80)
                     .overlay(alignment: .topLeading) { heavenlyHeart(size: 13).offset(x: -2, y: 8) }
                     .overlay(alignment: .topTrailing) { heavenlyHeart(size: 12).offset(x: 4, y: 4) }
                     .accessibilityHidden(true)
@@ -264,11 +264,12 @@ struct MoodWeekCard: View {
         }
         .overlay(alignment: .topTrailing) {
             if heavenly {
+                // Flying over the card's corner, clear of Calendar (her hand rests on the edge).
                 Image("HeavenlyPeekAngel")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 58, height: 58)
-                    .offset(x: 10, y: -42)
+                    .frame(width: 64, height: 53)
+                    .offset(x: 14, y: -48)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -672,8 +673,9 @@ struct JournalEntryCard: View {
                     Image(entry.date.dayNumber.isMultiple(of: 2) ? "HeavenlyCardAngelSleepy" : "HeavenlyCardAngelAwake")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 78, height: 70)
-                        .offset(x: 6, y: 6)
+                        .frame(width: 82, height: 76)
+                        // Her cloud fades out just at the card's bottom edge.
+                        .offset(x: 6, y: -1)
                         .accessibilityHidden(true)
                 }
             }
