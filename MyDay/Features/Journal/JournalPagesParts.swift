@@ -1039,20 +1039,52 @@ struct JournalDateTile: View {
         .shadow(color: ribbon.edge.opacity(0.35), radius: 4, x: 0, y: 2)
     }
 
-    /// Rose Gold Elegance: the ribbon bow on a tile framed in rose gold, with a little heart at
-    /// its foot.
-    private func roseGold(_ ribbon: Ribbon) -> some View {
-        blush(ribbon)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(RoseStyle.roseGold, lineWidth: 1.6)
-                    .padding(.top, 8)
-                    .padding(-3)
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .bottom) {
-                GlossyHeart(size: 9).offset(y: 3)
-            }
+    /// Rose Gold Elegance, as in its design: a blush tile framed in rose gold, crowned with the
+    /// gold filigree heart (a pink jewel heart, little diamonds and pearls), with a diamond at
+    /// its foot. Every day wears the same pink and gold.
+    private func roseGold(_: Ribbon) -> some View {
+        let tile = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return VStack(spacing: 0) {
+            Text(date.formatted(.dateTime.day()))
+                .font(.rounded(.title, weight: .heavy))
+                .foregroundStyle(Palette.berry)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(.rounded(.subheadline, weight: .heavy))
+                .foregroundStyle(JournalPagesStyle.weekday)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.top, 20)
+        .frame(width: 64, height: 92)
+        .background(tile.fill(LinearGradient(colors: [Color(hex: 0xFFF8F4), Color(hex: 0xFCE6E0)],
+                                             startPoint: .top, endPoint: .bottom)))
+        .overlay(tile.strokeBorder(RoseStyle.roseGold, lineWidth: 2))
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(RoseStyle.goldLine.opacity(0.7), lineWidth: 0.8)
+                .padding(4)
+        )
+        .overlay(alignment: .top) {
+            Image("RoseDateCrown")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 78, height: 52)
+                .offset(y: -34)
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(LinearGradient(colors: [Color.white, Color(hex: 0xF3C9A2)], startPoint: .top, endPoint: .bottom))
+                .frame(width: 7, height: 7)
+                .rotationEffect(.degrees(45))
+                .overlay(Rectangle().stroke(RoseStyle.goldLine, lineWidth: 0.8).rotationEffect(.degrees(45)))
+                .offset(y: 4)
+                .accessibilityHidden(true)
+        }
+        .padding(.top, 30)
+        .shadow(color: RoseStyle.glow.opacity(0.35), radius: 4, x: 0, y: 2)
     }
 
     /// Rainbow Glow Unicorn: a cute rainbow cloud on top (a little rainbow resting on two smiling

@@ -4,9 +4,9 @@ import SwiftUI
 /// with curtains, hanging gold hearts and pearls at the top, a gold heart ornament over
 /// "My Journal Pages", an angel girl hugging a heart, a star with a bow beside Write a new page,
 /// cards framed in rose gold with roses at their corners, pale pink stars for days with no page,
-/// rose-gold rims on the buttons and dates under ribbon bows, and a pink bow at the bottom. The
-/// header, the girl, the star, the roses and the bow are art from the design; the frames, the
-/// stars, the hearts and the sparkles are drawn here.
+/// rose-gold rims on the buttons, dates crowned with a gold filigree heart, and a pink bow at
+/// the bottom. The header, the girl, the star, the roses, the crown and the bow are art from the
+/// design; the frames, the stars, the hearts and the sparkles are drawn here.
 enum RoseStyle {
     static let title = Color(hex: 0x4A0718)         // "My week in moods"
     static let month = Color(hex: 0x45061A)         // "October 2026"
