@@ -2,11 +2,11 @@ import SwiftUI
 
 /// Rainbow Glow Unicorn 🦄, a My Day Pro journal theme: My Journal Pages in a pastel sky with
 /// rainbows, clouds, golden stars and pink hearts, the castle with "My Journal Pages" and two
-/// unicorns at the top, a unicorn peeking beside Write a new page and over My week in moods, a
-/// rainbow star with a face for each day with no page, a little unicorn beside the month, dates
-/// under a cute rainbow cloud, and a unicorn on every page card in front of a rainbow. The
-/// unicorns, the castle and the stars with faces are art from the design; the rainbows, the
-/// clouds, the hearts and the cards are drawn here.
+/// unicorns at the top, a unicorn peeking beside Write a new page, a winged one flying over My
+/// week in moods, a rainbow star with a face for each day with no page, a little unicorn beside
+/// the month, dates under a cute rainbow cloud, and a unicorn on every page card in front of a
+/// rainbow. The unicorns, the castle and the stars with faces are art from the design; the
+/// rainbows, the clouds, the hearts and the cards are drawn here.
 enum UnicornStyle {
     static let title = Color(hex: 0x5E0B4E)         // "My week in moods"
     static let month = Color(hex: 0x5A0A2E)         // "October 2026"

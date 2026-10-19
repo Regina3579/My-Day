@@ -183,8 +183,8 @@ struct WriteNewPageRow: View {
 /// The last seven days, each with the star of its latest page (tap one to open that page). In
 /// Heavenly Angel Wishes a moon hangs on its corner, an angel peeks over it, and a day with no
 /// page is a pink star with little wings; in Enchanted Fairy Garden a butterfly rests on it and
-/// a day with no page is a pink flower with a face; in Rainbow Glow Unicorn a unicorn peeks over
-/// its corner and a day with no page is a rainbow star with a face.
+/// a day with no page is a pink flower with a face; in Rainbow Glow Unicorn a little winged
+/// unicorn flies over its corner and a day with no page is a rainbow star with a face.
 struct MoodWeekCard: View {
     let entries: [JournalEntry]
     let today: Date
@@ -281,12 +281,14 @@ struct MoodWeekCard: View {
         }
         .overlay(alignment: .topTrailing) {
             if theme == .rainbowGlowUnicorn {
-                // Peeking in from the screen's edge, as in the design.
-                Image("UnicornPeek")
+                // The design's little winged unicorn, whole, flying over the card's corner
+                // (turned to face the page), clear of Calendar and Write a new page.
+                Image("UnicornWinged")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 44, height: 66)
-                    .offset(x: 16, y: -13)
+                    .scaleEffect(x: -1, y: 1)
+                    .frame(width: 52, height: 52)
+                    .offset(x: 14, y: -42)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
