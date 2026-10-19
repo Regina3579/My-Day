@@ -885,6 +885,8 @@ struct VoiceNotePlayer: View {
     var duration: TimeInterval?
     var recordedAt: Date?
     var onContinue: (() -> Void)?
+    /// Continue needs My Day Pro: a small crown on it for a free account.
+    var continueLocked = false
     var onDelete: (() -> Void)?
     @State private var recorder = VoiceNoteRecorder()
 
@@ -928,6 +930,12 @@ struct VoiceNotePlayer: View {
                             .foregroundStyle(JournalStyle.pink)
                             .frame(width: 40, height: 40)
                             .background(Circle().fill(JournalStyle.pinkFill))
+                            .overlay(alignment: .topTrailing) {
+                                if continueLocked {
+                                    ProCrown(size: 16)
+                                        .offset(x: 4, y: -4)
+                                }
+                            }
                     }
                     .buttonStyle(PressScaleStyle())
                     .accessibilityLabel("Continue recording \(title)")

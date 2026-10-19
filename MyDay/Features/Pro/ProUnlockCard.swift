@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The My Day Pro pop-up, as in the design: the screen frosts over, and a pink card rises with
-/// the girl and her puppy among hearts and sparkles, a gold "👑 My Day Pro" badge, "Unlock …"
-/// with a line on what it brings (for the feature that was tapped), "Maybe Later" and
+/// The My Day Pro pop-up, as in the design: the screen softens and dims, and a pink card rises
+/// with the girl and her puppy among hearts and sparkles, a gold "👑 My Day Pro" badge,
+/// "Unlock …" with a line on what it brings (for the feature that was tapped), "Maybe Later" and
 /// "👑 Unlock Pro". It comes whenever a free account taps a Pro feature (`.proOffer`).
 struct ProUnlockCard: View {
     let feature: ProFeature
@@ -26,9 +26,11 @@ struct ProUnlockCard: View {
             let width = min(proxy.size.width * 0.86, 360)
             let place = TipArtFrame(origin: .zero, scale: width / Self.grid.width)
             ZStack {
+                // The page stays readable, as in the design: only softened (frosted glass, at
+                // part strength) and dimmed.
                 ZStack {
-                    Rectangle().fill(.ultraThinMaterial)
-                    ProStyle.frost
+                    Rectangle().fill(.ultraThinMaterial).opacity(0.4)
+                    ProStyle.shade
                 }
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
@@ -328,7 +330,8 @@ private struct ProCardShape: Shape {
 
 /// Colours of the Pro pop-up, sampled from the design.
 enum ProStyle {
-    static let frost = Color(hex: 0xF7C9DE).opacity(0.3)
+    /// The dim over the page: in the design, white turns to about (170, 164, 169).
+    static let shade = Color(hex: 0x251622).opacity(0.38)
     static let card = LinearGradient(colors: [Color(hex: 0xFCE2EE), Color(hex: 0xFDEDF5)],
                                      startPoint: .top, endPoint: .bottom)
     static let panel = LinearGradient(colors: [Color(hex: 0xFFF9FB), Color(hex: 0xFEF1F6)],

@@ -933,6 +933,7 @@ struct JournalComposer: View {
                             onContinue: {
                                 recordVoiceNote(continuing: note.id)
                             },
+                            continueLocked: !pro.isActive,
                             onDelete: {
                                 withAnimation(.snappy) { voiceNotes.removeAll { $0.id == note.id } }
                             })

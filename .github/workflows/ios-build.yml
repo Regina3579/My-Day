@@ -59,7 +59,7 @@ jobs:
     name: Simulator screenshots
     needs: build
     runs-on: macos-latest
-    timeout-minutes: 70
+    timeout-minutes: 90
     permissions:
       contents: write
     steps:
