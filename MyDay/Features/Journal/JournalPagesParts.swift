@@ -46,9 +46,9 @@ private struct JournalPagesCard: ViewModifier {
         case .cozyRainyDay:
             card.background(RainyCardBackground(radius: radius))
         case .candyCloudKingdom:
-            // A little more room at the top, under the icing.
+            // More room at the top, under the icing.
             card
-                .padding(.top, 6)
+                .padding(.top, 10)
                 .background(CandyCardBackground(radius: radius))
         case .blushBlossom:
             card
@@ -409,8 +409,8 @@ struct MoodWeekCard: View {
                 Image("CandyMoodsLollipop")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 50, height: 52)
-                    .offset(x: 18, y: 18)
+                    .frame(width: 56, height: 58)
+                    .offset(x: 14, y: 14)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -600,12 +600,14 @@ private struct JournalTabTile: View {
                     }
                 }
                 .angelWings(width: 11, tucked: 0.35, y: -1, isShown: heavenly)
-            // Small enough for six across; it shrinks a touch only on the narrowest iPhones.
+            // Small enough for six across, clear of the tile's rim; a long name (Voice Notes) or a
+            // narrow iPhone shrinks it a touch.
             Text(label)
                 .font(.system(size: 10.5, weight: .bold, design: .rounded))
                 .foregroundStyle(isOn ? Color.white : JournalPagesStyle.heading)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 3)
                 .frame(maxWidth: .infinity)
         }
         .padding(.top, 7)
@@ -788,7 +790,7 @@ struct JournalEntryCard: View {
         .padding(12)
         .padding(.bottom, 2)
         // Candy Cloud Kingdom: room under the icing.
-        .padding(.top, theme == .candyCloudKingdom ? 6 : 0)
+        .padding(.top, theme == .candyCloudKingdom ? 9 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             switch theme {
@@ -1119,7 +1121,7 @@ struct JournalDateTile: View {
         }
         .padding(.top, 14)
         .frame(width: 64, height: 88)
-        .background(CandyCardBackground(radius: 16, seed: date.dayNumber &+ 3, ring: 6, icing: 8, dripLength: 6))
+        .background(CandyCardBackground(radius: 16, seed: date.dayNumber &+ 3, ring: 8, icing: 10, dripLength: 7))
         .overlay(alignment: .top) {
             Image(ribbon == .pink ? "CandyLollipopPink" : ribbon == .purple ? "CandyLollipopYellow" : "CandyLollipopBlue")
                 .resizable()

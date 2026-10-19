@@ -18,9 +18,9 @@ enum CandyStyle {
     static let cardFill = LinearGradient(colors: [Color(hex: 0xFFFEFC), Color(hex: 0xFDF8F4)],
                                          startPoint: .top, endPoint: .bottom)
     /// Vanilla frosting, and the soft shadow under it.
-    static let frosting = LinearGradient(colors: [Color.white, Color(hex: 0xFFF5EC), Color(hex: 0xFBE6DC)],
+    static let frosting = LinearGradient(colors: [Color(hex: 0xFFFDF9), Color(hex: 0xFFF0E4), Color(hex: 0xFADFD3)],
                                          startPoint: .top, endPoint: .bottom)
-    static let frostingShade = Color(hex: 0xF2CDD2)
+    static let frostingShade = Color(hex: 0xEFC3CB)
     /// The pink of the candy-cane stripes.
     static let stripe = Color(hex: 0xF27AAB)
     /// The glowing caramel rims of the open tab, All Time, the search bar and Filter.
@@ -158,13 +158,21 @@ struct CandyIcing: View {
         Canvas { context, size in
             var scatter = CandyScatter(seed: seed)
             var pieces = [Path(CGRect(x: 0, y: 0, width: size.width, height: band))]
+            // A puffy, scalloped edge...
+            var bump: CGFloat = 3
+            while bump < size.width - 3 {
+                let radius = scatter.next(in: 2.6...4)
+                pieces.append(Path(ellipseIn: CGRect(x: bump - radius, y: band - radius, width: radius * 2, height: radius * 2)))
+                bump += radius * 1.7
+            }
+            // ...and drips running down from it.
             var x: CGFloat = scatter.next(in: 4...14)
             while x < size.width - 8 {
-                let width = scatter.next(in: 6...11)
-                let length = scatter.next(in: 2...max(3, dripLength))
+                let width = scatter.next(in: 6...10)
+                let length = scatter.next(in: max(2, dripLength * 0.3)...max(3, dripLength))
                 pieces.append(Path(roundedRect: CGRect(x: x, y: band - width / 2, width: width, height: length + width / 2),
                                    cornerRadius: width / 2))
-                x += width + scatter.next(in: 7...22)
+                x += width + scatter.next(in: 9...26)
             }
             for piece in pieces {
                 context.fill(piece.offsetBy(dx: 0, dy: 1.2), with: .color(CandyStyle.frostingShade))
@@ -174,7 +182,7 @@ struct CandyIcing: View {
                                                           startPoint: .zero, endPoint: CGPoint(x: 0, y: band + dripLength)))
             }
             if sprinkles {
-                let count = Int(size.width / 13)
+                let count = Int(size.width / 8)
                 for _ in 0..<count {
                     let point = CGPoint(x: scatter.next(in: 6...max(7, size.width - 6)), y: scatter.next(in: 2.5...max(3, band - 2.5)))
                     CandyScatter.sprinkle(in: context, at: point, angle: .degrees(scatter.next(in: 0...180)),
@@ -210,14 +218,14 @@ struct CandyEdgeSprinkles: View {
             let inner = max(ring - 1.5, 3.5)
             let along = max(radius * 0.7, 10)
             // Bottom, then the two sides.
-            for _ in 0..<Int(size.width / 22) {
+            for _ in 0..<Int(size.width / 14) {
                 let point = CGPoint(x: scatter.next(in: along...max(along + 1, size.width - along)),
                                     y: size.height - scatter.next(in: 2.5...inner))
                 CandyScatter.sprinkle(in: context, at: point, angle: .degrees(scatter.next(in: 0...180)),
                                       color: scatter.pick(CandyStyle.sprinkles), length: 4)
             }
             for side in 0..<2 {
-                for _ in 0..<Int(size.height / 24) {
+                for _ in 0..<Int(size.height / 15) {
                     let inset = scatter.next(in: 2.5...inner)
                     let point = CGPoint(x: side == 0 ? inset : size.width - inset,
                                         y: scatter.next(in: along...max(along + 1, size.height - along)))
@@ -236,11 +244,11 @@ struct CandyCardBackground: View {
     var radius: CGFloat = 26
     var seed = 0
     /// How wide the frosting round the edge is.
-    var ring: CGFloat = 9
+    var ring: CGFloat = 11
     /// The candy-cane edge (the tabs go without).
     var stripes = true
-    var icing: CGFloat = 11
-    var dripLength: CGFloat = 8
+    var icing: CGFloat = 13
+    var dripLength: CGFloat = 11
     /// A picture in the bottom corner, under the frosting.
     var scene: String?
     var sceneWidth: CGFloat = 140
@@ -261,6 +269,11 @@ struct CandyCardBackground: View {
             shape
                 .strokeBorder(CandyStyle.frosting, lineWidth: ring)
                 .shadow(color: CandyStyle.frostingShade, radius: 1.5, x: 0, y: 1)
+            // Where the frosting meets the card: a soft pink line, so it looks piped on.
+            shape
+                .inset(by: ring)
+                .stroke(CandyStyle.frostingShade.opacity(0.7), lineWidth: 1)
+                .blur(radius: 0.5)
             if icing > 0 {
                 CandyIcing(band: icing, dripLength: dripLength, seed: seed)
                     .frame(height: icing + dripLength + 4)

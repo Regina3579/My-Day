@@ -123,16 +123,8 @@ struct RoseCardBackground: View {
         shape
             .fill(RoseStyle.cardFill)
             .overlay(shape.strokeBorder(RoseStyle.roseGold, lineWidth: 2))
-            .overlay(
-                RoundedRectangle(cornerRadius: radius - 2, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.9), lineWidth: 1)
-                    .padding(2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: radius - 4.5, style: .continuous)
-                    .strokeBorder(RoseStyle.goldLine.opacity(0.75), lineWidth: 0.8)
-                    .padding(4.5)
-            )
+            .overlay(shape.inset(by: 2).strokeBorder(Color.white.opacity(0.9), lineWidth: 1))
+            .overlay(shape.inset(by: 4.5).strokeBorder(RoseStyle.goldLine.opacity(0.75), lineWidth: 0.8))
             .shadow(color: RoseStyle.glow.opacity(0.35), radius: 8, x: 0, y: 3)
     }
 }
