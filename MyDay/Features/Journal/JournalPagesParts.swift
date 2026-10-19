@@ -41,6 +41,8 @@ private struct JournalPagesCard: ViewModifier {
             card.background(FairyCardBackground(radius: radius))
         case .rainbowGlowUnicorn:
             card.background(UnicornCardBackground(radius: radius))
+        case .roseGoldElegance:
+            card.background(RoseCardBackground(radius: radius))
         case .blushBlossom:
             card
                 .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
@@ -102,6 +104,20 @@ struct WriteNewPageRow: View {
                             .accessibilityHidden(true)
                     }
             }
+        case .roseGoldElegance:
+            // Rose Gold Elegance: the star with a bow and hearts, on a rose-gold card.
+            HStack(spacing: 2) {
+                Image("RoseWriteStar")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 84, height: 74)
+                    .accessibilityHidden(true)
+                button
+            }
+            .padding(.leading, 6)
+            .padding(.trailing, 10)
+            .padding(.vertical, 10)
+            .background(RoseCardBackground(radius: 30))
         case .rainbowGlowUnicorn:
             HStack(spacing: 0) {
                 Image("UnicornWrite")
@@ -164,6 +180,8 @@ struct WriteNewPageRow: View {
             .overlay {
                 if theme == .heavenlyAngelWishes {
                     Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.5)
+                } else if theme == .roseGoldElegance {
+                    Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 2)
                 }
             }
             .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
@@ -236,6 +254,10 @@ struct MoodWeekCard: View {
                                 .fill(LinearGradient(colors: [Color.white, Color(hex: 0xFDE4F1)],
                                                      startPoint: .top, endPoint: .bottom))
                                 .overlay(Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.2))
+                        } else if theme == .roseGoldElegance {
+                            Capsule()
+                                .fill(RoseStyle.calendarFill)
+                                .overlay(Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.6))
                         } else {
                             Capsule().fill(JournalPagesStyle.calendarFill)
                         }
@@ -293,6 +315,23 @@ struct MoodWeekCard: View {
                     .accessibilityHidden(true)
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            if theme == .roseGoldElegance {
+                Image("RoseMoodsCorner")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 36, height: 48)
+                    .offset(x: -8, y: 8)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlay(alignment: .top) {
+            if theme == .roseGoldElegance {
+                GlossyHeart(size: 13)
+                    .offset(x: 30, y: -7)
+            }
+        }
         .overlay(alignment: .top) {
             if fairy {
                 Image("FairyButterflyPink")
@@ -336,6 +375,8 @@ struct MoodWeekCard: View {
                 } else if theme == .rainbowGlowUnicorn {
                     UnicornFaceStar(day: day)
                         .frame(width: 40, height: 40)
+                } else if theme == .roseGoldElegance {
+                    RoseEmptyStar()
                 } else {
                     Image(systemName: "star.fill")
                         .font(.system(size: 30))
@@ -490,6 +531,13 @@ private struct JournalTabTile: View {
                               : theme == .enchantedFairyGarden ? Color(hex: 0xF6D6E4) : Color.white,
                               lineWidth: isOn ? 2 : 1.5)
         )
+        .overlay {
+            if theme == .roseGoldElegance {
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .strokeBorder(RoseStyle.roseGold, lineWidth: 1.6)
+                    .padding(-2)
+            }
+        }
         .shadow(color: (heavenly && !isOn ? HeavenlyStyle.glow : JournalStyle.pink)
                     .opacity(isOn ? 0.3 : heavenly ? 0.1 : 0.08),
                 radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
@@ -529,6 +577,8 @@ struct JournalPeriodMenu: View {
             .overlay {
                 if heavenly {
                     Capsule().strokeBorder(HeavenlyStyle.goldEdge, lineWidth: 1.3)
+                } else if theme == .roseGoldElegance {
+                    Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
                 } else {
                     Capsule().strokeBorder(JournalPagesStyle.calendarFill, lineWidth: 1.5)
                 }
@@ -641,6 +691,7 @@ struct JournalEntryCard: View {
             case .heavenlyAngelWishes: heavenlyBackground
             case .enchantedFairyGarden: fairyBackground
             case .rainbowGlowUnicorn: unicornBackground
+            case .roseGoldElegance: roseBackground
             case .blushBlossom: RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill)
             }
         }
@@ -699,6 +750,21 @@ struct JournalEntryCard: View {
                         .frame(width: 88, height: 72)
                         // The grass fades out just at the card's bottom edge.
                         .offset(x: 4, y: -1)
+                        .accessibilityHidden(true)
+                }
+            }
+    }
+
+    /// Rose Gold Elegance: a rose-gold frame, with roses, leaves and a bow in the bottom corner.
+    private var roseBackground: some View {
+        RoseCardBackground(radius: 26)
+            .overlay(alignment: .bottomTrailing) {
+                if !inTrash {
+                    Image("RoseCorner")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 64)
+                        .offset(x: 6, y: 6)
                         .accessibilityHidden(true)
                 }
             }
@@ -892,8 +958,25 @@ struct JournalDateTile: View {
         case .heavenlyAngelWishes: heavenly(ribbon)
         case .enchantedFairyGarden: fairy(ribbon)
         case .rainbowGlowUnicorn: unicorn(ribbon)
+        case .roseGoldElegance: roseGold(ribbon)
         case .blushBlossom: blush(ribbon)
         }
+    }
+
+    /// Rose Gold Elegance: the ribbon bow on a tile framed in rose gold, with a little heart at
+    /// its foot.
+    private func roseGold(_ ribbon: Ribbon) -> some View {
+        blush(ribbon)
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(RoseStyle.roseGold, lineWidth: 1.6)
+                    .padding(.top, 8)
+                    .padding(-3)
+                    .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottom) {
+                GlossyHeart(size: 9).offset(y: 3)
+            }
     }
 
     /// Rainbow Glow Unicorn: a cute rainbow cloud on top (a little rainbow resting on two smiling
@@ -1153,6 +1236,11 @@ struct JournalSearchBar: View {
             .frame(minHeight: 56)
             .background(Capsule().fill(Color.white.opacity(0.97)))
             .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
+            .overlay {
+                if theme == .roseGoldElegance {
+                    Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
+                }
+            }
             .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
 
             Button(action: onFilter) {
@@ -1168,6 +1256,11 @@ struct JournalSearchBar: View {
                 .frame(minHeight: 56)
                 .background(Capsule().fill(Color.white.opacity(0.97)))
                 .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
+                .overlay {
+                    if theme == .roseGoldElegance {
+                        Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
+                    }
+                }
                 .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
                 .angelWingTrailing(width: 15, tucked: 0.45, y: -6, isShown: heavenly)
                 .overlay(alignment: .topTrailing) {

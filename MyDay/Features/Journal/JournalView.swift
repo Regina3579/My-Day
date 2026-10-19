@@ -69,6 +69,7 @@ struct JournalPagesHome: View {
             case .heavenlyAngelWishes: HeavenlyBackdrop()
             case .enchantedFairyGarden: FairyBackdrop()
             case .rainbowGlowUnicorn: UnicornBackdrop()
+            case .roseGoldElegance: RoseBackdrop()
             case .blushBlossom: JournalBackdrop()
             }
         }
@@ -136,6 +137,8 @@ struct JournalPagesHome: View {
                         JournalHero(scene: .fairyGarden, width: proxy.size.width, statusBar: statusBar)
                     case .rainbowGlowUnicorn:
                         JournalHero(scene: .rainbowUnicorn, width: proxy.size.width, statusBar: statusBar)
+                    case .roseGoldElegance:
+                        RoseHeader(width: proxy.size.width, statusBar: statusBar)
                     case .blushBlossom:
                         JournalHero(scene: .pages, width: proxy.size.width, statusBar: statusBar)
                     }
@@ -145,6 +148,8 @@ struct JournalPagesHome: View {
                 } action: { isVisible in
                     heroIsVisible = isVisible
                 }
+                // Rose Gold Elegance's angel girl hangs over the card below, in front of it.
+                .zIndex(theme == .roseGoldElegance ? 1 : 0)
                 content
                     .padding(.horizontal, 16)
                     // The fairy and the unicorn beside Write a new page rise into the picture.
@@ -261,6 +266,7 @@ struct JournalPagesHome: View {
         case .heavenlyAngelWishes: 2
         case .enchantedFairyGarden: -18
         case .rainbowGlowUnicorn: -28
+        case .roseGoldElegance: 2
         }
     }
 
