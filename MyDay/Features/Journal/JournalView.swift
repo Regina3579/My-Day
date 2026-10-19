@@ -44,6 +44,7 @@ struct JournalPagesHome: View {
     @State private var heroIsVisible = true
     @State private var confirmEmptyTrash = false
     @State private var choosesTheme = false
+    @State private var showsMenu = false
     @FocusState private var searchFocused: Bool
     /// The opening picture shows each time the journal opens (after the lock, when it is on).
     #if DEBUG
@@ -77,6 +78,7 @@ struct JournalPagesHome: View {
             }
         }
         .environment(\.journalTheme, theme)
+        .overlay(alignment: .topTrailing) { menuCard }
         .overlay {
             if isOpening {
                 JournalOpeningView(frozenAt: debugOpeningMoment) {
@@ -432,36 +434,63 @@ struct JournalPagesHome: View {
 
     // MARK: Menu and actions
 
+    /// ⋮: opens (or closes) the menu card.
     private var moreMenu: some View {
-        Menu {
-            Button {
-                router.push(todayPage.map { AppRoute.editJournalPage($0) } ?? .newJournalPage(nil), in: hostTab)
-            } label: {
-                Label(todayPage == nil ? "Write a New Page" : "Continue Today's Page", systemImage: "square.and.pencil")
-            }
-            Button {
-                isFiltering = true
-            } label: {
-                Label("Filter Pages", systemImage: "line.3.horizontal.decrease.circle")
-            }
-            Button(action: openCalendar) {
-                Label("View Calendar", systemImage: "calendar")
-            }
-            Button {
-                choosesTheme = true
-            } label: {
-                Label("Journal Theme", systemImage: "paintpalette")
-            }
-            Button {
-                withAnimation(.snappy) { shelf = .trash }
-            } label: {
-                Label("Trash", systemImage: "trash")
-            }
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { showsMenu.toggle() }
+            Haptics.tap()
         } label: {
             Image(uiImage: PriorityMoreSymbol.image)
                 .foregroundStyle(JournalStyle.pink)
-                .accessibilityLabel("More")
         }
+        .accessibilityLabel("More")
+    }
+
+    /// The menu card from the design, under ⋮; a tap anywhere else closes it.
+    @ViewBuilder
+    private var menuCard: some View {
+        if showsMenu {
+            ZStack(alignment: .topTrailing) {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture { closeMenu() }
+                    .accessibilityHidden(true)
+                JournalPagesMenu(items: menuItems)
+                    .padding(.top, 30)
+                    .padding(.trailing, 12)
+                    .transition(.scale(scale: 0.85, anchor: .topTrailing).combined(with: .opacity))
+            }
+        }
+    }
+
+    private var menuItems: [JournalPagesMenu.Item] {
+        [
+            .init(title: todayPage == nil ? "Write a New Page" : "Continue Today's Page", art: "JournalMenuWrite") {
+                closeMenu()
+                router.push(todayPage.map { AppRoute.editJournalPage($0) } ?? .newJournalPage(nil), in: hostTab)
+            },
+            .init(title: "Filter Pages", art: "JournalMenuFilter") {
+                closeMenu()
+                isFiltering = true
+            },
+            .init(title: "View Calendar", art: "JournalMenuCalendar") {
+                closeMenu()
+                openCalendar()
+            },
+            .init(title: "Journal Theme", art: "JournalMenuTheme") {
+                closeMenu()
+                choosesTheme = true
+            },
+            .init(title: "Trash", art: "JournalMenuTrash") {
+                closeMenu()
+                withAnimation(.snappy) { shelf = .trash }
+            },
+        ]
+    }
+
+    private func closeMenu() {
+        withAnimation(.easeOut(duration: 0.18)) { showsMenu = false }
     }
 
     private func openCalendar() {
@@ -483,6 +512,11 @@ struct JournalPagesHome: View {
 
     #if DEBUG
     private func applyDebugRoute(_ reader: ScrollViewProxy) async {
+        if DebugLaunchRoute.takeJournalMenu() {
+            try? await Task.sleep(for: .seconds(0.6))
+            showsMenu = true
+            return
+        }
         if DebugLaunchRoute.takeJournalPage(), let newest = live.first {
             router.homePath.append(newest)
             return

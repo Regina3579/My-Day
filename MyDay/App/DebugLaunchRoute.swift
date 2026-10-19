@@ -166,6 +166,8 @@ enum DebugLaunchRoute {
     /// The My Journal Pages tab to show, scrolled to the tabs ("journal-pages": All Pages,
     /// "journal-templates", "journal-feelings", "journal-photos", "journal-trash").
     @MainActor private static var journalShelf: String?
+    /// Open the ⋮ menu on My Journal Pages ("journal-menu").
+    @MainActor private static var journalMenu = false
     /// Open Filter on My Journal Pages ("journal-filter").
     @MainActor private static var journalFilter = false
     /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save,
@@ -353,6 +355,12 @@ enum DebugLaunchRoute {
     }
 
     @MainActor
+    static func takeJournalMenu() -> Bool {
+        defer { journalMenu = false }
+        return journalMenu
+    }
+
+    @MainActor
     static func takeJournalFilter() -> Bool {
         defer { journalFilter = false }
         return journalFilter
@@ -457,6 +465,9 @@ enum DebugLaunchRoute {
         case "journal-pages", "journal-templates", "journal-feelings", "journal-photos", "journal-trash":
             let name = arguments[index + 1].dropFirst("journal-".count)
             journalShelf = name == "pages" ? JournalShelf.all.rawValue : String(name)
+            router.open(.journal)
+        case "journal-menu":
+            journalMenu = true
             router.open(.journal)
         case "journal-filter":
             journalShelf = JournalShelf.all.rawValue
