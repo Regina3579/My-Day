@@ -95,8 +95,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           branch="${GITHUB_REF_NAME}"
           # Commit on top of the newest branch, which may have moved on during the run.
-          for attempt in 1 2 3; do
-            git fetch --depth=1 origin "$branch"
+          # A fetch or push can fail on a network hiccup (once: "Could not resolve host:
+          # github.com"), so both are tried again, waiting longer each time.
+          for wait in 5 10 20 40 0; do
+            if ! git fetch --depth=1 origin "$branch"; then
+              sleep "$wait"
+              continue
+            fi
             git checkout -q -B "$branch" FETCH_HEAD
             mkdir -p docs/screenshots
             rm -f docs/screenshots/*.jpg
@@ -104,6 +109,6 @@ jobs:
             git add -A docs/screenshots
             git commit -q -m "Update app screenshots" || exit 0
             git push origin "HEAD:$branch" && exit 0
-            sleep 5
+            sleep "$wait"
           done
           exit 1
