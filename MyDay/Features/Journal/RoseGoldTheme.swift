@@ -27,8 +27,8 @@ enum RoseStyle {
 
 // MARK: - The page
 
-/// Behind My Journal Pages: blush and peach, soft glows, gold sparkles and little hearts, with
-/// roses in the bottom corners and a pink bow at the bottom.
+/// Behind My Journal Pages: blush and peach, soft glows, gold sparkles and little hearts (the
+/// roses and the pink bow at the bottom are drawn round the search bar: `RoseSearchBarTrim`).
 struct RoseBackdrop: View {
     private static let glows: [(x: CGFloat, y: CGFloat, size: CGFloat)] = [
         (0.04, 0.28, 46), (0.97, 0.33, 40), (0.02, 0.5, 52), (0.98, 0.56, 44), (0.03, 0.72, 48), (0.97, 0.8, 40),
@@ -66,22 +66,6 @@ struct RoseBackdrop: View {
                     GlossyHeart(size: heart.size)
                         .position(x: size.width * heart.x, y: size.height * heart.y)
                 }
-                Image("RoseCorner")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 64)
-                    .position(x: size.width - 40, y: size.height - 28)
-                Image("RoseCorner")
-                    .resizable()
-                    .scaledToFit()
-                    .scaleEffect(x: -1, y: 1)
-                    .frame(width: 100, height: 64)
-                    .position(x: 40, y: size.height - 28)
-                Image("RoseBow")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 96, height: 57)
-                    .position(x: size.width / 2, y: size.height - 22)
             }
         }
         .ignoresSafeArea()
@@ -162,5 +146,36 @@ struct RoseEmptyStar: View {
             .shadow(color: RoseStyle.glow.opacity(0.4), radius: 2, x: 0, y: 1)
             .frame(width: 38, height: 38)
             .accessibilityHidden(true)
+    }
+}
+
+/// Round the search bar at the bottom, as in the design: roses and leaves in both corners and
+/// the pink bow with its gold heart under the middle.
+struct RoseSearchBarTrim: View {
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            HStack {
+                Image("RoseCorner")
+                    .resizable()
+                    .scaledToFit()
+                    .scaleEffect(x: -1, y: 1)
+                    .frame(width: 76, height: 48)
+                Spacer()
+                Image("RoseCorner")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 76, height: 48)
+            }
+            .padding(.horizontal, -8)
+            // Just under the bar's outer corners, clear of the search icon and Filter.
+            .offset(y: 40)
+            Image("RoseBow")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 92, height: 55)
+                .offset(y: 36)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }

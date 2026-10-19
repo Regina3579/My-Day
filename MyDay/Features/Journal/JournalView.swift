@@ -144,7 +144,10 @@ struct JournalPagesHome: View {
                     }
                 }
                 .onGeometryChange(for: Bool.self) { geometry in
-                    geometry.frame(in: .global).maxY > proxy.safeAreaInsets.top + 60
+                    // A Pro theme's picture is about as tall as the bars over it, so it counts
+                    // as shown until it has scrolled a little way up.
+                    blush ? geometry.frame(in: .global).maxY > proxy.safeAreaInsets.top + 60
+                        : geometry.frame(in: .global).minY > -40
                 } action: { isVisible in
                     heroIsVisible = isVisible
                 }
@@ -165,6 +168,9 @@ struct JournalPagesHome: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+        // iOS 26 softens what lies under the navigation bar; a Pro theme's picture (its title,
+        // castle, sign or girl) stays sharp there, as in its design, until it scrolls away.
+        .modifier(TopScrollEdgeEffect(hidden: !blush && heroIsVisible))
         .ignoresSafeArea(edges: .top)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             JournalSearchBar(text: $search, focused: $searchFocused, filterCount: filter.count + (period == .allTime ? 0 : 1)) {
@@ -462,4 +468,17 @@ struct JournalPagesHome: View {
         }
     }
     #endif
+}
+
+/// Hides the top scroll edge effect (iOS 26 and later) while `hidden`.
+private struct TopScrollEdgeEffect: ViewModifier {
+    let hidden: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.scrollEdgeEffectHidden(hidden, for: .top)
+        } else {
+            content
+        }
+    }
 }

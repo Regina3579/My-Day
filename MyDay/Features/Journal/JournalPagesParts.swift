@@ -1280,6 +1280,11 @@ struct JournalSearchBar: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 6)
+        .overlay(alignment: .bottom) {
+            if theme == .roseGoldElegance {
+                RoseSearchBarTrim()
+            }
+        }
         .background(alignment: .bottom) {
             let base = theme.pagesBase
             LinearGradient(colors: [base.opacity(0), base.opacity(0.92)], startPoint: .top, endPoint: .center)

@@ -75,6 +75,8 @@ struct MoodChooserSheet: View {
                     Text("24 more moods with My Day Pro")
                         .font(.rounded(.subheadline, weight: .heavy))
                         .foregroundStyle(ProStyle.title)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     Text("Amazing, Happy, Calm, Sad, Stressed and Tired are free 💖")
                         .font(.rounded(.caption, weight: .semibold))
                         .foregroundStyle(MoodChooserStyle.subtitle)
