@@ -23,7 +23,8 @@ struct JournalView: View {
 /// moods, the ten tabs, then the pages by month, with the search bar and Filter floating at
 /// the bottom. Written pages scroll behind the search bar. It is drawn in the journal theme
 /// (Blush Blossom, or with My Day Pro, Heavenly Angel Wishes: the castle in the clouds at the
-/// top and the cards in the sky).
+/// top and the cards in the sky; or Enchanted Fairy Garden: the fairies' sign at the top and the
+/// cards in a flower garden).
 struct JournalPagesHome: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
@@ -52,6 +53,8 @@ struct JournalPagesHome: View {
     /// The theme drawn: Blush Blossom while a Pro theme waits for My Day Pro.
     private var theme: JournalTheme { chosenTheme.applying(pro: pro.isActive) }
     private var heavenly: Bool { theme == .heavenlyAngelWishes }
+    private var fairy: Bool { theme == .enchantedFairyGarden }
+    private var blush: Bool { theme == .blushBlossom }
 
     var body: some View {
         GeometryReader { proxy in
@@ -63,10 +66,10 @@ struct JournalPagesHome: View {
             }
         }
         .background {
-            if heavenly {
-                HeavenlyBackdrop()
-            } else {
-                JournalBackdrop()
+            switch theme {
+            case .heavenlyAngelWishes: HeavenlyBackdrop()
+            case .enchantedFairyGarden: FairyBackdrop()
+            case .blushBlossom: JournalBackdrop()
             }
         }
         .environment(\.journalTheme, theme)
@@ -82,8 +85,8 @@ struct JournalPagesHome: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("My Journal Pages")
-                    .font(heavenly ? HeavenlyStyle.serif(.headline) : .rounded(.headline, weight: .bold))
-                    .foregroundStyle(heavenly ? HeavenlyStyle.title : JournalStyle.ink)
+                    .font(blush ? .rounded(.headline, weight: .bold) : HeavenlyStyle.serif(.headline))
+                    .foregroundStyle(heavenly ? HeavenlyStyle.title : fairy ? FairyStyle.title : JournalStyle.ink)
                     .opacity(heroIsVisible ? 0 : 1)
                     .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
                     .accessibilityHidden(heroIsVisible)
@@ -119,16 +122,19 @@ struct JournalPagesHome: View {
 
     // MARK: Layout
 
-    /// The picture, then the cards on their panel (in Heavenly Angel Wishes, the castle in the
-    /// clouds, then the cards in the sky); the search bar floats at the bottom.
+    /// The picture, then the cards on their panel (in the Pro themes, the theme's picture, then
+    /// the cards on its backdrop); the search bar floats at the bottom.
     private func scroller(_ proxy: GeometryProxy) -> some View {
         let statusBar = JournalScene.windowStatusBar(fallback: max(0, proxy.safeAreaInsets.top - 44))
         return ScrollView {
             VStack(spacing: 0) {
                 Group {
-                    if heavenly {
+                    switch theme {
+                    case .heavenlyAngelWishes:
                         HeavenlyHeader(width: proxy.size.width, statusBar: statusBar)
-                    } else {
+                    case .enchantedFairyGarden:
+                        JournalHero(scene: .fairyGarden, width: proxy.size.width, statusBar: statusBar)
+                    case .blushBlossom:
                         JournalHero(scene: .pages, width: proxy.size.width, statusBar: statusBar)
                     }
                 }
@@ -139,15 +145,16 @@ struct JournalPagesHome: View {
                 }
                 content
                     .padding(.horizontal, 16)
-                    .padding(.top, heavenly ? 2 : 18)
+                    // The fairy beside Write a new page rises into the sign's picture.
+                    .padding(.top, blush ? 18 : heavenly ? 2 : -18)
                     .padding(.bottom, 20)
                     .frame(maxWidth: .infinity)
                     .background(alignment: .top) {
-                        if !heavenly {
+                        if blush {
                             JournalPanel()
                         }
                     }
-                    .padding(.top, heavenly ? 0 : -JournalScene.pages.overlap(width: proxy.size.width))
+                    .padding(.top, blush ? -JournalScene.pages.overlap(width: proxy.size.width) : 0)
             }
         }
         .scrollDismissesKeyboard(.interactively)
@@ -246,19 +253,20 @@ struct JournalPagesHome: View {
     }
 
     /// The first heading: the month (or the tab), with the period menu beside it (in Heavenly
-    /// Angel Wishes, with the angel asleep on a cloud between them when there is room).
+    /// Angel Wishes, with the angel asleep on a cloud between them when there is room; in
+    /// Enchanted Fairy Garden, two butterflies).
     @ViewBuilder
     private func listHeader(title: String) -> some View {
-        if heavenly {
+        if !blush {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 0) {
                     monthTitle(title)
                         .fixedSize()
                     Spacer(minLength: 2)
-                    Image("HeavenlyMonthAngel")
+                    Image(heavenly ? "HeavenlyMonthAngel" : "FairyButterflyPair")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 62, height: 42)
+                        .frame(width: heavenly ? 62 : 52, height: heavenly ? 42 : 36)
                         .accessibilityHidden(true)
                     Spacer(minLength: 8)
                     JournalPeriodMenu(period: $period)
@@ -288,8 +296,8 @@ struct JournalPagesHome: View {
     private func monthTitle(_ title: String) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(heavenly ? HeavenlyStyle.serif(.title3) : .rounded(.title3, weight: .heavy))
-                .foregroundStyle(heavenly ? HeavenlyStyle.month : Palette.berry)
+                .font(blush ? .rounded(.title3, weight: .heavy) : HeavenlyStyle.serif(.title3))
+                .foregroundStyle(heavenly ? HeavenlyStyle.month : fairy ? FairyStyle.month : Palette.berry)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             Image(systemName: "heart.fill")

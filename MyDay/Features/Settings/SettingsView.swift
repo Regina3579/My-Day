@@ -160,7 +160,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Journal")
                 } footer: {
-                    Text("Journal Theme dresses My Journal Pages: Blush Blossom for everyone, Heavenly Angel Wishes and the themes to come with My Day Pro. " + lockFooter)
+                    Text("Journal Theme dresses My Journal Pages: Blush Blossom for everyone; Heavenly Angel Wishes, Enchanted Fairy Garden and the themes to come with My Day Pro. " + lockFooter)
                 }
 
                 Section {

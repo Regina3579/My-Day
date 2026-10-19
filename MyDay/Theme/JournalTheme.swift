@@ -6,6 +6,7 @@ import SwiftUI
 enum JournalTheme: String, CaseIterable, Identifiable {
     case blushBlossom
     case heavenlyAngelWishes
+    case enchantedFairyGarden
 
     var id: String { rawValue }
 
@@ -13,6 +14,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
         switch self {
         case .blushBlossom: "Blush Blossom 🌷"
         case .heavenlyAngelWishes: "Heavenly Angel Wishes 👼"
+        case .enchantedFairyGarden: "Enchanted Fairy Garden 🧚"
         }
     }
 
@@ -21,6 +23,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
         switch self {
         case .blushBlossom: "Pastel pink pages with hearts, bows and flowers."
         case .heavenlyAngelWishes: "Little angels, golden stars and a castle in the clouds."
+        case .enchantedFairyGarden: "Fairies, butterflies and glowing lanterns in a flower garden."
         }
     }
 
@@ -29,6 +32,7 @@ enum JournalTheme: String, CaseIterable, Identifiable {
         switch self {
         case .blushBlossom: "ThemePreviewBlushBlossom"
         case .heavenlyAngelWishes: "ThemePreviewHeavenly"
+        case .enchantedFairyGarden: "ThemePreviewFairyGarden"
         }
     }
 
