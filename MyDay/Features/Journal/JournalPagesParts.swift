@@ -18,7 +18,8 @@ enum JournalPagesStyle {
 
 extension View {
     /// A card of My Journal Pages: soft white (in Heavenly Angel Wishes, cream with gold edges;
-    /// in Enchanted Fairy Garden, cream with vines round two corners).
+    /// in Enchanted Fairy Garden, cream with vines round two corners; in Rainbow Glow Unicorn,
+    /// white fading to pink).
     func journalPagesCard(padding: CGFloat = 14, radius: CGFloat = 26) -> some View {
         modifier(JournalPagesCard(padding: padding, radius: radius))
     }
@@ -38,6 +39,8 @@ private struct JournalPagesCard: ViewModifier {
             card.background(HeavenlyCardBackground(radius: radius))
         case .enchantedFairyGarden:
             card.background(FairyCardBackground(radius: radius))
+        case .rainbowGlowUnicorn:
+            card.background(UnicornCardBackground(radius: radius))
         case .blushBlossom:
             card
                 .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
@@ -51,8 +54,9 @@ private struct JournalPagesCard: ViewModifier {
 
 /// The star waving beside the big pink "✏️ Write a new page ›" (in Heavenly Angel Wishes, an
 /// angel hugging a heart, on a gold-edged card; in Enchanted Fairy Garden, a fairy asleep on a
-/// mushroom and a butterfly on the button). A journal is one page a day, so once today has a
-/// page it reads "Continue writing" and opens that page.
+/// mushroom and a butterfly on the button; in Rainbow Glow Unicorn, a unicorn peeking over a
+/// cloud). A journal is one page a day, so once today has a page it reads "Continue writing"
+/// and opens that page.
 struct WriteNewPageRow: View {
     /// Today's page, when it has been written.
     let todayPage: JournalEntry?
@@ -97,6 +101,15 @@ struct WriteNewPageRow: View {
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
                     }
+            }
+        case .rainbowGlowUnicorn:
+            HStack(spacing: 0) {
+                Image("UnicornWrite")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 88)
+                    .accessibilityHidden(true)
+                button
             }
         case .blushBlossom:
             HStack(spacing: 4) {
@@ -170,7 +183,8 @@ struct WriteNewPageRow: View {
 /// The last seven days, each with the star of its latest page (tap one to open that page). In
 /// Heavenly Angel Wishes a moon hangs on its corner, an angel peeks over it, and a day with no
 /// page is a pink star with little wings; in Enchanted Fairy Garden a butterfly rests on it and
-/// a day with no page is a pink flower with a face.
+/// a day with no page is a pink flower with a face; in Rainbow Glow Unicorn a unicorn peeks over
+/// its corner and a day with no page is a rainbow star with a face.
 struct MoodWeekCard: View {
     let entries: [JournalEntry]
     let today: Date
@@ -186,8 +200,8 @@ struct MoodWeekCard: View {
             HStack(spacing: 8) {
                 HStack(spacing: 6) {
                     Text("My week in moods")
-                        .font(theme == .blushBlossom ? .rounded(.headline, weight: .heavy) : HeavenlyStyle.serif(.headline))
-                        .foregroundStyle(heavenly ? HeavenlyStyle.title : fairy ? FairyStyle.title : JournalStyle.plum)
+                        .font(theme.headingFont(.headline))
+                        .foregroundStyle(theme.headingColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Image(systemName: "heart.fill")
@@ -264,6 +278,17 @@ struct MoodWeekCard: View {
                 HeavenlyStarView(size: 20).rotationEffect(.degrees(12)).offset(x: 8, y: 7)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if theme == .rainbowGlowUnicorn {
+                Image("UnicornPeek")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 58, height: 60)
+                    .offset(x: 30, y: -14)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .overlay(alignment: .top) {
             if fairy {
                 Image("FairyButterflyPink")
@@ -304,6 +329,9 @@ struct MoodWeekCard: View {
                     WingedPinkStar()
                 } else if fairy {
                     FairyFlowerFace(day: day)
+                } else if theme == .rainbowGlowUnicorn {
+                    UnicornFaceStar(day: day)
+                        .frame(width: 40, height: 40)
                 } else {
                     Image(systemName: "star.fill")
                         .font(.system(size: 30))
@@ -608,6 +636,7 @@ struct JournalEntryCard: View {
             switch theme {
             case .heavenlyAngelWishes: heavenlyBackground
             case .enchantedFairyGarden: fairyBackground
+            case .rainbowGlowUnicorn: unicornBackground
             case .blushBlossom: RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill)
             }
         }
@@ -665,6 +694,27 @@ struct JournalEntryCard: View {
                         .frame(width: 88, height: 70)
                         .offset(x: 4, y: 2)
                         .accessibilityHidden(true)
+                }
+            }
+    }
+
+    /// Rainbow Glow Unicorn: a unicorn in the bottom corner in front of a rainbow (hugging a heart
+    /// cloud, or prancing, day by day).
+    private var unicornBackground: some View {
+        UnicornCardBackground(radius: 26)
+            .overlay(alignment: .bottomTrailing) {
+                if !inTrash {
+                    ZStack(alignment: .bottomTrailing) {
+                        RainbowArc(band: 4)
+                            .frame(width: 80, height: 80)
+                            .offset(x: -34, y: 22)
+                        Image(entry.date.dayNumber.isMultiple(of: 2) ? "UnicornCardHug" : "UnicornCardPrance")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 84, height: 76)
+                    }
+                    .offset(x: 4, y: 2)
+                    .accessibilityHidden(true)
                 }
             }
     }
@@ -835,8 +885,27 @@ struct JournalDateTile: View {
         switch theme {
         case .heavenlyAngelWishes: heavenly(ribbon)
         case .enchantedFairyGarden: fairy(ribbon)
+        case .rainbowGlowUnicorn: unicorn(ribbon)
         case .blushBlossom: blush(ribbon)
         }
+    }
+
+    /// Rainbow Glow Unicorn: the ribbon bow, with a cloud at its foot and little golden stars.
+    private func unicorn(_ ribbon: Ribbon) -> some View {
+        blush(ribbon)
+            .overlay(alignment: .bottom) {
+                PuffCloud()
+                    .scaleEffect(0.42)
+                    .frame(width: 70, height: 26)
+                    .offset(y: 4)
+                    .allowsHitTesting(false)
+            }
+            .overlay(alignment: .leading) {
+                HeavenlyStarView(size: 11).offset(x: 3, y: -6)
+            }
+            .overlay(alignment: .trailing) {
+                HeavenlyStarView(size: 12).offset(x: -3, y: -12)
+            }
     }
 
     /// Enchanted Fairy Garden: a little wooden frame with vines and flowers, a butterfly on top
@@ -1091,8 +1160,7 @@ struct JournalSearchBar: View {
         .padding(.top, 10)
         .padding(.bottom, 6)
         .background(alignment: .bottom) {
-            let base = heavenly ? HeavenlyStyle.base
-                : theme == .enchantedFairyGarden ? FairyStyle.base : JournalBackdrop.base
+            let base = theme.pagesBase
             LinearGradient(colors: [base.opacity(0), base.opacity(0.92)], startPoint: .top, endPoint: .center)
                 .ignoresSafeArea(edges: .bottom)
                 .allowsHitTesting(false)

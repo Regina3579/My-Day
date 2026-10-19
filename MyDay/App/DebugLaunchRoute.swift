@@ -416,9 +416,11 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
         UserDefaults.standard.set(arguments[index + 1] != "settings-icloud-tip", forKey: Prefs.didShowICloudTip)
-        // Only the `heavenly-` and `fairy-` routes dress the journal in a Pro theme.
-        let theme: JournalTheme = arguments[index + 1].hasPrefix("heavenly-") ? .heavenlyAngelWishes
-            : arguments[index + 1].hasPrefix("fairy-") ? .enchantedFairyGarden : .blushBlossom
+        // Only the `heavenly-`, `fairy-` and `unicorn-` routes dress the journal in a Pro theme.
+        let route = arguments[index + 1]
+        let theme: JournalTheme = route.hasPrefix("heavenly-") ? .heavenlyAngelWishes
+            : route.hasPrefix("fairy-") ? .enchantedFairyGarden
+            : route.hasPrefix("unicorn-") ? .rainbowGlowUnicorn : .blushBlossom
         UserDefaults.standard.set(theme.rawValue, forKey: Prefs.journalTheme)
 
         switch arguments[index + 1] {
@@ -501,9 +503,9 @@ enum DebugLaunchRoute {
         case "pro-settings":
             settingsPro = true
             router.tab = .settings
-        case "heavenly-journal", "fairy-journal":
+        case "heavenly-journal", "fairy-journal", "unicorn-journal":
             router.open(.journal)
-        case "heavenly-pages", "fairy-pages":
+        case "heavenly-pages", "fairy-pages", "unicorn-pages":
             journalShelf = JournalShelf.all.rawValue
             router.open(.journal)
         case "settings-journal-theme":

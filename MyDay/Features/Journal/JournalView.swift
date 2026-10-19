@@ -23,8 +23,9 @@ struct JournalView: View {
 /// moods, the ten tabs, then the pages by month, with the search bar and Filter floating at
 /// the bottom. Written pages scroll behind the search bar. It is drawn in the journal theme
 /// (Blush Blossom, or with My Day Pro, Heavenly Angel Wishes: the castle in the clouds at the
-/// top and the cards in the sky; or Enchanted Fairy Garden: the fairies' sign at the top and the
-/// cards in a flower garden).
+/// top and the cards in the sky; Enchanted Fairy Garden: the fairies' sign at the top and the
+/// cards in a flower garden; or Rainbow Glow Unicorn: the unicorns' castle at the top and the
+/// cards among rainbows and clouds).
 struct JournalPagesHome: View {
     @Environment(AppState.self) private var appState
     @Environment(Router.self) private var router
@@ -52,8 +53,6 @@ struct JournalPagesHome: View {
 
     /// The theme drawn: Blush Blossom while a Pro theme waits for My Day Pro.
     private var theme: JournalTheme { chosenTheme.applying(pro: pro.isActive) }
-    private var heavenly: Bool { theme == .heavenlyAngelWishes }
-    private var fairy: Bool { theme == .enchantedFairyGarden }
     private var blush: Bool { theme == .blushBlossom }
 
     var body: some View {
@@ -69,6 +68,7 @@ struct JournalPagesHome: View {
             switch theme {
             case .heavenlyAngelWishes: HeavenlyBackdrop()
             case .enchantedFairyGarden: FairyBackdrop()
+            case .rainbowGlowUnicorn: UnicornBackdrop()
             case .blushBlossom: JournalBackdrop()
             }
         }
@@ -85,8 +85,8 @@ struct JournalPagesHome: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("My Journal Pages")
-                    .font(blush ? .rounded(.headline, weight: .bold) : HeavenlyStyle.serif(.headline))
-                    .foregroundStyle(heavenly ? HeavenlyStyle.title : fairy ? FairyStyle.title : JournalStyle.ink)
+                    .font(blush ? .rounded(.headline, weight: .bold) : theme.headingFont(.headline))
+                    .foregroundStyle(blush ? JournalStyle.ink : theme.headingColor)
                     .opacity(heroIsVisible ? 0 : 1)
                     .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
                     .accessibilityHidden(heroIsVisible)
@@ -134,6 +134,8 @@ struct JournalPagesHome: View {
                         HeavenlyHeader(width: proxy.size.width, statusBar: statusBar)
                     case .enchantedFairyGarden:
                         JournalHero(scene: .fairyGarden, width: proxy.size.width, statusBar: statusBar)
+                    case .rainbowGlowUnicorn:
+                        JournalHero(scene: .rainbowUnicorn, width: proxy.size.width, statusBar: statusBar)
                     case .blushBlossom:
                         JournalHero(scene: .pages, width: proxy.size.width, statusBar: statusBar)
                     }
@@ -145,8 +147,8 @@ struct JournalPagesHome: View {
                 }
                 content
                     .padding(.horizontal, 16)
-                    // The fairy beside Write a new page rises into the sign's picture.
-                    .padding(.top, blush ? 18 : heavenly ? 2 : -18)
+                    // The fairy and the unicorn beside Write a new page rise into the picture.
+                    .padding(.top, contentTop)
                     .padding(.bottom, 20)
                     .frame(maxWidth: .infinity)
                     .background(alignment: .top) {
@@ -252,21 +254,31 @@ struct JournalPagesHome: View {
         }
     }
 
-    /// The first heading: the month (or the tab), with the period menu beside it (in Heavenly
-    /// Angel Wishes, with the angel asleep on a cloud between them when there is room; in
-    /// Enchanted Fairy Garden, two butterflies).
+    /// Where the cards start, under the picture.
+    private var contentTop: CGFloat {
+        switch theme {
+        case .blushBlossom: 18
+        case .heavenlyAngelWishes: 2
+        case .enchantedFairyGarden: -18
+        case .rainbowGlowUnicorn: -28
+        }
+    }
+
+    /// The first heading: the month (or the tab), with the period menu beside it (in the Pro
+    /// themes, with the theme's little picture between them when there is room: the angel
+    /// asleep on a cloud, two butterflies or the little unicorn).
     @ViewBuilder
     private func listHeader(title: String) -> some View {
-        if !blush {
+        if let art = theme.monthArt {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 0) {
                     monthTitle(title)
                         .fixedSize()
                     Spacer(minLength: 2)
-                    Image(heavenly ? "HeavenlyMonthAngel" : "FairyButterflyPair")
+                    Image(art.name)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: heavenly ? 62 : 52, height: heavenly ? 42 : 36)
+                        .frame(width: art.size.width, height: art.size.height)
                         .accessibilityHidden(true)
                     Spacer(minLength: 8)
                     JournalPeriodMenu(period: $period)
@@ -296,8 +308,8 @@ struct JournalPagesHome: View {
     private func monthTitle(_ title: String) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(blush ? .rounded(.title3, weight: .heavy) : HeavenlyStyle.serif(.title3))
-                .foregroundStyle(heavenly ? HeavenlyStyle.month : fairy ? FairyStyle.month : Palette.berry)
+                .font(theme.headingFont(.title3))
+                .foregroundStyle(theme.monthColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
             Image(systemName: "heart.fill")
