@@ -77,6 +77,9 @@ struct FairyBackdrop: View {
                     .frame(width: 36, height: 38)
                     .position(x: 12, y: size.height - 26)
             }
+            // Drawn once: its blurred clouds, glows and stars would otherwise be painted again
+            // on every frame while the pages scroll over it.
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -107,6 +110,7 @@ struct FairyCardBackground: View {
             .overlay(shape.inset(by: 1.5).strokeBorder(FairyStyle.glow.opacity(0.35), lineWidth: 0.8))
             .shadow(color: FairyStyle.glow.opacity(0.25), radius: 8, x: 0, y: 3)
             .overlay(FairyVines(radius: radius))
+            .renderedOnce(bleed: 16)
     }
 }
 

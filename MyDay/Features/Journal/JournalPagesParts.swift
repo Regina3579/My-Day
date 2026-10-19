@@ -51,10 +51,15 @@ private struct JournalPagesCard: ViewModifier {
                 .padding(.top, 10)
                 .background(CandyCardBackground(radius: radius))
         case .blushBlossom:
-            card
-                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(JournalPagesStyle.cardFill))
-                .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Color.white, lineWidth: 1.5))
-                .shadow(color: JournalStyle.pink.opacity(0.12), radius: 10, x: 0, y: 4)
+            // The glow belongs to the card's shape (not its words and stars), drawn once.
+            let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+            card.background(
+                shape
+                    .fill(JournalPagesStyle.cardFill)
+                    .overlay(shape.strokeBorder(Color.white, lineWidth: 1.5))
+                    .shadow(color: JournalStyle.pink.opacity(0.12), radius: 10, x: 0, y: 4)
+                    .renderedOnce(bleed: 16)
+            )
         }
     }
 }
@@ -176,6 +181,7 @@ struct WriteNewPageRow: View {
             .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFF9ACB), Color(hex: 0xF5459A)],
                                             startPoint: .top, endPoint: .bottom))
             .shadow(color: Color.white, radius: 1)
+            .renderedOnce(bleed: 3)
     }
 
     private var button: some View {
@@ -229,6 +235,7 @@ struct WriteNewPageRow: View {
                 }
             }
             .shadow(color: JournalStyle.pink.opacity(0.4), radius: 12, x: 0, y: 6)
+            .renderedOnce(bleed: 22)
         }
         .buttonStyle(PressScaleStyle(scale: 0.97))
         .accessibilityLabel(todayPage == nil ? title : "Continue writing today's page")
@@ -643,6 +650,7 @@ private struct JournalTabTile: View {
         .shadow(color: (heavenly && !isOn ? HeavenlyStyle.glow : JournalStyle.pink)
                     .opacity(isOn ? 0.3 : heavenly ? 0.1 : 0.08),
                 radius: isOn ? 6 : 4, x: 0, y: isOn ? 3 : 2)
+        .renderedOnce(bleed: 12)
         .contentShape(Rectangle())
     }
 }
@@ -690,6 +698,7 @@ struct JournalPeriodMenu: View {
             .shadow(color: (heavenly ? HeavenlyStyle.glow : JournalStyle.purple).opacity(heavenly ? 0.3 : 0.12),
                     radius: 5, x: 0, y: 2)
             .angelWings(width: 15, y: -3, isShown: heavenly)
+            .renderedOnce(bleed: 18)
         }
         .accessibilityLabel("Show pages from: \(period.label)")
     }
@@ -792,15 +801,19 @@ struct JournalEntryCard: View {
         .padding(.top, theme == .candyCloudKingdom ? 9 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            switch theme {
-            case .heavenlyAngelWishes: heavenlyBackground
-            case .enchantedFairyGarden: fairyBackground
-            case .rainbowGlowUnicorn: unicornBackground
-            case .roseGoldElegance: roseBackground
-            case .cozyRainyDay: rainyBackground
-            case .candyCloudKingdom: candyBackground
-            case .blushBlossom: RoundedRectangle(cornerRadius: 24, style: .continuous).fill(JournalPagesStyle.cardFill)
+            Group {
+                switch theme {
+                case .heavenlyAngelWishes: heavenlyBackground
+                case .enchantedFairyGarden: fairyBackground
+                case .rainbowGlowUnicorn: unicornBackground
+                case .roseGoldElegance: roseBackground
+                case .cozyRainyDay: rainyBackground
+                case .candyCloudKingdom: candyBackground
+                case .blushBlossom: blushBackground
+                }
             }
+            // The card's frame, pictures and glow, drawn once instead of on every frame of a scroll.
+            .renderedOnce(bleed: 18)
         }
         .overlay(alignment: .bottomTrailing) {
             if blush && !inTrash {
@@ -813,16 +826,18 @@ struct JournalEntryCard: View {
                     .accessibilityHidden(true)
             }
         }
-        .overlay {
-            if blush {
-                RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white, lineWidth: 1.5)
-            }
-        }
-        .shadow(color: blush ? JournalStyle.pink.opacity(0.12) : Color.clear, radius: blush ? 10 : 0, x: 0,
-                y: blush ? 4 : 0)
         .opacity(inTrash ? 0.9 : 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+
+    /// Blush Blossom: soft white with a white edge and a pink glow.
+    private var blushBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        return shape
+            .fill(JournalPagesStyle.cardFill)
+            .overlay(shape.strokeBorder(Color.white, lineWidth: 1.5))
+            .shadow(color: JournalStyle.pink.opacity(0.12), radius: 10, x: 0, y: 4)
     }
 
     /// Heavenly Angel Wishes: gold edges, an angel hugging a star in the bottom corner (asleep or
@@ -1099,15 +1114,19 @@ struct JournalDateTile: View {
     var body: some View {
         // Next days take turns: pink, purple, blue.
         let ribbon = Ribbon(rawValue: ((date.dayNumber % 3) + 3) % 3) ?? .pink
-        switch theme {
-        case .heavenlyAngelWishes: heavenly(ribbon)
-        case .enchantedFairyGarden: fairy(ribbon)
-        case .rainbowGlowUnicorn: unicorn(ribbon)
-        case .roseGoldElegance: roseGold(ribbon)
-        case .cozyRainyDay: rainy(ribbon)
-        case .candyCloudKingdom: candy(ribbon)
-        case .blushBlossom: blush(ribbon)
+        Group {
+            switch theme {
+            case .heavenlyAngelWishes: heavenly(ribbon)
+            case .enchantedFairyGarden: fairy(ribbon)
+            case .rainbowGlowUnicorn: unicorn(ribbon)
+            case .roseGoldElegance: roseGold(ribbon)
+            case .cozyRainyDay: rainy(ribbon)
+            case .candyCloudKingdom: candy(ribbon)
+            case .blushBlossom: blush(ribbon)
+            }
         }
+        // Its frame, bow or lollipop and shadow, drawn once.
+        .renderedOnce(bleed: 14)
     }
 
     /// Candy Cloud Kingdom: the date on a frosted tile with sprinkles, under a swirl lollipop
@@ -1414,6 +1433,7 @@ struct JournalCardPhoto: View {
                     }
                 }
                 .shadow(color: JournalStyle.pink.opacity(0.2), radius: 5, x: 0, y: 2)
+                .renderedOnce(bleed: 10)
                 .accessibilityHidden(true)
         }
     }
@@ -1487,16 +1507,9 @@ struct JournalSearchBar: View {
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 56)
-            .background(Capsule().fill(Color.white.opacity(0.97)))
-            .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
-            .overlay {
-                if theme == .roseGoldElegance {
-                    Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
-                } else if theme == .candyCloudKingdom {
-                    CandyGlowRim(shape: Capsule())
-                }
-            }
-            .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
+            // The capsule, its rim and glow, drawn once behind the text field (the pages scroll
+            // under it, so it would otherwise be painted again on every frame).
+            .background(capsule.renderedOnce(bleed: 18))
 
             Button(action: onFilter) {
                 HStack(spacing: 5) {
@@ -1509,16 +1522,7 @@ struct JournalSearchBar: View {
                 }
                 .padding(.horizontal, 14)
                 .frame(minHeight: 56)
-                .background(Capsule().fill(Color.white.opacity(0.97)))
-                .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
-                .overlay {
-                    if theme == .roseGoldElegance {
-                        Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
-                    } else if theme == .candyCloudKingdom {
-                        CandyGlowRim(shape: Capsule())
-                    }
-                }
-                .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
+                .background(capsule)
                 .angelWingTrailing(width: 15, tucked: 0.45, y: -6, isShown: heavenly)
                 .overlay(alignment: .topTrailing) {
                     if filterCount > 0 {
@@ -1530,6 +1534,7 @@ struct JournalSearchBar: View {
                             .offset(x: 4, y: -4)
                     }
                 }
+                .renderedOnce(bleed: 18)
             }
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel(filterCount > 0 ? "Filter, \(filterCount) on" : "Filter")
@@ -1555,6 +1560,22 @@ struct JournalSearchBar: View {
                 .ignoresSafeArea(edges: .bottom)
                 .allowsHitTesting(false)
         }
+    }
+
+    /// The look of the search field and Filter: white, a pink edge (rose gold or caramel in those
+    /// themes) and a soft pink shadow.
+    private var capsule: some View {
+        Capsule()
+            .fill(Color.white.opacity(0.97))
+            .overlay(Capsule().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
+            .overlay {
+                if theme == .roseGoldElegance {
+                    Capsule().strokeBorder(RoseStyle.roseGold, lineWidth: 1.8)
+                } else if theme == .candyCloudKingdom {
+                    CandyGlowRim(shape: Capsule())
+                }
+            }
+            .shadow(color: JournalStyle.pink.opacity(0.18), radius: 10, x: 0, y: 4)
     }
 }
 

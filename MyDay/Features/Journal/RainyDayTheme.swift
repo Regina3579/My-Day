@@ -62,6 +62,9 @@ struct RainyBackdrop: View {
                         .position(x: size.width * drop.x, y: size.height * drop.y)
                 }
             }
+            // Drawn once: its blurred clouds, glows and stars would otherwise be painted again
+            // on every frame while the pages scroll over it.
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -80,6 +83,7 @@ struct RainDropView: View {
             .frame(width: size * 0.72, height: size)
             .shadow(color: Color(hex: 0x8FB6E8).opacity(0.4), radius: 1, x: 0, y: 0.5)
             .accessibilityHidden(true)
+            .renderedOnce(bleed: 3)
     }
 }
 
@@ -122,6 +126,7 @@ struct RainyCardBackground: View {
             .fill(RainyStyle.cardFill)
             .overlay(shape.strokeBorder(Color.white, lineWidth: 1.5))
             .shadow(color: RainyStyle.glow.opacity(0.3), radius: 9, x: 0, y: 3)
+            .renderedOnce(bleed: 16)
     }
 }
 

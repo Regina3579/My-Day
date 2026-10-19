@@ -70,6 +70,9 @@ struct UnicornBackdrop: View {
                         .position(x: size.width * heart.x, y: size.height * heart.y)
                 }
             }
+            // Drawn once: its blurred clouds, glows and stars would otherwise be painted again
+            // on every frame while the pages scroll over it.
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -93,6 +96,7 @@ struct RainbowArc: View {
         .opacity(0.85)
         .blur(radius: 1.2)
         .accessibilityHidden(true)
+        .renderedOnce(bleed: 4)
     }
 }
 
@@ -120,6 +124,7 @@ struct RainbowCloud: View {
             }
         }
         .accessibilityHidden(true)
+        .renderedOnce(bleed: 4)
     }
 }
 
@@ -156,6 +161,7 @@ struct SmilingCloud: View {
             }
         }
         .accessibilityHidden(true)
+        .renderedOnce(bleed: 3)
     }
 }
 
@@ -174,6 +180,7 @@ struct PuffCloud: View {
         .blur(radius: 4)
         .frame(width: 160, height: 110)
         .accessibilityHidden(true)
+        .renderedOnce(bleed: 10)
     }
 }
 
@@ -188,6 +195,7 @@ struct GlossyHeart: View {
                                             startPoint: .top, endPoint: .bottom))
             .shadow(color: UnicornStyle.glow.opacity(0.8), radius: size * 0.3)
             .accessibilityHidden(true)
+            .renderedOnce(bleed: size * 0.6)
     }
 }
 
@@ -212,6 +220,7 @@ struct UnicornCardBackground: View {
             .overlay(shape.strokeBorder(Color.white, lineWidth: 1.5))
             .overlay(shape.inset(by: 1.5).strokeBorder(UnicornStyle.glow.opacity(0.3), lineWidth: 0.8))
             .shadow(color: UnicornStyle.glow.opacity(0.28), radius: 9, x: 0, y: 3)
+            .renderedOnce(bleed: 16)
     }
 }
 

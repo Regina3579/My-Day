@@ -68,6 +68,9 @@ struct CandyBackdrop: View {
                     side("CandyEdgeRight", width: edge, height: size.height, from: .trailing, to: .leading)
                 }
             }
+            // Drawn once: its blurred clouds, glows and stars would otherwise be painted again
+            // on every frame while the pages scroll over it.
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -292,6 +295,7 @@ struct CandyCardBackground: View {
             }
         }
         .shadow(color: CandyStyle.glow.opacity(0.35), radius: 8, x: 0, y: 3)
+        .renderedOnce(bleed: 16)
     }
 }
 

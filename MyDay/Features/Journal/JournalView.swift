@@ -215,7 +215,9 @@ struct JournalPagesHome: View {
             TemplatesShelf(query: search.trimmed)
         default:
             let pages = shown
-            VStack(alignment: .leading, spacing: 14) {
+            // Lazy: a page card is made as it scrolls into view, so a journal of many months
+            // scrolls as lightly as a new one.
+            LazyVStack(alignment: .leading, spacing: 14) {
                 shelfIntro(pages: pages)
                 if shelf == .photos {
                     listHeader(title: pages.isEmpty ? shelf.label : photoCountTitle(pages))

@@ -73,6 +73,9 @@ struct HeavenlyBackdrop: View {
                         .position(x: size.width * sparkle.x, y: size.height * sparkle.y)
                 }
             }
+            // Drawn once: its blurred clouds, glows and stars would otherwise be painted again
+            // on every frame while the pages scroll over it.
+            .drawingGroup()
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -123,6 +126,7 @@ struct HeavenlyHeader: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .shadow(color: Color.white.opacity(0.9), radius: 3)
+                    .renderedOnce(bleed: 6)
                     .frame(width: width * 0.37)
                     .position(x: width * 0.537, y: row)
                     .accessibilityHidden(true)
@@ -152,6 +156,7 @@ struct HeavenlyCardBackground: View {
                     .padding(3.3)
             )
             .shadow(color: HeavenlyStyle.glow.opacity(0.3), radius: 8, x: 0, y: 2)
+            .renderedOnce(bleed: 16)
     }
 }
 
@@ -168,6 +173,7 @@ struct HeavenlyStarView: View {
             .frame(width: size, height: size)
             .shadow(color: HeavenlyStyle.glow.opacity(0.7), radius: size * 0.2)
             .accessibilityHidden(true)
+            .renderedOnce(bleed: size * 0.5)
     }
 }
 
@@ -181,6 +187,7 @@ struct HeavenlySparkle: View {
             .frame(width: size, height: size)
             .shadow(color: HeavenlyStyle.glow, radius: size * 0.3)
             .accessibilityHidden(true)
+            .renderedOnce(bleed: size * 0.6)
     }
 }
 
@@ -209,6 +216,7 @@ struct HeavenlyMoon: View {
             .overlay(CrescentShape().stroke(Color(hex: 0xF09A2E), lineWidth: 0.8))
             .shadow(color: HeavenlyStyle.glow.opacity(0.8), radius: 3)
             .accessibilityHidden(true)
+            .renderedOnce(bleed: 6)
     }
 }
 
@@ -231,6 +239,7 @@ struct WingedPinkStar: View {
             .frame(width: 34, height: 34)
             .angelWings(width: 11, tucked: 0.35, y: 2)
             .accessibilityHidden(true)
+            .renderedOnce(bleed: 14)
     }
 }
 
@@ -282,6 +291,7 @@ struct AngelWing: View {
         .scaleEffect(x: mirrored ? -1 : 1)
         .shadow(color: HeavenlyStyle.glow.opacity(0.35), radius: 1.5)
         .accessibilityHidden(true)
+        .renderedOnce(bleed: 4)
     }
 }
 
