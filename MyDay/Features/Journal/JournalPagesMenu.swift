@@ -1,127 +1,91 @@
 import SwiftUI
 
-/// The ⋮ menu of My Journal Pages, as in its design: a cream card framed in gold under a pink
-/// heart bow, with a row for each choice (its picture in a soft round badge, its name in plum,
-/// pink hearts), the first one in pink. The bow and the pictures are from the design; the card,
-/// the hearts and the lines are drawn here.
+/// The ⋮ menu of My Journal Pages, as in its design: a cream card in a gold frame with little
+/// flowers and sparkles, a pink heart bow on top, and a row for each choice (its picture in a
+/// soft round badge, pink hearts at the end, a thin line between rows). The card, bow, pictures
+/// and hearts are the design's own picture (enlarged 4× with Real-ESRGAN, its words taken out);
+/// the names are written here in thick dark navy, so they stay sharp and easy to read.
+///
+/// Everything is placed on the design's grid: the card picture is 520 × 588 pixels of a design
+/// 941 pixels across the screen.
 struct JournalPagesMenu: View {
     struct Item: Identifiable {
         let title: String
-        let art: String
         let action: () -> Void
         var id: String { title }
     }
 
+    /// The five choices, top to bottom, as the picture shows them.
     let items: [Item]
+    /// Points per pixel of the design.
+    let scale: CGFloat
     /// Where Journal Theme is on screen (for its first-time tip).
     var onThemeRowFrame: ((CGRect) -> Void)?
 
-    private static let plum = Color(hex: 0x6B1442)
-    private static let gold = LinearGradient(colors: [Color(hex: 0xF6D9A6), Color(hex: 0xE2A76B), Color(hex: 0xF4CF98),
-                                                      Color(hex: 0xD99A62)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing)
-    private static let heart = LinearGradient(colors: [Color(hex: 0xFFC2DA), Color(hex: 0xF77BAE)],
-                                              startPoint: .top, endPoint: .bottom)
+    /// The picture's size, in pixels of the design.
+    static let grid = CGSize(width: 520, height: 588)
+    /// Where ⋮'s middle is on the picture's grid (the menu hangs from it).
+    static let moreButton = CGPoint(x: 468, y: 52)
+
+    private static let ink = Color(hex: 0x0A0A48)
+    /// Each row's top and bottom, and where its name starts and must end.
+    private static let rows: [(top: CGFloat, bottom: CGFloat)] = [(95, 200), (200, 292), (292, 385), (385, 475), (475, 570)]
+    private static let textStart: CGFloat = 160
+    private static let textEnd: CGFloat = 402
+    /// The names' size: 35 pixels of the design.
+    private static let fontPixels: CGFloat = 35
 
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                if index > 0 {
-                    Rectangle()
-                        .fill(Color(hex: 0xF4D6DB))
-                        .frame(height: 1)
-                        .padding(.horizontal, 12)
+        Image("JournalMenuCard")
+            .resizable()
+            .frame(width: Self.grid.width * scale, height: Self.grid.height * scale)
+            // Only the rows take taps: ⋮ shows through the bite in the card's corner.
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .overlay(alignment: .topLeading) {
+                ZStack(alignment: .topLeading) {
+                    ForEach(Array(items.prefix(Self.rows.count).enumerated()), id: \.element.id) { index, item in
+                        row(item, Self.rows[index])
+                    }
                 }
-                row(item, highlighted: index == 0)
             }
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
-        .frame(width: 290)
-        .background(card)
-        .overlay(alignment: .top) {
-            Image("JournalMenuBow")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 112, height: 61)
-                .offset(x: -6, y: -34)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
+            .accessibilityElement(children: .contain)
     }
 
-    private func row(_ item: Item, highlighted: Bool) -> some View {
-        Button(action: item.action) {
-            HStack(spacing: 10) {
-                Image(item.art)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 30, height: 30)
-                    .frame(width: 46, height: 46)
-                    .background(
-                        Circle()
-                            .fill(RadialGradient(colors: [Color.white, Color(hex: 0xFDECEF)], center: .center,
-                                                 startRadius: 4, endRadius: 24))
-                            .overlay(Circle().strokeBorder(Color(hex: 0xF7C9D6), lineWidth: 1))
-                            .shadow(color: Color(hex: 0xF29DBE).opacity(0.3), radius: 3, x: 0, y: 1)
-                    )
-                    .accessibilityHidden(true)
-                Text(item.title)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Self.plum)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 2)
-                hearts
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(minHeight: 60)
-            .background {
-                if highlighted {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(hex: 0xFDE3EE), Color(hex: 0xFAD0E2)],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.8), lineWidth: 1))
-                }
-            }
-            .contentShape(Rectangle())
+    private func row(_ item: Item, _ span: (top: CGFloat, bottom: CGFloat)) -> some View {
+        let frame = CGRect(x: 30 * scale, y: span.top * scale,
+                           width: (Self.grid.width - 60) * scale, height: (span.bottom - span.top) * scale)
+        return Button(action: item.action) {
+            Text(item.title)
+                .font(.system(size: Self.fontPixels * scale, weight: .heavy, design: .rounded))
+                .foregroundStyle(Self.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .multilineTextAlignment(.leading)
+                .lineSpacing(-2)
+                .frame(width: (Self.textEnd - Self.textStart) * scale, alignment: .leading)
+                .padding(.leading, (Self.textStart - 30) * scale)
+                .frame(width: frame.width, height: frame.height, alignment: .leading)
         }
-        .buttonStyle(PressScaleStyle(scale: 0.97))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-            if item.art == "JournalMenuTheme" { onThemeRowFrame?(frame) }
+        .buttonStyle(MenuRowStyle())
+        .frame(width: frame.width, height: frame.height)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { global in
+            if item.title == "Journal Theme" { onThemeRowFrame?(global) }
         }
+        .offset(x: frame.minX, y: frame.minY)
         .accessibilityLabel(item.title)
     }
+}
 
-    /// A big pink heart and a little one beside each name.
-    private var hearts: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 17))
-                .foregroundStyle(Self.heart)
-                .offset(x: -2, y: 4)
-            Image(systemName: "heart.fill")
-                .font(.system(size: 9))
-                .foregroundStyle(Self.heart)
-                .offset(x: 4, y: -4)
-        }
-        .frame(width: 26, height: 26)
-        .accessibilityHidden(true)
-    }
-
-    /// Cream fading to blush, framed in gold with a white line inside, and a soft pink glow.
-    private var card: some View {
-        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
-        return shape
-            .fill(LinearGradient(colors: [Color(hex: 0xFFF9F6), Color(hex: 0xFDEEEF)], startPoint: .top, endPoint: .bottom))
-            .overlay(shape.strokeBorder(Self.gold, lineWidth: 2.5))
-            .overlay(shape.inset(by: 3).strokeBorder(Color.white.opacity(0.9), lineWidth: 1))
-            .overlay(shape.inset(by: 5).strokeBorder(Color(hex: 0xF1C99C).opacity(0.6), lineWidth: 0.7))
-            .shadow(color: Color(hex: 0xE88AB0).opacity(0.3), radius: 14, x: 0, y: 6)
-            .renderedOnce(bleed: 24)
+/// A row of the menu: a soft pink wash while it is pressed.
+private struct MenuRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(hex: 0xF7B6CF).opacity(configuration.isPressed ? 0.35 : 0))
+            )
+            .contentShape(Rectangle())
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

@@ -45,6 +45,8 @@ struct JournalPagesHome: View {
     @State private var confirmEmptyTrash = false
     @State private var choosesTheme = false
     @State private var showsMenu = false
+    /// The menu card has grown in (it pops from ⋮).
+    @State private var menuShown = false
     @AppStorage(Prefs.didShowJournalMenuTip) private var didShowMenuTip = false
     @AppStorage(Prefs.didShowJournalThemeTip) private var didShowThemeTip = false
     @State private var tip: JournalMenuTip.Kind?
@@ -473,43 +475,58 @@ struct JournalPagesHome: View {
         .accessibilityLabel("More")
     }
 
-    /// The menu card from the design, under ⋮; a tap anywhere else closes it.
+    /// The menu card from the design, hanging from ⋮ (which stays on top of the card's corner,
+    /// as in the design); a tap anywhere else closes it.
     @ViewBuilder
     private var menuCard: some View {
         if showsMenu {
-            ZStack(alignment: .topTrailing) {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .ignoresSafeArea()
-                    .onTapGesture { closeMenu() }
-                    .accessibilityHidden(true)
-                JournalPagesMenu(items: menuItems) { themeRowFrame = $0 }
-                    .padding(.top, 30)
-                    .padding(.trailing, 12)
-                    .transition(.scale(scale: 0.85, anchor: .topTrailing).combined(with: .opacity))
+            GeometryReader { proxy in
+                let scale = proxy.size.width / 941
+                let origin = proxy.frame(in: .global).origin
+                let grid = JournalPagesMenu.grid
+                let hook = JournalPagesMenu.moreButton
+                // ⋮'s middle, in this view's space (the card's right edge stays on screen).
+                let x = min(moreFrame.midX - origin.x - hook.x * scale, proxy.size.width - grid.width * scale)
+                let y = moreFrame.midY - origin.y - hook.y * scale
+                ZStack(alignment: .topLeading) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { closeMenu() }
+                        .accessibilityHidden(true)
+                    JournalPagesMenu(items: menuItems, scale: scale) { themeRowFrame = $0 }
+                        .scaleEffect(menuShown ? 1 : 0.85,
+                                     anchor: UnitPoint(x: hook.x / grid.width, y: hook.y / grid.height))
+                        .opacity(menuShown ? 1 : 0)
+                        .offset(x: x, y: y)
+                }
             }
+            .ignoresSafeArea()
+            .onAppear {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { menuShown = true }
+            }
+            .onDisappear { menuShown = false }
         }
     }
 
     private var menuItems: [JournalPagesMenu.Item] {
         [
-            .init(title: todayPage == nil ? "Write a New Page" : "Continue Today's Page", art: "JournalMenuWrite") {
+            .init(title: todayPage == nil ? "Write a New Page" : "Continue Today's Page") {
                 closeMenu()
                 router.push(todayPage.map { AppRoute.editJournalPage($0) } ?? .newJournalPage(nil), in: hostTab)
             },
-            .init(title: "Filter Pages", art: "JournalMenuFilter") {
+            .init(title: "Filter Pages") {
                 closeMenu()
                 isFiltering = true
             },
-            .init(title: "View Calendar", art: "JournalMenuCalendar") {
+            .init(title: "View Calendar") {
                 closeMenu()
                 openCalendar()
             },
-            .init(title: "Journal Theme", art: "JournalMenuTheme") {
+            .init(title: "Journal Theme") {
                 closeMenu()
                 choosesTheme = true
             },
-            .init(title: "Trash", art: "JournalMenuTrash") {
+            .init(title: "Trash") {
                 closeMenu()
                 withAnimation(.snappy) { shelf = .trash }
             },
