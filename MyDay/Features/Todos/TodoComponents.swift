@@ -962,7 +962,8 @@ struct HeartTrack: View {
     var body: some View {
         GeometryReader { proxy in
             let spacing: CGFloat = 4
-            let size = min(maxSize, (proxy.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots))
+            // Never below zero (before the strip has a width, the sum would be negative).
+            let size = max(0, min(maxSize, (proxy.size.width - spacing * CGFloat(slots - 1)) / CGFloat(slots)))
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color(hex: 0xEBD9E2))

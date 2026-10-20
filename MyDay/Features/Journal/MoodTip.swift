@@ -34,7 +34,7 @@ struct MoodTip: View {
 
     /// The picture, as wide as the page allows (so the words are easy to read), just below the ＋.
     private var art: TipArtFrame {
-        let width = min(size.width - 16, 400)
+        let width = max(0, min(size.width - 16, 400))
         return TipArtFrame(origin: CGPoint(x: (size.width - width) / 2, y: plusFrame.maxY + 6),
                            scale: width / Self.grid.width)
     }

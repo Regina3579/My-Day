@@ -27,6 +27,9 @@ struct MyDayApp: App {
                         // Opened again (Sync with iCloud switched): every screen starts afresh.
                         .id(store.generation)
                         .modelContainer(container)
+                } else if store.isLaunching {
+                    // A moment while the store opens, under the splash.
+                    Color(hex: 0xFFF5FA).ignoresSafeArea()
                 } else {
                     StoreSwitchingView(turningOn: store.syncsWithICloud)
                 }

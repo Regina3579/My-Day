@@ -101,11 +101,25 @@ final class DataStore {
     let syncStatus = CloudSyncStatus()
     /// Changes each time the store is opened again, so every screen starts afresh with it.
     private(set) var generation = 0
+    /// The store is still being opened at launch (the splash shows meanwhile).
+    private(set) var isLaunching = true
 
     init() {
         let syncs = MyDayStore.syncsWithICloud
         syncsWithICloud = syncs
-        container = MyDayStore.makeContainer(syncingWithICloud: syncs)
+        Task {
+            await open(syncingWithICloud: syncs)
+            isLaunching = false
+        }
+    }
+
+    /// Opens the store away from the main thread: opening it reads and writes the database
+    /// file, which on the main thread could hold up the screen (Xcode's Thread Performance
+    /// Checker warns about it).
+    private func open(syncingWithICloud syncs: Bool) async {
+        container = await Task.detached(priority: .userInitiated) {
+            MyDayStore.makeContainer(syncingWithICloud: syncs)
+        }.value
     }
 
     /// Turns Sync with iCloud on or off. The store is saved and closed (the screens using it go
@@ -119,7 +133,7 @@ final class DataStore {
         container = nil
         // Lets the screens and their contexts go, so only one container has the store open.
         try? await Task.sleep(for: .seconds(0.6))
-        container = MyDayStore.makeContainer(syncingWithICloud: isOn)
+        await open(syncingWithICloud: isOn)
         generation += 1
     }
 }
