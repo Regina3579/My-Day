@@ -30,6 +30,8 @@ struct SettingsView: View {
     @State private var visibleBottom: CGFloat = 0
     /// Turning the lock on or off, or changing how it opens.
     @State private var lockGoal: JournalLockSetupSheet.Goal?
+    /// Lock My Journal, tapped by a free account: the My Day Pro pop-up.
+    @State private var proOffer: ProFeature?
     @State private var confirmClearDone = false
     @State private var confirmEraseAll = false
     #if DEBUG
@@ -132,7 +134,12 @@ struct SettingsView: View {
                         }
                     }
                     Toggle(isOn: lockToggle) {
-                        Label("Lock My Journal", systemImage: "lock.fill")
+                        HStack(spacing: 6) {
+                            Label("Lock My Journal", systemImage: "lock.fill")
+                            if !pro.isActive && !journalLock {
+                                ProCrown(size: 20)
+                            }
+                        }
                     }
                     .id("lock")
                     if journalLock {
@@ -284,6 +291,7 @@ struct SettingsView: View {
         .sheet(item: $lockGoal) { goal in
             JournalLockSetupSheet(goal: goal)
         }
+        .proOffer($proOffer)
         .confirmationDialog("Clear finished to-dos and priorities?", isPresented: $confirmClearDone, titleVisibility: .visible) {
             Button("Clear finished items", role: .destructive, action: clearFinished)
         }
@@ -303,7 +311,16 @@ struct SettingsView: View {
     private var lockToggle: Binding<Bool> {
         Binding(
             get: { journalLock },
-            set: { lockGoal = $0 ? .turnOn : .turnOff }
+            // Turning it on comes with My Day Pro. Turning it off never does: a lock set while
+            // Pro was on stays until the person turns it off, so the journal never opens up by
+            // itself.
+            set: { isOn in
+                if isOn && !pro.isActive {
+                    proOffer = .journalLock
+                } else {
+                    lockGoal = isOn ? .turnOn : .turnOff
+                }
+            }
         )
     }
 
