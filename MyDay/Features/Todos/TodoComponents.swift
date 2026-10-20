@@ -10,7 +10,7 @@ import SwiftUI
 /// right edge, so the "Today's To-Dos" sign stays clear of the back button.
 enum TodosScene {
     static let imageSize = CGSize(width: 853, height: 482)
-    static let widthFraction: CGFloat = 0.88
+    static let widthFraction: CGFloat = 1
     /// Image rows (px): the girl's eyes, and the last row shown.
     static let eyesRow: CGFloat = 300
     static let bottomRow: CGFloat = 452
@@ -41,32 +41,15 @@ struct TodosHero: View {
         let top = TodosScene.topRow(width: width, statusBar: statusBar)
         let height = TodosScene.height(width: width, statusBar: statusBar)
         let imageWidth = width * TodosScene.widthFraction
-        ZStack(alignment: .topTrailing) {
-            // A soft, blurred copy fills the strip on the left.
-            Image("TodosScene")
-                .resizable()
-                .scaledToFill()
-                .frame(width: width, height: height)
-                .blur(radius: 16, opaque: true)
-                .clipped()
-            Image("TodosScene")
-                .resizable()
-                .frame(width: imageWidth, height: TodosScene.imageSize.height * scale)
-                .offset(y: -top * scale)
-                .frame(width: imageWidth, height: height, alignment: .top)
-                .clipped()
-                .mask(Self.edgeFade)
-        }
-        .frame(width: width, height: height)
-        .clipped()
-        .accessibilityHidden(true)
+        // The picture across the whole width, sharp (no blurred strip).
+        Image("TodosScene")
+            .resizable()
+            .frame(width: imageWidth, height: TodosScene.imageSize.height * scale)
+            .offset(y: -top * scale)
+            .frame(width: width, height: height, alignment: .top)
+            .clipped()
+            .accessibilityHidden(true)
     }
-
-    /// Blends the picture's left edge into the blurred strip.
-    private static let edgeFade = LinearGradient(
-        stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.1)],
-        startPoint: .leading, endPoint: .trailing
-    )
 }
 
 // MARK: - Date and quote
@@ -704,7 +687,7 @@ private struct BigActionButton: View {
             .foregroundStyle(Color.white)
             .shadow(color: Color.black.opacity(0.12), radius: 1, x: 0, y: 1)
             .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity, minHeight: 46)
+            .frame(maxWidth: .infinity, minHeight: 40)
             .background(background)
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
@@ -754,13 +737,13 @@ private struct VoiceMicButton: View {
                     )
                     .overlay(Circle().strokeBorder(Color.white.opacity(0.8), lineWidth: 2))
                     .shadow(color: Palette.honey.opacity(0.55), radius: 8, x: 0, y: 4)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 42, height: 42)
                 Image(systemName: "mic.fill")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(Color.white)
                     .shadow(color: Color(hex: 0xB86E00).opacity(0.55), radius: 1.5, x: 0, y: 1)
             }
-            .frame(width: 48, height: 48)
+            .frame(width: 44, height: 44)
             .contentShape(Circle())
         }
         .buttonStyle(PressScaleStyle(scale: 0.9))
@@ -811,7 +794,7 @@ private struct SoftActionButton: View {
                     .minimumScaleFactor(0.8)
             }
             .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, minHeight: 36)
+            .frame(maxWidth: .infinity, minHeight: 31)
             .background(Capsule().fill(Color.white.opacity(0.75)))
             .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1))
             .overlay(alignment: .topTrailing) {
@@ -857,8 +840,8 @@ struct TodosProgressStrip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 HStack(spacing: 8) {
-                    HeartTrack(done: done, total: total, maxSize: 14)
-                        .frame(height: 16)
+                    HeartTrack(done: done, total: total, maxSize: 12)
+                        .frame(height: 14)
                     Text(TodosProgressCard.cheer(done: done, total: total))
                         .font(.rounded(.caption, weight: .heavy))
                         .foregroundStyle(Palette.berry)
@@ -871,12 +854,12 @@ struct TodosProgressStrip: View {
             Image("ProgressKitten")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 34)
+                .frame(width: 28)
                 .accessibilityHidden(true)
         }
         .padding(.leading, 12)
         .padding(.trailing, 8)
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(LinearGradient(colors: [Color.white.opacity(0.92), Color(hex: 0xFFF0F6)],

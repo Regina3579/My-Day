@@ -2,11 +2,11 @@ import SwiftUI
 
 /// Size and placement of the floating tab bar.
 enum TabBarLayout {
-    static let height: CGFloat = 64
+    static let height: CGFloat = 52
 
-    /// Distance from the bottom of the screen: it sits just over the home indicator.
+    /// Distance from the bottom of the screen: low, close to the home indicator.
     static func bottomPadding(safeAreaBottom: CGFloat) -> CGFloat {
-        max(10, safeAreaBottom - 12)
+        max(6, safeAreaBottom - 22)
     }
 }
 
@@ -56,11 +56,11 @@ struct BottomTabBar: View {
                         Haptics.tap()
                     }
                 } label: {
-                    VStack(spacing: 3) {
+                    VStack(spacing: 2) {
                         Image(systemName: tab.icon)
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                         Text(tab.title)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     }
@@ -68,10 +68,10 @@ struct BottomTabBar: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background {
                         if isSelected {
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .fill(Color.white.opacity(0.95))
                                 .shadow(color: Palette.hotPink.opacity(0.18), radius: 6, x: 0, y: 2)
-                                .padding(5)
+                                .padding(4)
                                 .matchedGeometryEffect(id: "selected-tab", in: highlight)
                         }
                     }
@@ -85,14 +85,14 @@ struct BottomTabBar: View {
         .padding(.horizontal, 6)
         .frame(height: TabBarLayout.height)
         .background {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(Color.white.opacity(0.55))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .strokeBorder(Color.white.opacity(0.9), lineWidth: 1.2)
                 )
                 .shadow(color: Palette.hotPink.opacity(0.2), radius: 14, x: 0, y: 6)

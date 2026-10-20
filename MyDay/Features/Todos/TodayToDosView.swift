@@ -31,7 +31,6 @@ struct TodayToDosView: View {
     @State private var pendingDelete: TaskItem?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
-    @State private var heroIsVisible = true
     /// Height of the pinned add buttons, so the toast can float above them.
     @State private var dockHeight: CGFloat = 0
     /// Goes up each time the last to-do of the day is ticked; each change plays the confetti.
@@ -85,11 +84,13 @@ struct TodayToDosView: View {
         withSheets
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            // The picture stays at the top, clear (no bar or blur over it); the title is its sign.
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    principalTitle
+                    Color.clear.frame(width: 1, height: 1).accessibilityHidden(true)
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             #if DEBUG
             .task { await openDebugRoute() }
             #endif
@@ -242,12 +243,39 @@ struct TodayToDosView: View {
         }
     }
 
-    /// A List (not a ScrollView), so every to-do gets the standard swipe-left Delete
-    /// and press-and-hold reordering. The add buttons and Today's Progress are pinned at the
-    /// bottom and the list scrolls behind them.
+    /// A little of the picture stays fixed at the top, clear and sharp; under it, a rounded
+    /// panel holds the list, which starts right there. The list is a List (not a ScrollView),
+    /// so every to-do gets the standard swipe-left Delete and press-and-hold reordering. The
+    /// add buttons and Today's Progress are pinned at the bottom and the list scrolls behind them.
     private func scrollingPage(width: CGFloat, safeTop: CGFloat) -> some View {
+        let statusBar = Self.statusBarHeight(fallback: max(0, safeTop - 44))
+        // The status bar, the back button's row, and a strip of the picture under them.
+        let band = statusBar + 44 + 22
+        return VStack(spacing: 0) {
+            TodosHero(width: width, statusBar: statusBar)
+                .frame(width: width, height: band, alignment: .top)
+                .clipped()
+            list
+                .background(alignment: .top) { panelBackground }
+                // Rounded at the top; reaching on down, so the pinned panel's backing still
+                // runs under the home indicator.
+                .mask {
+                    UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
+                        .padding(.bottom, -120)
+                }
+                .padding(.top, -16)
+        }
+        .ignoresSafeArea(edges: .top)
+    }
+
+    private var list: some View {
         List {
-            header(width: width, safeTop: safeTop)
+            TodayHeaderCard(day: day, quoteGlows: quoteGlows) { frame in
+                quoteFrame = frame
+            }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
                 .plainListRow()
             CategoryChipBar(selection: $filter)
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
@@ -273,38 +301,8 @@ struct TodayToDosView: View {
                 actionDock
             }
         }
+        .modifier(HidesTopScrollEdgeEffect())
         .tabBarSafeArea()
-        .ignoresSafeArea(edges: .top)
-    }
-
-    /// The scene, then the date card on a rounded panel that overlaps it slightly.
-    private func header(width: CGFloat, safeTop: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            hero(width: width, safeTop: safeTop)
-            TodayHeaderCard(day: day, quoteGlows: quoteGlows) { frame in
-                quoteFrame = frame
-            }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 6)
-                .frame(maxWidth: .infinity)
-                .background(alignment: .top) {
-                    panelBackground
-                }
-                .padding(.top, -16)
-        }
-    }
-
-    /// The scene; once it scrolls away, the title appears in the navigation bar.
-    /// (`safeTop` includes the navigation bar; the scene only keeps clear of the status bar.)
-    private func hero(width: CGFloat, safeTop: CGFloat) -> some View {
-        TodosHero(width: width, statusBar: Self.statusBarHeight(fallback: max(0, safeTop - 44)))
-            .onGeometryChange(for: Bool.self) { geometry in
-                // Visible while it still reaches below the navigation bar.
-                geometry.frame(in: .global).maxY > safeTop + 8
-            } action: { isVisible in
-                heroIsVisible = isVisible
-            }
     }
 
     /// The height of the status bar (and the Dynamic Island), from the app's window.
@@ -335,15 +333,6 @@ struct TodayToDosView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .allowsHitTesting(false)
         }
-    }
-
-    private var principalTitle: some View {
-        Text(title)
-            .font(.rounded(.headline, weight: .bold))
-            .foregroundStyle(Palette.ink)
-            .opacity(heroIsVisible ? 0 : 1)
-            .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
-            .accessibilityHidden(heroIsVisible)
     }
 
     private var withSheets: some View {
@@ -409,13 +398,13 @@ struct TodayToDosView: View {
     /// The add buttons, then Today's Progress, on a frosted panel that reaches down behind
     /// the tab bar.
     private var actionDock: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             actionBar
             TodosProgressStrip(done: doneCount, total: tasks.count)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
         .background(alignment: .top) {
             dockBackground
         }
@@ -700,3 +689,15 @@ extension TodoSheet {
     }
 }
 #endif
+
+/// No soft blur at the top of the list (iOS 26's scroll edge effect): the picture above it
+/// stays clear.
+private struct HidesTopScrollEdgeEffect: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
+        }
+    }
+}
