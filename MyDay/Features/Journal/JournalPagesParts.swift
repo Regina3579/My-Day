@@ -762,38 +762,41 @@ struct JournalEntryCard: View {
     }
 
     private var card: some View {
-        HStack(alignment: .top, spacing: 12) {
-            JournalDateTile(date: entry.date)
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(alignment: .center, spacing: 6) {
-                    Image(entry.mood.artName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 32, height: 30)
-                        .accessibilityHidden(true)
-                    Text(entry.displayTitle)
-                        .font(heavenly ? HeavenlyStyle.serif(.headline) : .rounded(.headline, weight: .heavy))
-                        .foregroundStyle(JournalPagesStyle.heading)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    Spacer(minLength: 0)
-                    moreMenu
-                }
-                HStack(alignment: .top, spacing: 10) {
-                    if !previewText.isEmpty {
-                        Text(previewText)
-                            .font(.rounded(.subheadline, weight: .medium))
-                            .foregroundStyle(JournalPagesStyle.preview)
-                            .lineSpacing(1)
-                            .lineLimit(3)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                JournalDateTile(date: entry.date)
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(alignment: .center, spacing: 6) {
+                        Image(entry.mood.artName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 32, height: 30)
+                            .accessibilityHidden(true)
+                        Text(entry.displayTitle)
+                            .font(heavenly ? HeavenlyStyle.serif(.headline) : .rounded(.headline, weight: .heavy))
+                            .foregroundStyle(JournalPagesStyle.heading)
+                            .lineLimit(2)
                             .multilineTextAlignment(.leading)
-                            .padding(.trailing, previewClearance)
+                        Spacer(minLength: 0)
+                        moreMenu
                     }
-                    Spacer(minLength: 0)
-                    JournalCardPhoto(entry: entry)
+                    HStack(alignment: .top, spacing: 10) {
+                        if !previewText.isEmpty {
+                            Text(previewText)
+                                .font(.rounded(.subheadline, weight: .medium))
+                                .foregroundStyle(JournalPagesStyle.preview)
+                                .lineSpacing(1)
+                                .lineLimit(3)
+                                .multilineTextAlignment(.leading)
+                                .padding(.trailing, previewClearance)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    metaRow
                 }
-                metaRow
             }
+            // The page's photos, as a row across the card.
+            JournalCardPhotos(entry: entry)
         }
         .padding(12)
         .padding(.bottom, 2)
@@ -816,7 +819,8 @@ struct JournalEntryCard: View {
             .renderedOnce(bleed: 18)
         }
         .overlay(alignment: .bottomTrailing) {
-            if blush && !inTrash {
+            // The flowers would cover the last photo's corner.
+            if blush && !inTrash && entry.sortedPhotos.isEmpty {
                 Image("JournalFlowerCorner")
                     .resizable()
                     .scaledToFit()
@@ -947,7 +951,7 @@ struct JournalEntryCard: View {
     /// Room beside the first lines for the picture in the card's corner (the angel, the fairy;
     /// Candy Cloud Kingdom's castle or bunny is wider).
     private var previewClearance: CGFloat {
-        if blush || !entry.sortedPhotos.isEmpty || inTrash { return 0 }
+        if blush || inTrash { return 0 }
         return theme == .candyCloudKingdom ? 84 : 60
     }
 
@@ -1407,35 +1411,51 @@ struct JournalDateTile: View {
     }
 }
 
-/// A page's first photo on its card, with "+2" when there are more.
-struct JournalCardPhoto: View {
+/// A page's photos on its card: up to three equal square photos with rounded corners, side by
+/// side across the card (each a third of its width, even when there are fewer), with "+2" on the
+/// third when there are more.
+struct JournalCardPhotos: View {
     let entry: JournalEntry
 
+    private static let gap: CGFloat = 8
+
     var body: some View {
-        let photos = entry.sortedPhotos
-        if let first = photos.first, let data = first.thumbnailData, let image = UIImage(data: data) {
-            Color.clear
-                .frame(width: 78, height: 78)
-                .overlay(Image(uiImage: image).resizable().scaledToFill())
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.white, lineWidth: 3)
-                )
-                .overlay(alignment: .bottomTrailing) {
-                    if photos.count > 1 {
-                        Text("+\(photos.count - 1)")
-                            .font(.rounded(.subheadline, weight: .heavy))
-                            .foregroundStyle(Color.white)
-                            .frame(minWidth: 32, minHeight: 32)
-                            .background(Circle().fill(Color.black.opacity(0.45)))
-                            .padding(5)
+        let images = entry.sortedPhotos.compactMap { photo in photo.thumbnailData.flatMap(UIImage.init(data:)) }
+        if !images.isEmpty {
+            HStack(spacing: Self.gap) {
+                ForEach(0..<3, id: \.self) { index in
+                    if index < images.count {
+                        tile(images[index], more: index == 2 ? images.count - 3 : 0)
+                    } else {
+                        Color.clear.aspectRatio(1, contentMode: .fit).frame(maxWidth: .infinity)
                     }
                 }
-                .shadow(color: JournalStyle.pink.opacity(0.2), radius: 5, x: 0, y: 2)
-                .renderedOnce(bleed: 10)
-                .accessibilityHidden(true)
+            }
+            .renderedOnce(bleed: 8)
+            .accessibilityElement()
+            .accessibilityLabel(images.count == 1 ? "1 photo" : "\(images.count) photos")
         }
+    }
+
+    private func tile(_ image: UIImage, more: Int) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .overlay(Image(uiImage: image).resizable().scaledToFill())
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(Color.white.opacity(0.9), lineWidth: 1.5))
+            .overlay {
+                if more > 0 {
+                    ZStack {
+                        shape.fill(Color.black.opacity(0.35))
+                        Text("+\(more)")
+                            .font(.rounded(.title3, weight: .heavy))
+                            .foregroundStyle(Color.white)
+                    }
+                }
+            }
+            .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
     }
 }
 
