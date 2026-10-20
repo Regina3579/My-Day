@@ -14,9 +14,12 @@ import Foundation
 ///
 /// Tips with their own timing (the Journal Lock tip on the journal's second opening, and 7
 /// days after Maybe Later) follow it too.
+///
+/// **Show tips again** is different: the person asked to see them, so until each has shown
+/// again there is no waiting, and a screen's tips come one right after another.
 enum TipPacer {
-    /// How long a screen is open before its tip shows.
-    static let settle: Duration = .seconds(2.5)
+    /// How long a screen is open before its tip shows (a moment, after Show tips again).
+    static var settle: Duration { isReplaying ? .seconds(0.9) : .seconds(2.5) }
     static let firstUseQuiet: TimeInterval = 60
     static let gap: TimeInterval = 3 * 60
     static let contextualGap: TimeInterval = 30
@@ -28,6 +31,7 @@ enum TipPacer {
         // Screenshot runs show each tip on its own route straight away.
         if DebugLaunchRoute.isScreenshotRun { return true }
         #endif
+        if isReplaying { return true }
         let defaults = UserDefaults.standard
         let time = now.timeIntervalSince1970
         var firstUse = defaults.double(forKey: Prefs.tipFirstUse)
@@ -43,6 +47,7 @@ enum TipPacer {
 
     /// Call when a tip appears.
     static func shown(now: Date = .now) {
+        guard !isReplaying else { return }
         let defaults = UserDefaults.standard
         let count = shownToday(now: now)
         defaults.set(dayKey(now), forKey: Prefs.tipDay)
@@ -50,12 +55,30 @@ enum TipPacer {
         defaults.set(now.timeIntervalSince1970, forKey: Prefs.tipLastShown)
     }
 
-    /// Settings → Show tips again: they may come again from the next screen opened (still one at
-    /// a time, with the same gaps).
-    static func reset() {
+    /// The first-time tips' "seen" keys.
+    static let tipKeys = [
+        Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip,
+        Prefs.didShowPromptTip, Prefs.didShowReminderTip, Prefs.didShowICloudTip,
+        Prefs.didShowJournalMenuTip, Prefs.didShowJournalThemeTip, Prefs.didShowQuickAddTip,
+    ]
+
+    /// Settings → Show tips again: every tip is unseen, and they come with no waiting until each
+    /// has shown again.
+    static func replayAll() {
         let defaults = UserDefaults.standard
-        for key in [Prefs.tipLastShown, Prefs.tipsToday] { defaults.removeObject(forKey: key) }
-        defaults.set(1, forKey: Prefs.tipFirstUse)
+        for key in tipKeys { defaults.set(false, forKey: key) }
+        defaults.set(true, forKey: Prefs.tipReplay)
+    }
+
+    /// After Show tips again, while some tip has not shown again yet.
+    static var isReplaying: Bool {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: Prefs.tipReplay) else { return false }
+        if tipKeys.allSatisfy({ defaults.bool(forKey: $0) }) {
+            defaults.set(false, forKey: Prefs.tipReplay)
+            return false
+        }
+        return true
     }
 
     private static func shownToday(now: Date) -> Int {

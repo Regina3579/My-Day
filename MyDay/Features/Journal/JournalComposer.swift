@@ -417,6 +417,12 @@ struct JournalComposer: View {
     private func closeMoodTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsMoodTip = false }
         Haptics.tap()
+        // After Show tips again, Get a Prompt's tip follows straight away.
+        guard TipPacer.isReplaying else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(0.7))
+            await showPromptTipIfNew()
+        }
     }
 
     private func openMoodsFromTip() {

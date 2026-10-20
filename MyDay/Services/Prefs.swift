@@ -29,6 +29,8 @@ enum Prefs {
     static let tipLastShown = "tipLastShown"
     static let tipDay = "tipDay"
     static let tipsToday = "tipsToday"
+    /// Set by Settings → Show tips again: the tips come with no waiting until each has shown.
+    static let tipReplay = "tipReplay"
     /// How many times the journal has opened, and the Journal Lock tip's state (see
     /// `JournalLockTipSchedule`).
     static let journalOpenings = "journalOpenings"

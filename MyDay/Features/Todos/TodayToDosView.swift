@@ -181,6 +181,18 @@ struct TodayToDosView: View {
     private func closeQuoteTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsQuoteTip = false }
         Haptics.tap()
+        nextTipIfReplaying()
+    }
+
+    /// After Show tips again, closing one tip brings this page's next (once any sheet a tip
+    /// opened is closed).
+    private func nextTipIfReplaying() {
+        guard TipPacer.isReplaying else { return }
+        Task {
+            try? await Task.sleep(for: .seconds(0.7))
+            while sheet != nil, !Task.isCancelled { try? await Task.sleep(for: .seconds(0.5)) }
+            await showTipsIfNew()
+        }
     }
 
     /// "Show me": the tip closes and the quote glows for a moment.
@@ -197,6 +209,7 @@ struct TodayToDosView: View {
     private func closeVoiceTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsVoiceTip = false }
         Haptics.tap()
+        nextTipIfReplaying()
     }
 
     private func tryVoiceFromTip() {
@@ -207,6 +220,7 @@ struct TodayToDosView: View {
     private func closePhotoTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsPhotoTip = false }
         Haptics.tap()
+        nextTipIfReplaying()
     }
 
     private func tryPhotoFromTip() {

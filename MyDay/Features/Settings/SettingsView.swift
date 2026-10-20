@@ -351,17 +351,12 @@ struct SettingsView: View {
             && !router.isMenuOpen && lockGoal == nil && !confirmClearDone && !confirmEraseAll && !rating.isShowing
     }
 
-    /// Marks the ten first-time tips as not seen and opens today's To-Dos, where the first of
-    /// them comes. The others come back gently, one at a time on later visits, paced by
-    /// `TipPacer`. My Day goes back to its home screen first, so To-Dos opens afresh even when
-    /// it was already open there.
+    /// Marks the ten first-time tips as not seen and opens today's To-Dos, where its three come
+    /// one right after another (asked for, so no waiting: see `TipPacer`); the others come the
+    /// next time their screen opens. My Day goes back to its home screen first, so To-Dos opens
+    /// afresh even when it was already open there.
     private func showTipsAgain() {
-        for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip,
-                    Prefs.didShowPromptTip, Prefs.didShowReminderTip, Prefs.didShowICloudTip,
-                    Prefs.didShowJournalMenuTip, Prefs.didShowJournalThemeTip, Prefs.didShowQuickAddTip] {
-            UserDefaults.standard.set(false, forKey: key)
-        }
-        TipPacer.reset()
+        TipPacer.replayAll()
         Haptics.tap()
         router.goHome()
         let today = appState.today
