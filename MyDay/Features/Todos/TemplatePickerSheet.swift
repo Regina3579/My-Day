@@ -765,6 +765,11 @@ private struct TemplateDetailView: View {
     private func addTaskButton(_ proxy: ScrollViewProxy) -> some View {
         Button {
             Haptics.tap()
+            // Tapped again while a to-do is typed: it goes in the list, and the field is ready
+            // for the next one.
+            if isAddingItem && !newItem.trimmed.isEmpty {
+                addItem()
+            }
             withAnimation(.snappy) { isAddingItem = true }
             newItemFocused = true
             Task {
