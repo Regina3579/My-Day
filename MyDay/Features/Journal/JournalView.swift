@@ -33,6 +33,7 @@ struct JournalPagesHome: View {
     @Environment(MyDayPro.self) private var pro
     @Environment(\.hostTab) private var hostTab
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \JournalEntry.date, order: .reverse) private var allEntries: [JournalEntry]
     @AppStorage(Prefs.journalTheme) private var chosenTheme: JournalTheme = .blushBlossom
 
@@ -69,6 +70,9 @@ struct JournalPagesHome: View {
     /// The theme drawn: Blush Blossom while a Pro theme waits for My Day Pro.
     private var theme: JournalTheme { chosenTheme.applying(pro: pro.isActive) }
     private var blush: Bool { theme == .blushBlossom }
+
+    /// Back and ⋮ float over Blush Blossom's picture while it shows.
+    private var floatsButtons: Bool { blush && heroIsVisible && !isOpening }
 
     var body: some View {
         GeometryReader { proxy in
@@ -116,7 +120,40 @@ struct JournalPagesHome: View {
                 .transition(.opacity)
             }
         }
-        .toolbar(isOpening ? .hidden : .automatic, for: .navigationBar)
+        // Blush Blossom's picture reaches the very top: while it shows, back and ⋮ float in the
+        // clock's row over it (the clock hides here) instead of the bar, so nothing covers its
+        // title; once it has scrolled away, the soft pink bar comes back.
+        .overlay(alignment: .top) {
+            if floatsButtons {
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(JournalStyle.ink)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(Color.white.opacity(0.75)))
+                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
+                            .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    .accessibilityLabel("Back")
+                    Spacer()
+                    moreMenu
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(Color.white.opacity(0.75)))
+                        .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
+                        .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 12)
+                .ignoresSafeArea(edges: .top)
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: floatsButtons)
+        .toolbar(isOpening || floatsButtons ? .hidden : .automatic, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("My Journal Pages")
@@ -127,7 +164,9 @@ struct JournalPagesHome: View {
                     .accessibilityHidden(heroIsVisible)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                moreMenu
+                if !floatsButtons {
+                    moreMenu
+                }
             }
         }
         .navigationTitle("My Journal Pages")
@@ -153,8 +192,9 @@ struct JournalPagesHome: View {
         } message: {
             Text("These pages will be gone for good.")
         }
-        .onAppear { router.setFullScreen(true, in: hostTab) }
-        .onDisappear { router.setFullScreen(false, in: hostTab) }
+        // Full screen: no tab bar, and no clock over the picture.
+        .onAppear { router.setFullScreen(true, in: hostTab, hidingStatusBar: true) }
+        .onDisappear { router.setFullScreen(false, in: hostTab, hidingStatusBar: true) }
         // The first time the pages show (after the opening picture), Health is asked for the
         // steps on each page.
         .task(id: isOpening) {

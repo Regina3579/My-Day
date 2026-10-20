@@ -47,6 +47,9 @@ struct JournalScene {
     /// The rows the panel covers.
     let overlapRows: CGFloat
     let accessibilityLabel: String
+    /// Where the title's words begin (px), for a picture whose title rises to just under the
+    /// Dynamic Island (its back and ⋮ buttons float in the clock's row above it).
+    var titleRow: CGFloat?
 
     /// Writing a page: the "My Journal — A safe space for your thoughts, feelings and
     /// beautiful moments" sign, the girl, the puppy, the kitten and the books.
@@ -59,14 +62,18 @@ struct JournalScene {
     /// stays in view), and Write a new page sits right at the panel's top.
     static let pages = JournalScene(
         imageName: "JournalPagesScene", imageSize: CGSize(width: 853, height: 570), buttonsRow: 213, overlapRows: 44,
-        accessibilityLabel: "My Journal Pages. Every thought and beautiful moment belongs here.")
+        accessibilityLabel: "My Journal Pages. Every thought and beautiful moment belongs here.", titleRow: 258)
 
     func scale(width: CGFloat) -> CGFloat {
         width / imageSize.width
     }
 
     func topRow(width: CGFloat, statusBar: CGFloat) -> CGFloat {
-        max(0, buttonsRow - (statusBar + 22) / scale(width: width))
+        if let titleRow {
+            // The title's top just under the Dynamic Island (or 58 points down without one).
+            return max(0, titleRow - max(statusBar - 2, 58) / scale(width: width))
+        }
+        return max(0, buttonsRow - (statusBar + 22) / scale(width: width))
     }
 
     func height(width: CGFloat, statusBar: CGFloat) -> CGFloat {
@@ -867,20 +874,21 @@ struct JournalComposer: View {
     private var extrasCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             cardTitle("Add some extras", icon: "JournalExtrasIcon", color: JournalStyle.ink)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            // All six in one row of small tiles.
+            HStack(alignment: .top, spacing: 5) {
                 photoTile
-                extraTile("Add Sticker", art: "ExtraSticker",
+                extraTile("Sticker", art: "ExtraSticker",
                           status: stickers.isEmpty ? nil : "\(Sticker.list(from: stickers).count) added") {
                     extra = .sticker
                 }
-                extraTile("Voice Note", art: "ExtraVoice", status: voiceNoteStatus, locked: !pro.isActive) {
+                extraTile("Voice", art: "ExtraVoice", status: voiceNoteStatus, locked: !pro.isActive) {
                     recordVoiceNote(continuing: nil)
                 }
                 extraTile("Location", art: "ExtraLocation", status: place.trimmed.isEmpty ? nil : place.trimmed) {
                     extra = .place
                 }
                 extraTile("Weather", art: "ExtraWeather", status: weather?.label) { extra = .weather }
-                extraTile("Tag Mood", art: "ExtraTag", status: tags.isEmpty ? nil : "\(tags.count) tags") {
+                extraTile("Tags", art: "ExtraTag", status: tags.isEmpty ? nil : "\(tags.count) tags") {
                     extra = .tags
                 }
             }
@@ -894,7 +902,7 @@ struct JournalComposer: View {
         if pro.isActive {
             photoPicker
         } else {
-            extraTile("Add Photo", art: "ExtraPhoto",
+            extraTile("Photo", art: "ExtraPhoto",
                       status: photos.isEmpty ? nil : "\(photos.count)/\(Self.maxPhotos)", locked: true) {
                 proOffer = .journalPhotos
             }
@@ -904,7 +912,7 @@ struct JournalComposer: View {
     private var photoPicker: some View {
         PhotosPicker(selection: $pickerItems, maxSelectionCount: max(1, Self.maxPhotos - photos.count),
                      matching: .images) {
-            tileLabel("Add Photo", art: "ExtraPhoto",
+            tileLabel("Photo", art: "ExtraPhoto",
                       status: photos.isEmpty ? nil : "\(photos.count)/\(Self.maxPhotos)")
                 .overlay {
                     if isLoadingPhotos {
@@ -922,8 +930,8 @@ struct JournalComposer: View {
             tileLabel(title, art: art, status: status)
                 .overlay(alignment: .topTrailing) {
                     if locked {
-                        ProCrown(size: 22)
-                            .padding(7)
+                        ProCrown(size: 16)
+                            .padding(2)
                     }
                 }
         }
@@ -932,29 +940,29 @@ struct JournalComposer: View {
     }
 
     private func tileLabel(_ title: String, art: String, status: String?) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 3) {
             Image(art)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 42)
+                .frame(height: 26)
             Text(title)
-                .font(.rounded(.subheadline, weight: .bold))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(JournalStyle.label)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.7)
             if let status {
                 Text(status)
-                    .font(.rounded(.caption, weight: .heavy))
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
                     .foregroundStyle(JournalStyle.pink)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.7)
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 6)
-        .frame(maxWidth: .infinity, minHeight: 106)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 2)
+        .frame(maxWidth: .infinity, minHeight: 66)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
             .strokeBorder(status == nil ? Color.white : JournalStyle.pink.opacity(0.5), lineWidth: 1.5))
         .shadow(color: JournalStyle.pink.opacity(0.1), radius: 6, x: 0, y: 3)
         .accessibilityElement(children: .combine)
