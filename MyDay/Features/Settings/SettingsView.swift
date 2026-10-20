@@ -21,6 +21,7 @@ struct SettingsView: View {
     @AppStorage(Prefs.journalTheme) private var journalTheme: JournalTheme = .blushBlossom
     @Environment(MyDayPro.self) private var pro
     @AppStorage(Prefs.journalLock) private var journalLock = false
+    @AppStorage(Prefs.showSteps) private var showSteps = true
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
     @AppStorage(Prefs.didShowICloudTip) private var didShowICloudTip = false
     /// Where Settings → iCloud is, and the part of the screen the list shows (between the
@@ -131,6 +132,14 @@ struct SettingsView: View {
                             Text(journalTheme.applying(pro: pro.isActive).title)
                                 .foregroundStyle(Palette.inkSoft)
                                 .lineLimit(1)
+                        }
+                    }
+                    if StepCounter.shared.isAvailable {
+                        Toggle(isOn: $showSteps) {
+                            Label("Show my steps", systemImage: "figure.walk")
+                        }
+                        .onChange(of: showSteps) { _, isOn in
+                            if isOn { Task { await StepCounter.shared.requestAccess() } }
                         }
                     }
                     Toggle(isOn: lockToggle) {

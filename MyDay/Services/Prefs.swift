@@ -31,6 +31,10 @@ enum Prefs {
     static let tipsToday = "tipsToday"
     /// Set by Settings → Show tips again: the tips come with no waiting until each has shown.
     static let tipReplay = "tipReplay"
+    /// Whether journal pages show the day's steps from Apple Health, and whether Health has
+    /// been asked for them yet.
+    static let showSteps = "showJournalSteps"
+    static let askedForSteps = "askedHealthForSteps"
     /// How many times the journal has opened, and the Journal Lock tip's state (see
     /// `JournalLockTipSchedule`).
     static let journalOpenings = "journalOpenings"

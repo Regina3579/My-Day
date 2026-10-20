@@ -719,6 +719,7 @@ struct JournalEntryCard: View {
     @Environment(\.journalTheme) private var theme
     @State private var confirmDelete = false
     @State private var trashChoices = false
+    @AppStorage(Prefs.showSteps) private var showSteps = true
 
     private var inTrash: Bool { entry.isInTrash }
     private var heavenly: Bool { theme == .heavenlyAngelWishes }
@@ -797,6 +798,9 @@ struct JournalEntryCard: View {
             }
             // The page's photos, as a row across the card.
             JournalCardPhotos(entry: entry)
+            if showSteps && !inTrash {
+                JournalStepsLine(date: entry.date)
+            }
         }
         .padding(12)
         .padding(.bottom, 2)
@@ -1699,5 +1703,38 @@ struct ShelfEmpty: View {
         .frame(maxWidth: .infinity)
         .journalPagesCard(padding: 20)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// "♥ 🚶 10,908": the steps walked that day, from Apple Health, on a thin outlined line across
+/// the card (shown once Health has given them; none on a day without steps).
+struct JournalStepsLine: View {
+    let date: Date
+    @State private var counter = StepCounter.shared
+
+    var body: some View {
+        Group {
+            if let steps = counter.steps(on: date), steps > 0 {
+                HStack(spacing: 10) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(JournalStyle.pink)
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(JournalPagesStyle.preview)
+                    Text(steps, format: .number)
+                        .font(.rounded(.subheadline, weight: .semibold))
+                        .foregroundStyle(JournalPagesStyle.heading)
+                        .monospacedDigit()
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+                .frame(minHeight: 32)
+                .overlay(Capsule().strokeBorder(JournalStyle.pink.opacity(0.35), lineWidth: 1.2))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(steps) steps walked that day")
+            }
+        }
+        .task(id: date) { await counter.load(date) }
     }
 }

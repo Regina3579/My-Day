@@ -44,6 +44,7 @@ struct JournalPagesHome: View {
     @State private var heroIsVisible = true
     @State private var confirmEmptyTrash = false
     @State private var choosesTheme = false
+    @AppStorage(Prefs.showSteps) private var showSteps = true
     @State private var showsMenu = false
     /// The menu card has grown in (it pops from ⋮).
     @State private var menuShown = false
@@ -153,6 +154,13 @@ struct JournalPagesHome: View {
         }
         .onAppear { router.setFullScreen(true, in: hostTab) }
         .onDisappear { router.setFullScreen(false, in: hostTab) }
+        // The first time the pages show (after the opening picture), Health is asked for the
+        // steps on each page.
+        .task(id: isOpening) {
+            guard !isOpening, showSteps else { return }
+            try? await Task.sleep(for: .seconds(1))
+            await StepCounter.shared.requestAccess()
+        }
     }
 
     // MARK: Layout
