@@ -316,7 +316,7 @@ private struct TemplatesHeader: View {
 
 /// A template's card, from the design: each starter has its own pastel card and picture
 /// (sunrise, the weightlifting star, the plane, the books, the broom, the trolley); the person's
-/// own templates are pink with a palm-tree island and a **👑 My template** badge. The name is in
+/// own templates are pink with a few pink hearts and a **👑 My template** badge. The name is in
 /// thick navy and "5 to-dos · Personal" (or "2 of 5 done") in the card's colour. A starter whose
 /// emoji was changed shows that emoji in a white circle over its picture.
 private struct TemplateCard: View {
