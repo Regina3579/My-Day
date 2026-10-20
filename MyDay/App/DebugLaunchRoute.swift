@@ -51,6 +51,11 @@ enum DebugLaunchRoute {
         let reading = TaskItem(title: "Read 20 pages 📚", category: .learning, date: today)
         reading.isImportant = true
         context.insert(reading)
+        // One template of the person's own, dressed for what it is about (books).
+        let readingList = TaskTemplate(name: "Reading List", emoji: "📖", category: .learning,
+                                       items: ["Finish my novel", "Return the library books", "Pick the next book"])
+        readingList.sortOrder = 100
+        context.insert(readingList)
         let shopping = TaskItem(title: "Buy milk and bread 🥛", category: .shopping, date: today)
         shopping.steps = ["Milk", "Bread", "Eggs"]
         shopping.stepsDone = [true]

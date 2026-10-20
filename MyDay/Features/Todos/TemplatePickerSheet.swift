@@ -316,7 +316,9 @@ private struct TemplatesHeader: View {
 
 /// A template's card, from the design: each starter has its own pastel card and picture
 /// (sunrise, the weightlifting star, the plane, the books, the broom, the trolley); the person's
-/// own templates are pink with a few pink hearts and a **👑 My template** badge. The name is in
+/// own templates are pink with a **👑 My template** badge, and pictures that match what the list
+/// is about (books for a reading list, fruit for a market list; see `TemplateTopic`), or a few
+/// pink hearts when nothing matches. The name is in
 /// thick navy and "5 to-dos · Personal" (or "2 of 5 done") in the card's colour. A starter whose
 /// emoji was changed shows that emoji in a white circle over its picture.
 private struct TemplateCard: View {
@@ -350,10 +352,16 @@ private struct TemplateCard: View {
         isOwn || TemplateBlueprint.starters.first { $0.id == template.starterID }?.emoji != template.emoji
     }
 
+    /// For the person's own template: what it is about, for its pictures (nil: pink hearts).
+    private var topic: TemplateTopic? {
+        isOwn ? TemplateTopic.match(name: template.name, items: template.items) : nil
+    }
+
     var body: some View {
         let art = Self.art(for: template)
+        let topic = topic
         ZStack(alignment: .bottomLeading) {
-            Image(art.image)
+            Image(topic == nil ? art.image : "TemplateCardCustomPlain")
                 .resizable()
                 .frame(width: art.size.width * k, height: art.size.height * k)
                 .accessibilityHidden(true)
@@ -390,6 +398,11 @@ private struct TemplateCard: View {
             .padding(.bottom, (isOwn ? 24 : 34) * k)
         }
         .overlay(alignment: .topLeading) {
+            if let topic {
+                decorations(topic.decorations)
+            }
+        }
+        .overlay(alignment: .topLeading) {
             if drawsEmoji {
                 Text(template.emoji)
                     .font(.system(size: 72 * k))
@@ -407,6 +420,29 @@ private struct TemplateCard: View {
         .shadow(color: art.tint.opacity(0.12), radius: 6, x: 0, y: 3)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Shows the list")
+    }
+}
+
+extension TemplateCard {
+    /// The topic's three pictures where the plain card's hearts would be: a big one under ⋯, a
+    /// middle one at the right edge and a small one lower down, each tilted a little.
+    private func decorations(_ pictures: [String]) -> some View {
+        let spots: [(x: CGFloat, y: CGFloat, size: CGFloat, tilt: Double)] = [
+            (318, 150, 66, -10), (368, 226, 50, 12), (300, 268, 40, -6),
+        ]
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(zip(pictures, spots).enumerated()), id: \.offset) { _, pair in
+                let (picture, spot) = pair
+                Text(picture)
+                    .font(.system(size: spot.size * k))
+                    .rotationEffect(.degrees(spot.tilt))
+                    .shadow(color: Color(hex: 0xF20694).opacity(0.18), radius: 3, x: 0, y: 2)
+                    .frame(width: spot.size * 1.4 * k, height: spot.size * 1.4 * k)
+                    .offset(x: (spot.x - spot.size * 0.7) * k, y: (spot.y - spot.size * 0.7) * k)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
