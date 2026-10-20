@@ -83,6 +83,8 @@ struct TodaysPriorityView: View {
         .background(PriorityPanel.base.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        // The picture shows clear right up to the top: no bar background over it.
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 principalTitle
@@ -160,6 +162,7 @@ struct TodaysPriorityView: View {
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.interactively)
+        .modifier(PriorityTopEdge())
         .ignoresSafeArea(edges: .top)
     }
 
@@ -443,13 +446,13 @@ struct TodaysPriorityView: View {
 // MARK: - Scene
 
 /// The picture at the top of Today's Priority, with its "Today's Priority — Focus on what
-/// matters most" title and the girl in her yellow frock. Its first 150 rows are soft curtains
-/// that sit behind the status bar.
+/// matters most" title and the girl in her yellow frock. Its soft curtains above the title are
+/// cropped away: the title rises to just under the Dynamic Island, beside the back button (it
+/// starts to the right of it), so the list below has more room.
 enum PriorityScene {
     static let imageSize = CGSize(width: 853, height: 678)
-    /// The row (px) where the design's back and ⋮ buttons sit: it lines up with the
-    /// navigation bar's buttons.
-    static let buttonsRow: CGFloat = 221
+    /// The row (px) where the title ("Today's", with its heart) begins.
+    static let titleRow: CGFloat = 272
     /// The panel covers the picture's last 44 rows.
     static let overlapRows: CGFloat = 44
 
@@ -458,9 +461,9 @@ enum PriorityScene {
         width / imageSize.width
     }
 
-    /// The first image row shown.
+    /// The first image row shown: the title sits just under the status bar's area.
     static func topRow(width: CGFloat, statusBar: CGFloat) -> CGFloat {
-        max(0, buttonsRow - (statusBar + 22) / scale(width: width))
+        max(0, titleRow - max(0, statusBar - 6) / scale(width: width))
     }
 
     static func height(width: CGFloat, statusBar: CGFloat) -> CGFloat {
@@ -741,6 +744,17 @@ struct PriorityCard: View {
             if isDone && !wasDone && !reduceMotion {
                 tickPops += 1
             }
+        }
+    }
+}
+
+/// No white haze at the top (iOS 26's scroll edge effect): the picture stays clear there.
+private struct PriorityTopEdge: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
         }
     }
 }
