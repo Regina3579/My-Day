@@ -58,7 +58,7 @@ final class TaskTemplate {
     }
 }
 
-/// One of the six starter templates. They are copied into the store once (see
+/// One of the six starter templates (in the order of Templates' design). They are copied into the store once (see
 /// `TemplateLibrary`), so they can be edited and deleted like the person's own.
 struct TemplateBlueprint {
     let id: String
@@ -71,20 +71,20 @@ struct TemplateBlueprint {
         TemplateBlueprint(id: "morning", name: "Morning Routine", emoji: "🌅", category: .personal,
                           items: ["Drink a glass of water", "Stretch for 5 minutes", "Make the bed",
                                   "Healthy breakfast", "Plan my day"]),
-        TemplateBlueprint(id: "grocery", name: "Grocery Shopping", emoji: "🛒", category: .shopping,
-                          items: ["Milk", "Eggs", "Vegetables", "Fruits", "Bread"]),
-        TemplateBlueprint(id: "travel", name: "Travel Checklist", emoji: "✈️", category: .personal,
-                          items: ["Passport and tickets", "Phone charger", "Clothes and toiletries",
-                                  "Medicines", "Book a ride to the airport"]),
         TemplateBlueprint(id: "workout", name: "Workout Routine", emoji: "🏋️", category: .health,
                           items: ["Warm up for 5 minutes", "20 squats", "10 push-ups",
                                   "30-second plank", "Cool down and stretch"]),
+        TemplateBlueprint(id: "travel", name: "Travel Checklist", emoji: "✈️", category: .personal,
+                          items: ["Passport and tickets", "Phone charger", "Clothes and toiletries",
+                                  "Medicines", "Book a ride to the airport"]),
+        TemplateBlueprint(id: "study", name: "Study Session", emoji: "📚", category: .learning,
+                          items: ["Review my notes", "Read one chapter", "Practice questions",
+                                  "Make flashcards", "Take a short break"]),
         TemplateBlueprint(id: "cleaning", name: "Home Cleaning", emoji: "🧹", category: .personal,
                           items: ["Tidy the living room", "Clean the kitchen", "Do the laundry",
                                   "Vacuum the floors", "Take out the trash"]),
-        TemplateBlueprint(id: "study", name: "Study Session", emoji: "📚", category: .learning,
-                          items: ["Review my notes", "Read one chapter", "Practice questions",
-                                  "Make flashcards", "Take a short break"])
+        TemplateBlueprint(id: "grocery", name: "Grocery Shopping", emoji: "🛒", category: .shopping,
+                          items: ["Milk", "Eggs", "Vegetables", "Fruits", "Bread"])
     ]
 }
 

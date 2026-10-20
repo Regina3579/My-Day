@@ -21,34 +21,34 @@ struct TemplatePickerSheet: View {
     @State private var pendingDelete: TaskTemplate?
     /// The card being moved (press and hold, then drag).
     @State private var dragging: TaskTemplate?
+    /// The page's width (everything is placed on the design's grid, 914 pixels across).
+    @State private var width: CGFloat = 402
+
+    /// Points per pixel of the design.
+    private var k: CGFloat { width / 914 }
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Open a list to tick off its to-dos or add them to My Day ✨")
-                        if templates.count > 1 {
-                            Label("Press and hold a card to move it around.", systemImage: "hand.draw.fill")
-                                .foregroundStyle(Palette.grape)
-                        }
-                    }
-                    .font(.rounded(.subheadline, weight: .medium))
-                    .foregroundStyle(Palette.inkSoft)
+                VStack(spacing: 0) {
+                    TemplatesHeader(k: k) { dismiss() }
+                        .padding(.top, 16)
 
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                              spacing: 12) {
-                        ForEach(Array(templates.enumerated()), id: \.element.persistentModelID) { index, template in
-                            card(template, tint: RowTint.at(index))
+                    LazyVGrid(columns: [GridItem(.fixed(420 * k), spacing: 22 * k, alignment: .top),
+                                        GridItem(.fixed(420 * k), alignment: .top)],
+                              spacing: 16 * k) {
+                        ForEach(templates, id: \.persistentModelID) { template in
+                            card(template)
                         }
 
                         Button {
                             path.append(.create)
                         } label: {
-                            NewTemplateCard()
+                            NewTemplateCard(k: k)
                         }
                         .buttonStyle(PressScaleStyle())
                     }
+                    .padding(.top, 4 * k)
 
                     if TemplateLibrary.isMissingStarters(among: templates) {
                         Button {
@@ -62,21 +62,18 @@ struct TemplatePickerSheet: View {
                         }
                     }
                 }
-                .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .background(TemplatesHeader.pageBackground.ignoresSafeArea())
             // Letting go anywhere else ends the move.
             .onDrop(of: [.text], isTargeted: nil) { _ in
                 dragging = nil
                 return true
             }
             .navigationTitle("Templates")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-            }
+            // The page draws its own heading (with Close) from its design.
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: TemplateRoute.self) { route in
                 destination(route)
             }
@@ -125,11 +122,11 @@ struct TemplatePickerSheet: View {
 
     /// A template's card: tap it to see its to-dos, ⋯ to edit or delete it, or press and
     /// hold to pick it up and move it; the other cards make room as it passes over them.
-    private func card(_ template: TaskTemplate, tint: RowTint) -> some View {
+    private func card(_ template: TaskTemplate) -> some View {
         Button {
             path.append(.detail(template.id))
         } label: {
-            TemplateCard(template: template, tint: tint)
+            TemplateCard(template: template, k: k)
         }
         .buttonStyle(PressScaleStyle())
         .opacity(dragging == template ? 0.35 : 1)
@@ -138,27 +135,24 @@ struct TemplatePickerSheet: View {
             Haptics.tap()
             return NSItemProvider(object: template.id.uuidString as NSString)
         } preview: {
-            TemplateCard(template: template, tint: tint)
-                .frame(width: 170)
+            TemplateCard(template: template, k: k)
                 .scaleEffect(1.04)
         }
         .onDrop(of: [.text], delegate: TemplateDropDelegate(target: template, templates: templates,
                                                             dragging: $dragging))
         .accessibilityAction(named: "Move earlier") { move(template, by: -1) }
         .accessibilityAction(named: "Move later") { move(template, by: 1) }
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .topLeading) {
+            // Over the card's own ⋯ (its middle is 367 × 53 pixels into the card).
+            let side = max(44, 76 * k)
             Menu {
                 actions(for: template)
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 15, weight: .heavy))
-                    .foregroundStyle(Palette.berry)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Color.white.opacity(0.92)))
-                    .shadow(color: tint.edge.opacity(0.6), radius: 3, x: 0, y: 1)
-                    .padding(8)
-                    .contentShape(Rectangle())
+                Color.clear
+                    .frame(width: side, height: side)
+                    .contentShape(Circle())
             }
+            .offset(x: 367 * k - side / 2, y: 53 * k - side / 2)
             .accessibilityLabel("Edit or delete \(template.name)")
         }
     }
@@ -259,81 +253,191 @@ enum TemplateRoute: Hashable {
 
 // MARK: - Cards
 
-private struct TemplateCard: View {
-    let template: TaskTemplate
-    let tint: RowTint
+/// The heading of Templates, from its design: a soft lilac strip with stars, hearts and clouds,
+/// a pink-edged **Close**, "Templates" in thick navy, a line on what the page is for and the
+/// purple "Press and hold a card to move it around." with its pointing hand. The strip is the
+/// design's own picture (enlarged 4× with Real-ESRGAN, its words taken out); the words are
+/// written here. Placed on the design's grid (913 × 236 pixels).
+private struct TemplatesHeader: View {
+    let k: CGFloat
+    let onClose: () -> Void
+
+    static let pageBackground = LinearGradient(
+        colors: [Color(hex: 0xF9F9FE), Color(hex: 0xFEFCFD), Color(hex: 0xFEF1F6)],
+        startPoint: .top, endPoint: .bottom
+    )
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(template.emoji)
-                .font(.system(size: 34))
-                .frame(width: 58, height: 58)
-                .background(Circle().fill(Color.white.opacity(0.8)))
+        Image("TemplatesHeader")
+            .resizable()
+            .frame(width: 913 * k, height: 236 * k)
+            .accessibilityHidden(true)
+            .overlay(alignment: .topLeading) {
+                ZStack(alignment: .topLeading) {
+                    Button(action: onClose) {
+                        Text("Close")
+                            .font(.system(size: 34 * k, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color(hex: 0xF2087F))
+                            .frame(width: 160 * k, height: 77 * k)
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    .frame(minHeight: 44)
+                    .offset(x: 41 * k, y: 13 * k)
+
+                    Text("Templates")
+                        .font(.system(size: 76 * k, weight: .black, design: .rounded))
+                        .foregroundStyle(Color(hex: 0x08053A))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(width: 370 * k, height: 84 * k, alignment: .leading)
+                        .offset(x: 226 * k, y: 12 * k)
+                        .accessibilityAddTraits(.isHeader)
+
+                    Text("Open a list to tick off its to-dos or add them to My Day")
+                        .font(.system(size: 31 * k, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(hex: 0x6860A0))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: 790 * k, height: 42 * k, alignment: .leading)
+                        .offset(x: 46 * k, y: 107 * k)
+
+                    Text("Press and hold a card to move it around.")
+                        .font(.system(size: 31 * k, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color(hex: 0x7A34F5))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: 550 * k, height: 42 * k, alignment: .leading)
+                        .offset(x: 176 * k, y: 172 * k)
+                }
+            }
+    }
+}
+
+/// A template's card, from the design: each starter has its own pastel card and picture
+/// (sunrise, the weightlifting star, the plane, the books, the broom, the trolley); the person's
+/// own templates are pink with a palm-tree island and a **👑 My template** badge. The name is in
+/// thick navy and "5 to-dos · Personal" (or "2 of 5 done") in the card's colour. A starter whose
+/// emoji was changed shows that emoji in a white circle over its picture.
+private struct TemplateCard: View {
+    let template: TaskTemplate
+    let k: CGFloat
+
+    /// A card's picture: its asset, size (design pixels), where its round badge is, and its colour.
+    struct Art {
+        let image: String
+        let size: CGSize
+        let badge: CGPoint
+        let tint: Color
+    }
+
+    static func art(for template: TaskTemplate) -> Art {
+        switch template.starterID {
+        case "morning": Art(image: "TemplateCardMorning", size: CGSize(width: 420, height: 282), badge: CGPoint(x: 99, y: 90), tint: Color(hex: 0xF2078A))
+        case "workout": Art(image: "TemplateCardWorkout", size: CGSize(width: 420, height: 282), badge: CGPoint(x: 103, y: 90), tint: Color(hex: 0x7440F2))
+        case "travel": Art(image: "TemplateCardTravel", size: CGSize(width: 420, height: 286), badge: CGPoint(x: 98, y: 82), tint: Color(hex: 0xEE8A00))
+        case "study": Art(image: "TemplateCardStudy", size: CGSize(width: 420, height: 286), badge: CGPoint(x: 102, y: 82), tint: Color(hex: 0x0A5CF2))
+        case "cleaning": Art(image: "TemplateCardCleaning", size: CGSize(width: 420, height: 284), badge: CGPoint(x: 98, y: 89), tint: Color(hex: 0x0FA70F))
+        case "grocery": Art(image: "TemplateCardGrocery", size: CGSize(width: 420, height: 284), badge: CGPoint(x: 102, y: 89), tint: Color(hex: 0xF24E05))
+        default: Art(image: "TemplateCardCustom", size: CGSize(width: 420, height: 354), badge: CGPoint(x: 98, y: 88), tint: Color(hex: 0xF20694))
+        }
+    }
+
+    private var isOwn: Bool { template.starterID.isEmpty }
+
+    /// The picture's own badge fits unless the emoji was changed (or it is the person's own).
+    private var drawsEmoji: Bool {
+        isOwn || TemplateBlueprint.starters.first { $0.id == template.starterID }?.emoji != template.emoji
+    }
+
+    var body: some View {
+        let art = Self.art(for: template)
+        ZStack(alignment: .bottomLeading) {
+            Image(art.image)
+                .resizable()
+                .frame(width: art.size.width * k, height: art.size.height * k)
                 .accessibilityHidden(true)
-            Text(template.name)
-                .font(.rounded(.headline, weight: .heavy))
-                .foregroundStyle(Palette.ink)
-                .multilineTextAlignment(.leading)
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
-            Text(template.doneCount > 0
-                 ? "\(template.doneCount) of \(template.items.count) done · \(template.category.label)"
-                 : "\(template.items.count) to-dos · \(template.category.label)")
-                .font(.rounded(.caption, weight: .semibold))
-                .foregroundStyle(tint.accent)
-            if template.starterID.isEmpty {
-                Text("My template")
-                    .font(.rounded(.caption2, weight: .bold))
+            VStack(alignment: .leading, spacing: 3 * k) {
+                Text(template.name)
+                    .font(.system(size: 38 * k, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color(hex: 0x08053A))
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+                Text(template.doneCount > 0
+                     ? "\(template.doneCount) of \(template.items.count) done · \(template.category.label)"
+                     : "\(template.items.count) to-dos · \(template.category.label)")
+                    .font(.system(size: 28 * k, weight: .semibold, design: .rounded))
+                    .foregroundStyle(art.tint)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                if isOwn {
+                    HStack(spacing: 6 * k) {
+                        Text("👑")
+                        Text("My template")
+                    }
+                    .font(.system(size: 26 * k, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(tint.accent))
+                    .padding(.horizontal, 16 * k)
+                    .padding(.vertical, 6 * k)
+                    .background(Capsule().fill(LinearGradient(colors: [Color(hex: 0xF94FB0), Color(hex: 0xEE1388)],
+                                                              startPoint: .top, endPoint: .bottom)))
+                    .padding(.top, 6 * k)
+                }
+            }
+            .frame(width: 350 * k, alignment: .leading)
+            .padding(.leading, 39 * k)
+            .padding(.bottom, (isOwn ? 24 : 34) * k)
+        }
+        .overlay(alignment: .topLeading) {
+            if drawsEmoji {
+                Text(template.emoji)
+                    .font(.system(size: 72 * k))
+                    .frame(width: 128 * k, height: 128 * k)
+                    .background(
+                        Circle()
+                            .fill(RadialGradient(colors: [Color.white, Color(hex: 0xF8F4FB)], center: .center,
+                                                 startRadius: 10 * k, endRadius: 66 * k))
+                            .shadow(color: art.tint.opacity(0.18), radius: 4, x: 0, y: 2)
+                    )
+                    .offset(x: (art.badge.x - 64) * k, y: (art.badge.y - 64) * k)
+                    .accessibilityHidden(true)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(LinearGradient(colors: [tint.fill.opacity(0.7), tint.fill],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(tint.edge, lineWidth: 1.2)
-        )
-        .shadow(color: tint.edge.opacity(0.5), radius: 6, x: 0, y: 3)
+        .shadow(color: art.tint.opacity(0.12), radius: 6, x: 0, y: 3)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Shows the list")
     }
 }
 
+/// Save as Template, from the design: a dashed pink card with hearts, stars and a smiling
+/// cloud, a big pink ＋, "Save as Template" in deep berry and "Make your own list".
 private struct NewTemplateCard: View {
+    let k: CGFloat
+
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Color.white)
-                .frame(width: 50, height: 50)
-                .background(Circle().fill(Palette.hotPink.gradient))
-            Text("Save as Template")
-                .font(.rounded(.headline, weight: .heavy))
-                .foregroundStyle(Palette.berry)
-                .multilineTextAlignment(.center)
-            Text("Make your own list")
-                .font(.rounded(.caption, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 170)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white.opacity(0.7))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Palette.bubblegum.opacity(0.55), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-        )
-        .accessibilityElement(children: .combine)
+        Image("TemplateCardSave")
+            .resizable()
+            .frame(width: 420 * k, height: 354 * k)
+            .accessibilityHidden(true)
+            .overlay(alignment: .top) {
+                VStack(spacing: 6 * k) {
+                    Text("Save as Template")
+                        .font(.system(size: 38 * k, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color(hex: 0x880035))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    Text("Make your own list")
+                        .font(.system(size: 28 * k, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(hex: 0x6860A0))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+                .frame(width: 380 * k)
+                .padding(.top, 196 * k)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Save as Template. Make your own list")
     }
 }
 
