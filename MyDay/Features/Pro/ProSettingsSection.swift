@@ -68,9 +68,9 @@ struct ProSettingsSection: View {
         } header: {
             Text("My Day Pro")
         } footer: {
-            Text(restoreMessage ?? (pro.isActive
-                ? "Thank you for supporting My Day! 💖 Manage Subscription changes or cancels it with Apple."
-                : "To-dos and journal writing are free for everyone. My Day Pro adds Daily Reflections, photos, voice notes, every mood and sticker, prompts and reminder melodies."))
+            if let message = restoreMessage ?? (pro.isActive ? "Thank you for supporting My Day! 💖" : nil) {
+                Text(message)
+            }
         }
         .id("pro")
     }

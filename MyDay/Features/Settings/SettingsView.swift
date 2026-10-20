@@ -116,8 +116,6 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Sounds & Haptics")
-                } footer: {
-                    Text("A soft “ting” when you tick off a to-do or a priority, a little chime when the day's last one is done, and a bubbly “pop… ting” when you pick a mood star in your journal. My Day's sounds stay quiet when your iPhone is on Silent and never stop your music. To-do reminders arrive with your Reminder Sound: tap it to hear all nine and choose one.")
                 }
 
                 Section {
@@ -160,7 +158,9 @@ struct SettingsView: View {
                 } header: {
                     Text("Journal")
                 } footer: {
-                    Text("Journal Theme dresses My Journal Pages: Blush Blossom for everyone; Heavenly Angel Wishes, Enchanted Fairy Garden, Rainbow Glow Unicorn, Rose Gold Elegance, Cozy Rainy Day, Candy Cloud Kingdom and the themes to come with My Day Pro. " + lockFooter)
+                    if let lockFooter {
+                        Text(lockFooter)
+                    }
                 }
 
                 Section {
@@ -180,8 +180,6 @@ struct SettingsView: View {
                     #endif
                 } header: {
                     Text("Tips")
-                } footer: {
-                    Text("See the first-time tips again, one at a time: on To-Dos (a new quote every day, Speak a Task, then Photo), the Reminder tip when you next open a to-do, the moods and Get a Prompt tips when you next write a journal page, and the iCloud tip when you next come to Settings.")
                 }
 
                 Section("Your data") {
@@ -315,12 +313,10 @@ struct SettingsView: View {
         return chosen.usesSecret && !JournalSecretStore.hasSecret(for: chosen) ? .biometrics : chosen
     }
 
-    private var lockFooter: String {
-        guard journalLock else {
-            return "Keep your journal private with Face ID, a pattern or a number passcode."
-        }
-        return "Your journal asks for \(lockMethod.askedFor) each time you come back to the app."
-            + (lockMethod.usesSecret ? " Forgot it? You can open it with \(JournalLock.methodName) instead." : "")
+    /// The one thing worth saying under Journal: a forgotten pattern or passcode isn't the end.
+    private var lockFooter: String? {
+        guard journalLock, lockMethod.usesSecret else { return nil }
+        return "Forgot it? Open your journal with \(JournalLock.methodName)."
     }
 
     // MARK: Tips

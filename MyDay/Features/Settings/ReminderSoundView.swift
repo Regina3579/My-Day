@@ -28,7 +28,9 @@ struct ReminderSoundView: View {
                     .accessibilityHint("Plays the sound and chooses it")
                 }
             } footer: {
-                Text("Tap a sound to hear it and choose it. Your to-do reminders arrive with it, following your iPhone's notification settings. With Silent on, reminders and the sounds here stay quiet." + (pro.isActive ? "" : " The sounds with a crown come with My Day Pro."))
+                if !pro.isActive {
+                    Text("Sounds with a 👑 come with My Day Pro.")
+                }
             }
         }
         .font(.rounded(.body))

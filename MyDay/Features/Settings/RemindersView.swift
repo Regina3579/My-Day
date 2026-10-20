@@ -53,8 +53,6 @@ struct RemindersView: View {
                 }
             } header: {
                 Text("Morning")
-            } footer: {
-                Text("A cheerful nudge to plan your to-dos and choose today's priority.")
             }
 
             Section {
@@ -66,8 +64,6 @@ struct RemindersView: View {
                 }
             } header: {
                 Text("Evening")
-            } footer: {
-                Text("A soft reminder to capture the day's thoughts and beautiful moments.")
             }
 
             Section("Upcoming to-do reminders") {

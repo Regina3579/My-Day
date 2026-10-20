@@ -23,15 +23,6 @@ enum JournalLockMethod: String, CaseIterable, Identifiable {
         }
     }
 
-    /// What is asked for, in a sentence: "Your journal asks for your pattern…".
-    var askedFor: String {
-        switch self {
-        case .biometrics: JournalLock.methodName
-        case .pattern: "your pattern"
-        case .passcode: "your passcode"
-        }
-    }
-
     var detail: String {
         switch self {
         case .biometrics: "Unlock with your face, just like your iPhone."

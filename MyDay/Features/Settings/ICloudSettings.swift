@@ -37,7 +37,7 @@ struct ICloudSettingsSection: View {
         .confirmationDialog("Stop syncing with iCloud?", isPresented: $confirmTurnOff, titleVisibility: .visible) {
             Button("Turn Off iCloud Sync", role: .destructive) { setSync(false) }
         } message: {
-            Text("Everything stays on this iPhone, and what is already in iCloud stays there. New changes are kept only on this iPhone, so they would be lost if you delete My Day.")
+            Text("New changes will be kept only on this iPhone.")
         }
     }
 
@@ -59,8 +59,8 @@ struct ICloudSettingsSection: View {
 
     private var footer: String {
         store.syncsWithICloud
-            ? "Your to-dos, priorities, templates and journal pages, with their photos and voice notes, are kept in your private iCloud. If you delete My Day or get a new iPhone, sign in with the same Apple ID and they all come back."
-            : "Your data is kept only on this iPhone, and deleting My Day deletes it. Turn on Sync with iCloud to keep it safe."
+            ? "Everything comes back on a new iPhone with your Apple ID."
+            : "Saved only on this iPhone."
     }
 }
 

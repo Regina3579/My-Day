@@ -49,10 +49,7 @@ struct JournalThemeView: View {
     private var current: JournalTheme { chosen.applying(pro: pro.isActive) }
 
     private var footer: String {
-        "Your theme dresses My Journal Pages. Blush Blossom is for everyone; "
-            + (pro.isActive ? "every other theme is yours with My Day Pro 💖"
-                : "the themes with a crown come with My Day Pro.")
-            + " More themes are on the way 🌸"
+        pro.isActive ? "More themes are on the way 🌸" : "Themes with a 👑 come with My Day Pro."
     }
 
     private func choose(_ theme: JournalTheme) {
