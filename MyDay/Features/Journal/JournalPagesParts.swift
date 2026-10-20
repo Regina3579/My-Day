@@ -265,11 +265,11 @@ struct MoodWeekCard: View {
 
     var body: some View {
         let days = (0..<7).reversed().map { today.adding(days: -$0) }
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 HStack(spacing: 6) {
                     Text("My week in moods")
-                        .font(theme.headingFont(.headline))
+                        .font(theme.headingFont(.subheadline))
                         .foregroundStyle(theme.headingColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -290,15 +290,15 @@ struct MoodWeekCard: View {
                             Text("View Calendar")
                             Text("Calendar")
                         }
-                        .font(.rounded(.subheadline, weight: .bold))
+                        .font(.rounded(.footnote, weight: .bold))
                         .foregroundStyle(JournalStyle.plum)
                         .lineLimit(1)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .heavy))
                             .foregroundStyle(JournalStyle.purple)
                     }
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: 38)
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 30)
                     .background {
                         if heavenly {
                             Capsule()
@@ -331,7 +331,7 @@ struct MoodWeekCard: View {
                 }
             }
         }
-        .journalPagesCard()
+        .journalPagesCard(padding: 10, radius: 22)
         .overlay(alignment: .topLeading) {
             if heavenly {
                 HeavenlyMoon()
@@ -452,7 +452,7 @@ struct MoodWeekCard: View {
     }
 
     private func dayLabel(_ day: Date, mood: Mood?) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 2) {
             Group {
                 if let mood {
                     Image(mood.artName)
@@ -464,23 +464,23 @@ struct MoodWeekCard: View {
                     FairyFlowerFace(day: day)
                 } else if theme == .rainbowGlowUnicorn {
                     UnicornFaceStar(day: day)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 30, height: 30)
                 } else if theme == .roseGoldElegance {
                     RoseEmptyStar()
                 } else if theme == .cozyRainyDay {
                     RainyCloudFace(day: day)
-                        .frame(width: 46, height: 40)
+                        .frame(width: 34, height: 30)
                 } else if theme == .candyCloudKingdom {
                     CandyEmptyStar()
                 } else {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 30))
+                        .font(.system(size: 22))
                         .foregroundStyle(JournalStyle.pink.opacity(0.14))
                 }
             }
-            .frame(width: 46, height: 42)
+            .frame(width: 34, height: 30)
             Text(day.formatted(.dateTime.weekday(.abbreviated)))
-                .font(.rounded(.subheadline, weight: .bold))
+                .font(.rounded(.caption, weight: .bold))
                 .foregroundStyle(day.isToday ? Color.white : JournalStyle.plum)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
