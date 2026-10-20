@@ -538,7 +538,8 @@ struct JournalPagesHome: View {
                 let hook = JournalPagesMenu.moreButton
                 // ⋮'s middle, in this view's space (the card's right edge stays on screen).
                 let x = min(moreFrame.midX - origin.x - hook.x * scale, proxy.size.width - grid.width * scale)
-                let y = moreFrame.midY - origin.y - hook.y * scale
+                // Never above the screen's top (⋮ floats in the clock's row over the picture).
+                let y = max(moreFrame.midY - hook.y * scale, 8) - origin.y
                 ZStack(alignment: .topLeading) {
                     Color.clear
                         .contentShape(Rectangle())
