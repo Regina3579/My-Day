@@ -1016,6 +1016,7 @@ private struct TemplateEditorView: View {
                             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .strokeBorder(Palette.bubblegum.opacity(0.3), lineWidth: 1))
                             .id(Field.item(item.id))
+                            .transition(Self.rowTransition)
                         }
 
                         if isAddingItem {
@@ -1037,7 +1038,7 @@ private struct TemplateEditorView: View {
                             .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .strokeBorder(Palette.hotPink.opacity(0.55), style: StrokeStyle(lineWidth: 1.4, dash: [6, 4])))
                             .id(Field.newItem)
-                            .transition(.opacity)
+                            .transition(Self.rowTransition)
                         }
 
                         addTaskButton
@@ -1055,9 +1056,10 @@ private struct TemplateEditorView: View {
         // new to-do is typed, ＋ Add Task under it shows too.
         .onChange(of: focus) { _, field in
             guard let field else { return }
+            // Moves with the keyboard as it rises (a moment, not a wait).
             Task {
-                try? await Task.sleep(for: .seconds(0.35))
-                withAnimation(.snappy) {
+                try? await Task.sleep(for: .seconds(0.12))
+                withAnimation(Self.motion) {
                     if field == .newItem {
                         proxy.scrollTo(Self.addTaskID, anchor: .bottom)
                     } else {
@@ -1068,10 +1070,7 @@ private struct TemplateEditorView: View {
         }
         .onChange(of: items.count) { _, _ in
             guard focus == .newItem else { return }
-            Task {
-                try? await Task.sleep(for: .seconds(0.1))
-                withAnimation(.snappy) { proxy.scrollTo(Self.addTaskID, anchor: .bottom) }
-            }
+            withAnimation(Self.motion) { proxy.scrollTo(Self.addTaskID, anchor: .bottom) }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Button(isEditing ? "Save Changes 💾" : "Save Template 💾", action: save)
@@ -1114,9 +1113,16 @@ private struct TemplateEditorView: View {
     }
 
     private static let addTaskID = "addTask"
+    /// One quick spring for everything that moves when a to-do is added: the new field, the
+    /// rows, ＋ Add Task under them and the scroll, together.
+    private static let motion = Animation.spring(response: 0.28, dampingFraction: 0.88)
+    private static let rowTransition = AnyTransition.asymmetric(
+        insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
+        removal: .opacity
+    )
 
     private func startAdding() {
-        withAnimation(.snappy) { isAddingItem = true }
+        withAnimation(Self.motion) { isAddingItem = true }
         focus = .newItem
     }
 
@@ -1136,12 +1142,14 @@ private struct TemplateEditorView: View {
     private func addItem() {
         let clean = newItem.trimmed
         guard !clean.isEmpty else {
-            withAnimation(.snappy) { isAddingItem = false }
+            withAnimation(Self.motion) { isAddingItem = false }
             focus = nil
             return
         }
-        withAnimation(.snappy) { items.append(Item(text: clean)) }
-        newItem = ""
+        withAnimation(Self.motion) {
+            items.append(Item(text: clean))
+            newItem = ""
+        }
         focus = .newItem
     }
 
