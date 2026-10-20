@@ -80,6 +80,8 @@ enum TaskActions {
         context.insert(next)
         next.customCategory = task.customCategory
         next.isImportant = task.isImportant
+        // The same steps, none ticked yet.
+        next.steps = task.steps
         ReminderCenter.sync(next)
     }
 }

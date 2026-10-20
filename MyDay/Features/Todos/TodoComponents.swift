@@ -530,7 +530,8 @@ private struct MenuRowStyle: ButtonStyle {
     }
 }
 
-/// "Health · 5:00 PM 🔔" — the category in its colour, then time, reminder, repeat and photo.
+/// "Health · 5:00 PM · 1 of 3 🔔" — the category in its colour, then time, steps done, reminder,
+/// repeat and photo.
 struct TodoMetaLine: View {
     let task: TaskItem
 
@@ -538,6 +539,9 @@ struct TodoMetaLine: View {
         var line = ""
         if let time = task.time {
             line += " · " + time.formatted(date: .omitted, time: .shortened)
+        }
+        if !task.steps.isEmpty {
+            line += " · \(task.stepsDoneCount) of \(task.steps.count)"
         }
         if let reminder = task.activeReminder, !task.isCompleted {
             if let time = task.time, time == reminder {
@@ -570,6 +574,9 @@ struct TodoMetaLine: View {
         var parts = [task.choice.label]
         if let time = task.time {
             parts.append("at " + time.formatted(date: .omitted, time: .shortened))
+        }
+        if !task.steps.isEmpty {
+            parts.append("\(task.stepsDoneCount) of \(task.steps.count) steps done")
         }
         if task.activeReminder != nil, !task.isCompleted {
             parts.append("reminder on")

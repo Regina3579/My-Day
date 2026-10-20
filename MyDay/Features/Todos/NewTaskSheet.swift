@@ -29,6 +29,10 @@ struct NewTaskSheet: View {
     @State private var reminderEnabled: Bool
     @State private var reminderDate: Date
     @State private var repeatOption: RepeatOption
+    @State private var steps: [Step]
+    /// ＋ Add Step was tapped: a new step's field waits under the others.
+    @State private var isAddingStep = false
+    @State private var newStep = ""
     /// Small preview of the photo (the saved one, or a newly picked one).
     @State private var thumbnail: Data?
     /// Full-size photo picked in this sheet.
@@ -55,8 +59,15 @@ struct NewTaskSheet: View {
     @State private var reminderFrame: CGRect = .zero
     @State private var sheetHeight: CGFloat = 0
 
-    private enum Field {
-        case title, note
+    private enum Field: Hashable {
+        case title, note, step(UUID), newStep
+    }
+
+    /// One of the to-do's steps while the sheet is open.
+    private struct Step: Identifiable {
+        let id = UUID()
+        var text: String
+        var isDone = false
     }
 
     /// A new to-do on `date`.
@@ -96,6 +107,9 @@ struct NewTaskSheet: View {
         _reminderEnabled = State(initialValue: draft.reminderEnabled)
         _reminderDate = State(initialValue: draft.reminderDate ?? draft.time ?? nextHour)
         _repeatOption = State(initialValue: draft.repeatOption)
+        _steps = State(initialValue: (existing?.steps ?? []).enumerated().map { index, text in
+            Step(text: text, isDone: existing.map { $0.stepsDone.indices.contains(index) && $0.stepsDone[index] } ?? false)
+        })
         _thumbnail = State(initialValue: existing?.photoThumbnail ?? draft.photo?.thumbnail)
         _newPhoto = State(initialValue: draft.photo?.photo)
         _photoChanged = State(initialValue: draft.photo != nil)
@@ -162,6 +176,7 @@ struct NewTaskSheet: View {
                 photoSection
             }
             titleField
+            stepsSection
             categorySection
             options
             if task != nil {
@@ -364,6 +379,143 @@ struct NewTaskSheet: View {
     private var titleBorder: Color {
         if showsTitleHint { return Color(hex: 0xD7263D) }
         return focusedField == .title ? Palette.hotPink.opacity(0.6) : Palette.bubblegum.opacity(0.25)
+    }
+
+    // MARK: Steps
+
+    /// The to-do's steps (tick, rewrite or remove each), then ＋ Add Step.
+    private var stepsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !steps.isEmpty {
+                SheetLabel(text: "Steps · \(steps.filter(\.isDone).count) of \(steps.count)")
+                ForEach($steps) { $step in
+                    stepRow($step)
+                }
+            }
+            if isAddingStep {
+                newStepField
+            }
+            addStepButton
+        }
+        .animation(.snappy, value: steps.count)
+        .animation(.snappy, value: isAddingStep)
+    }
+
+    private func stepRow(_ step: Binding<Step>) -> some View {
+        let id = step.wrappedValue.id
+        let isDone = step.wrappedValue.isDone
+        return HStack(spacing: 6) {
+            Button {
+                step.wrappedValue.isDone.toggle()
+                if step.wrappedValue.isDone {
+                    CompletionFeedback.completed(finishingAll: steps.allSatisfy(\.isDone))
+                } else {
+                    Haptics.tap()
+                }
+            } label: {
+                CheckBubble(isOn: isDone, tint: Palette.hotPink, size: 22)
+                    .frame(width: 40, height: 40)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(step.wrappedValue.text)
+            .accessibilityValue(isDone ? "Done" : "Not done")
+            TextField("Step", text: step.text, axis: .vertical)
+                .font(.rounded(.body, weight: .semibold))
+                .foregroundStyle(isDone ? Palette.inkSoft.opacity(0.75) : Palette.ink)
+                .strikethrough(isDone, color: Palette.hotPink.opacity(0.6))
+                .focused($focusedField, equals: .step(id))
+                .submitLabel(.done)
+                .onSubmit { focusedField = nil }
+            Button {
+                withAnimation(.snappy) { steps.removeAll { $0.id == id } }
+                Haptics.tap()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Palette.inkSoft)
+                    .frame(width: 40, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressScaleStyle(scale: 0.86))
+            .accessibilityLabel("Remove step")
+        }
+        .padding(.horizontal, 6)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(Palette.bubblegum.opacity(0.25), lineWidth: 1))
+    }
+
+    /// Type a step; Return adds it and leaves the field ready for the next one (Return on an
+    /// empty field closes it).
+    private var newStepField: some View {
+        HStack(spacing: 6) {
+            CheckBubble(isOn: false, tint: Palette.hotPink, size: 22)
+                .frame(width: 40, height: 40)
+                .accessibilityHidden(true)
+            TextField("Next step", text: $newStep)
+                .font(.rounded(.body, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .focused($focusedField, equals: .newStep)
+                .submitLabel(.next)
+                .onSubmit(addStep)
+                .accessibilityLabel("New step")
+        }
+        .padding(.horizontal, 6)
+        .padding(.trailing, 40)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(Palette.hotPink.opacity(0.5), style: StrokeStyle(lineWidth: 1.2, dash: [5, 4])))
+        .transition(.opacity)
+    }
+
+    /// ＋ Add Step, in pink, like the line under a to-do's name in other to-do apps.
+    private var addStepButton: some View {
+        Button {
+            if isAddingStep {
+                addStep()
+            } else {
+                isAddingStep = true
+            }
+            focusedField = .newStep
+            Haptics.tap()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 26)
+                Text("Add Step")
+                    .font(.rounded(.body, weight: .bold))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Palette.hotPink)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 46)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97))
+        .accessibilityHint("Adds a smaller step to this to-do")
+    }
+
+    private func addStep() {
+        let clean = newStep.trimmed
+        guard !clean.isEmpty else {
+            isAddingStep = false
+            focusedField = nil
+            return
+        }
+        steps.append(Step(text: clean))
+        newStep = ""
+        focusedField = .newStep
+    }
+
+    /// The steps as saved: blank ones left out, and one still being typed kept.
+    private var cleanSteps: [Step] {
+        var all = steps
+        if !newStep.trimmed.isEmpty { all.append(Step(text: newStep.trimmed)) }
+        return all.compactMap { step in
+            let text = step.text.trimmed
+            return text.isEmpty ? nil : Step(text: text, isDone: step.isDone)
+        }
     }
 
     private var categorySection: some View {
@@ -715,6 +867,9 @@ struct NewTaskSheet: View {
             context.insert(saved)
             saved.choice = category
         }
+        let finalSteps = cleanSteps
+        saved.steps = finalSteps.map(\.text)
+        saved.stepsDone = finalSteps.map(\.isDone)
         if photoChanged {
             saved.photoData = newPhoto
             saved.photoThumbnail = thumbnail
@@ -870,7 +1025,7 @@ struct CategoryPicker: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
             ForEach(choices, id: \.key) { choice in
                 option(choice)
             }
@@ -883,15 +1038,16 @@ struct CategoryPicker: View {
             withAnimation(.snappy) { selection = choice }
             Haptics.tap()
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 Text(choice.emoji)
                 Text(choice.label)
                     .foregroundStyle(isOn ? Color.white : choice.textColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .font(.rounded(.subheadline, weight: .bold))
-            .frame(maxWidth: .infinity, minHeight: 42)
+            .font(.rounded(.footnote, weight: .bold))
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, minHeight: 34)
             .background {
                 ZStack {
                     Capsule().fill(Color.white)

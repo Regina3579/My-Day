@@ -387,6 +387,12 @@ struct TodayToDosView: View {
             if let first = (openRows + doneRows).first(where: { !$0.reminderEnabled }) {
                 sheet = .edit(first, nil)
             }
+        case "steps":
+            // Task Details for the to-do with steps (Buy milk and bread).
+            try? await Task.sleep(for: .seconds(0.5))
+            if let shopping = (openRows + doneRows).first(where: { !$0.steps.isEmpty }) {
+                sheet = .edit(shopping, nil)
+            }
         case "voice-shopping":
             // Shopping is the chip chosen, so the spoken to-do goes to Shopping.
             filter = .builtIn(.shopping)

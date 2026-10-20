@@ -28,6 +28,10 @@ final class TaskItem {
     /// Optional photo the task is about (max 1600 px), stored outside the database file.
     @Attribute(.externalStorage) var photoData: Data?
     var photoThumbnail: Data?
+    /// Smaller steps inside the to-do (＋ Add Step), in order.
+    var steps: [String] = []
+    /// Which of `steps` are ticked done, by position (a missing value is not done).
+    var stepsDone: [Bool] = []
     var createdAt: Date = Date()
 
     init(
@@ -78,6 +82,11 @@ final class TaskItem {
     var repeatOption: RepeatOption {
         get { RepeatOption(rawValue: repeatRaw) ?? .never }
         set { repeatRaw = newValue.rawValue }
+    }
+
+    /// How many steps are ticked done.
+    var stepsDoneCount: Int {
+        steps.indices.filter { stepsDone.indices.contains($0) && stepsDone[$0] }.count
     }
 
     /// The reminder moment, only while reminders are switched on for this task.

@@ -51,7 +51,10 @@ enum DebugLaunchRoute {
         let reading = TaskItem(title: "Read 20 pages 📚", category: .learning, date: today)
         reading.isImportant = true
         context.insert(reading)
-        context.insert(TaskItem(title: "Buy milk and bread 🥛", category: .shopping, date: today))
+        let shopping = TaskItem(title: "Buy milk and bread 🥛", category: .shopping, date: today)
+        shopping.steps = ["Milk", "Bread", "Eggs"]
+        shopping.stepsDone = [true]
+        context.insert(shopping)
         let home = CustomCategory(name: "Home", emoji: "🏠", colorIndex: 0)
         context.insert(home)
         let plants = TaskItem(title: "Water the plants 🪴", date: today)
