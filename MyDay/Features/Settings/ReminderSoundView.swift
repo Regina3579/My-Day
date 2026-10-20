@@ -29,7 +29,7 @@ struct ReminderSoundView: View {
                 }
             } footer: {
                 if !pro.isActive {
-                    Text("Sounds with a 👑 come with My Day Pro.")
+                    Text(crowned: "Sounds with a 👑 come with My Day Pro.")
                 }
             }
         }

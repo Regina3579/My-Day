@@ -81,8 +81,7 @@ struct ProSettingsSection: View {
             showsPaywall = true
         } label: {
             HStack(spacing: 14) {
-                Text("👑")
-                    .font(.system(size: 26))
+                CrownArt(height: 25)
                     .frame(width: 44, height: 44)
                     .background(Circle().fill(ProStyle.badge))
                     .overlay(Circle().strokeBorder(ProStyle.badgeEdge, lineWidth: 1.5))
@@ -114,8 +113,7 @@ struct ProSettingsSection: View {
     /// For a Pro account.
     private var memberRow: some View {
         HStack(spacing: 14) {
-            Text("👑")
-                .font(.system(size: 26))
+            CrownArt(height: 25)
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(ProStyle.badge))
                 .overlay(Circle().strokeBorder(ProStyle.badgeEdge, lineWidth: 1.5))

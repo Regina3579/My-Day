@@ -97,7 +97,7 @@ struct StickerPickerSheet: View {
                 }
                 tabs
                 if !pro.isActive {
-                    Text("10 stickers are free to use 💖 The ones with a crown come with My Day Pro.")
+                    Text(crowned: "10 stickers are free to use 💖 The ones with a 👑 come with My Day Pro.")
                         .font(.rounded(.subheadline, weight: .semibold))
                         .foregroundStyle(JournalStyle.soft)
                 }

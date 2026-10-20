@@ -58,8 +58,7 @@ private struct ProPaywallHeader: View {
                 .frame(maxWidth: 240)
                 .accessibilityHidden(true)
             HStack(spacing: 8) {
-                Text("👑")
-                    .accessibilityHidden(true)
+                CrownArt(height: 30)
                 Text("My Day Pro")
                     .foregroundStyle(ProStyle.title)
             }

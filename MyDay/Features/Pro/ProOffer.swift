@@ -51,18 +51,42 @@ private struct ProOfferScreen: View {
     }
 }
 
-/// The small gold crown on a Pro button, tile or row, shown to a free account.
+/// The small crown on a Pro button, tile or row, shown to a free account: My Day's gold crown
+/// with its pink heart gem, in a white circle.
 struct ProCrown: View {
     var size: CGFloat = 18
 
     var body: some View {
-        Image(systemName: "crown.fill")
-            .font(.system(size: size * 0.55, weight: .bold))
-            .foregroundStyle(ProStyle.crown)
+        CrownArt(height: size * 0.6)
             .frame(width: size, height: size)
             .background(Circle().fill(Color.white))
             .overlay(Circle().strokeBorder(ProStyle.badgeEdge.opacity(0.7), lineWidth: 1))
             .shadow(color: ProStyle.badgeEdge.opacity(0.45), radius: 2, y: 1)
             .accessibilityLabel("My Day Pro")
+    }
+}
+
+/// My Day's crown (gold, with a pink heart gem): the sign of My Day Pro everywhere.
+struct CrownArt: View {
+    var height: CGFloat
+
+    var body: some View {
+        Image("ProCrownArt")
+            .resizable()
+            .scaledToFit()
+            .frame(height: height)
+            .accessibilityHidden(true)
+    }
+}
+
+extension Text {
+    /// The words with each 👑 drawn as My Day's crown (a small picture that sits in the line).
+    init(crowned string: String) {
+        let parts = string.components(separatedBy: "👑")
+        var text = Text(verbatim: parts[0])
+        for part in parts.dropFirst() {
+            text = Text("\(text)\(Image("ProCrownInline"))\(Text(verbatim: part))")
+        }
+        self = text
     }
 }

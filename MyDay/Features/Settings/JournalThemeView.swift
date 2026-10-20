@@ -21,7 +21,7 @@ struct JournalThemeView: View {
                     .buttonStyle(PressScaleStyle(scale: 0.98))
                     .accessibilityAddTraits(theme == current ? AccessibilityTraits.isSelected : [])
                 }
-                Text(footer)
+                Text(crowned: footer)
                     .font(.rounded(.footnote))
                     .foregroundStyle(Palette.inkSoft)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -95,7 +95,7 @@ private struct JournalThemeCard: View {
                     .font(.rounded(.subheadline, weight: .medium))
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(status)
+                Text(crowned: status)
                     .font(.rounded(.footnote, weight: .bold))
                     .foregroundStyle(isOn ? Palette.hotPink : isLocked ? ProStyle.title : Palette.inkSoft)
                     .padding(.horizontal, 10)

@@ -943,7 +943,7 @@ struct OptionRow<Panel: View>: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                             .accessibilityHidden(true)
                     } else {
-                        Text(value)
+                        Text(crowned: value)
                             .font(.rounded(.subheadline, weight: .medium))
                             .foregroundStyle(Palette.inkSoft)
                             .lineLimit(1)

@@ -224,8 +224,7 @@ struct ProUnlockCard: View {
     /// "👑 My Day Pro" on a gold pill, where the panel begins.
     private func badge(_ p: TipArtFrame) -> some View {
         HStack(spacing: p.length(10)) {
-            Text("👑")
-                .font(.system(size: p.length(42)))
+            CrownArt(height: p.length(36))
             Text("My Day Pro")
                 .font(.system(size: p.length(30), weight: .heavy, design: .rounded))
                 .foregroundStyle(ProStyle.badgeText)
@@ -285,9 +284,7 @@ struct ProUnlockCard: View {
                 close(then: onUnlock)
             } label: {
                 HStack(spacing: p.length(10)) {
-                    Text("👑")
-                        .font(.system(size: p.length(38)))
-                        .accessibilityHidden(true)
+                    CrownArt(height: p.length(32))
                     Text("Unlock Pro")
                         .font(.system(size: p.length(34), weight: .heavy, design: .rounded))
                         .lineLimit(1)
@@ -396,9 +393,6 @@ enum ProStyle {
                                        startPoint: .top, endPoint: .bottom)
     static let closeRing = Color(hex: 0xF4C6DE)
     static let closeMark = Color(hex: 0xF0559E)
-    /// The small crown on a Pro button.
-    static let crown = LinearGradient(colors: [Color(hex: 0xFFD95C), Color(hex: 0xF5A623)],
-                                      startPoint: .top, endPoint: .bottom)
 }
 
 /// A button drawn in a picture: a soft white flash on it while it is pressed.
