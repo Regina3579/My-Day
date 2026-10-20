@@ -280,8 +280,10 @@ struct JournalComposer: View {
             }
             .navigationTitle("My Journal")
             .navigationBarTitleDisplayMode(.inline)
-            // The picture shows clear right up to the top: no bar background over it.
-            .toolbarBackground(.hidden, for: .navigationBar)
+            // The picture shows clear right up to the top: no bar background over it (soft pink
+            // once it has scrolled away, so the page doesn't run under the title).
+            .toolbarBackground(heroIsVisible ? .hidden : .visible, for: .navigationBar)
+            .toolbarBackground(JournalBackdrop.base, for: .navigationBar)
             .sheet(item: $extra) { extra in
                 extraSheet(extra)
             }
@@ -493,7 +495,7 @@ struct JournalComposer: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        .modifier(ComposerTopEdge())
+        .modifier(ComposerTopEdge(hidden: heroIsVisible))
         .ignoresSafeArea(edges: .top)
     }
 
@@ -1508,9 +1510,11 @@ enum JournalWords {
 /// No white haze at the top of the writing page (iOS 26's scroll edge effect): the picture stays
 /// clear there.
 private struct ComposerTopEdge: ViewModifier {
+    let hidden: Bool
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.scrollEdgeEffectHidden(true, for: .top)
+            content.scrollEdgeEffectHidden(hidden, for: .top)
         } else {
             content
         }

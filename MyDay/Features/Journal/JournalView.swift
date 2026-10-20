@@ -132,7 +132,8 @@ struct JournalPagesHome: View {
         }
         .navigationTitle("My Journal Pages")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarBackground(heroIsVisible ? .hidden : .visible, for: .navigationBar)
+        .toolbarBackground(JournalBackdrop.base, for: .navigationBar)
         .sheet(isPresented: $isFiltering) {
             JournalFilterSheet(filter: $filter, period: $period)
         }
@@ -214,9 +215,10 @@ struct JournalPagesHome: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        // iOS 26 softens what lies under the navigation bar with a white haze; here the
-        // picture shows clear and sharp right up to the top, in every theme.
-        .modifier(TopScrollEdgeEffect(hidden: true))
+        // iOS 26 softens what lies under the navigation bar with a white haze: off while the
+        // picture shows (clear and sharp right up to the top, in every theme); once it has
+        // scrolled away, the bar turns soft pink so the pages don't run under its title.
+        .modifier(TopScrollEdgeEffect(hidden: heroIsVisible))
         .ignoresSafeArea(edges: .top)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             JournalSearchBar(text: $search, focused: $searchFocused, filterCount: filter.count + (period == .allTime ? 0 : 1)) {

@@ -83,8 +83,10 @@ struct TodaysPriorityView: View {
         .background(PriorityPanel.base.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        // The picture shows clear right up to the top: no bar background over it.
-        .toolbarBackground(.hidden, for: .navigationBar)
+        // The picture shows clear right up to the top: no bar background over it (soft pink
+        // once it has scrolled away, so the list doesn't run under the title).
+        .toolbarBackground(heroIsVisible ? .hidden : .visible, for: .navigationBar)
+        .toolbarBackground(PriorityPanel.base, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 principalTitle
@@ -162,7 +164,7 @@ struct TodaysPriorityView: View {
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
         .scrollDismissesKeyboard(.interactively)
-        .modifier(PriorityTopEdge())
+        .modifier(PriorityTopEdge(hidden: heroIsVisible))
         .ignoresSafeArea(edges: .top)
     }
 
@@ -748,11 +750,13 @@ struct PriorityCard: View {
     }
 }
 
-/// No white haze at the top (iOS 26's scroll edge effect): the picture stays clear there.
+/// No white haze at the top (iOS 26's scroll edge effect) while the picture shows there.
 private struct PriorityTopEdge: ViewModifier {
+    let hidden: Bool
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.scrollEdgeEffectHidden(true, for: .top)
+            content.scrollEdgeEffectHidden(hidden, for: .top)
         } else {
             content
         }
