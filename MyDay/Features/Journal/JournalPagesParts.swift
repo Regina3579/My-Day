@@ -798,9 +798,6 @@ struct JournalEntryCard: View {
             }
             // The page's photos, as a row across the card.
             JournalCardPhotos(entry: entry)
-            if showSteps && !inTrash {
-                JournalStepsLine(date: entry.date)
-            }
         }
         .padding(12)
         .padding(.bottom, 2)
@@ -993,6 +990,9 @@ struct JournalEntryCard: View {
                 .foregroundStyle(JournalPagesStyle.time)
                 .fixedSize()
                 MoodChip(mood: entry.mood)
+                if showSteps {
+                    StepsChip(date: entry.date, mood: entry.mood)
+                }
                 if entry.hasVoiceNotes {
                     Image(systemName: "mic.fill")
                         .font(.system(size: 14, weight: .bold))
@@ -1706,31 +1706,32 @@ struct ShelfEmpty: View {
     }
 }
 
-/// "♥ 🚶 10,908": the steps walked that day, from Apple Health, on a thin outlined line across
-/// the card (shown once Health has given them; none on a day without steps).
-struct JournalStepsLine: View {
+/// "🚶 1,254": the steps walked that day, from Apple Health, in a chip beside the mood, in the
+/// mood's colours (shown once Health has given them; none on a day without steps).
+struct StepsChip: View {
     let date: Date
+    let mood: Mood
     @State private var counter = StepCounter.shared
 
     var body: some View {
         Group {
             if let steps = counter.steps(on: date), steps > 0 {
-                HStack(spacing: 10) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(JournalStyle.pink)
+                let colors = mood.chooserColors
+                HStack(spacing: 4) {
                     Image(systemName: "figure.walk")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(JournalPagesStyle.preview)
+                        .font(.system(size: 13, weight: .heavy))
                     Text(steps, format: .number)
-                        .font(.rounded(.subheadline, weight: .semibold))
-                        .foregroundStyle(JournalPagesStyle.heading)
+                        .font(.rounded(.footnote, weight: .heavy))
                         .monospacedDigit()
-                    Spacer(minLength: 0)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
-                .padding(.horizontal, 14)
-                .frame(minHeight: 32)
-                .overlay(Capsule().strokeBorder(JournalStyle.pink.opacity(0.35), lineWidth: 1.2))
+                .foregroundStyle(colors.label)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(colors.tile))
+                .overlay(Capsule().strokeBorder(colors.label.opacity(0.45), lineWidth: 1.2))
+                .fixedSize()
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(steps) steps walked that day")
             }
