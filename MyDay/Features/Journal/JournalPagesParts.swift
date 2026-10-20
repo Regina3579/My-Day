@@ -796,8 +796,11 @@ struct JournalEntryCard: View {
                     metaRow
                 }
             }
+            // Each part at its own height, so the photos never squeeze the words to one line.
+            .fixedSize(horizontal: false, vertical: true)
             // The page's photos, as a row across the card.
             JournalCardPhotos(entry: entry)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .padding(.bottom, 2)
@@ -1714,7 +1717,9 @@ struct StepsChip: View {
     @State private var counter = StepCounter.shared
 
     var body: some View {
-        Group {
+        // A ZStack, not a Group: an empty Group is no view at all, so its task would never run
+        // and the steps would never be read.
+        ZStack {
             if let steps = counter.steps(on: date), steps > 0 {
                 let colors = mood.chooserColors
                 HStack(spacing: 4) {
