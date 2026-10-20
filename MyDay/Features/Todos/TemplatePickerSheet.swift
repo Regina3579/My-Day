@@ -340,8 +340,9 @@ private struct NewTemplateCard: View {
 // MARK: - Checklist
 
 /// A template's to-dos, like the day's list: tick a to-do done (two little hearts pop) and it
-/// moves under "› Completed"; tap it there to untick it. ＋ on a row adds that to-do to My Day,
-/// and the button at the bottom adds every one not done yet. Edit and Delete sit at the top.
+/// moves under "› Completed"; tap it there to untick it. ＋ on a row adds that to-do to My Day.
+/// At the bottom, Add Task writes a new to-do into the list, and Add to My Day adds every one
+/// not done yet. Edit and Delete sit at the top.
 private struct TemplateDetailView: View {
     let template: TaskTemplate
     /// Adds these to-dos to the day and closes Templates.
@@ -361,6 +362,10 @@ private struct TemplateDetailView: View {
     @State private var tickPops: [Int: Int] = [:]
     /// To-dos just added to My Day with ＋ (their ＋ shows a tick for a moment).
     @State private var added: Set<Int> = []
+    /// Add Task was tapped: a new row waits at the end of the list for its words.
+    @State private var isAddingItem = false
+    @State private var newItem = ""
+    @FocusState private var newItemFocused: Bool
 
     /// To-dos not done yet, in the template's order (a just-ticked one still sits here).
     private var openIndices: [Int] {
@@ -377,34 +382,45 @@ private struct TemplateDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                header
-                progressLine
-                ForEach(openIndices, id: \.self) { index in
-                    row(index)
-                }
-                if openIndices.isEmpty && !template.items.isEmpty {
-                    allDoneNote
-                }
-                let done = doneIndices
-                if !done.isEmpty {
-                    CompletedHeader(count: done.count, isOpen: showCompleted) {
-                        withAnimation(.snappy) { showCompleted.toggle() }
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    header
+                    progressLine
+                    ForEach(openIndices, id: \.self) { index in
+                        row(index)
                     }
-                    .padding(.top, openIndices.isEmpty ? 0 : 6)
-                    if showCompleted {
-                        ForEach(done, id: \.self) { index in
-                            row(index)
+                    if isAddingItem {
+                        newItemRow
+                            .id(Self.newItemID)
+                            .transition(.scale(scale: 0.95, anchor: .top).combined(with: .opacity))
+                    } else if openIndices.isEmpty && !template.items.isEmpty {
+                        allDoneNote
+                    }
+                    let done = doneIndices
+                    if !done.isEmpty {
+                        CompletedHeader(count: done.count, isOpen: showCompleted) {
+                            withAnimation(.snappy) { showCompleted.toggle() }
+                        }
+                        .padding(.top, openIndices.isEmpty ? 0 : 6)
+                        if showCompleted {
+                            ForEach(done, id: \.self) { index in
+                                row(index)
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            addButton
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 10) {
+                    addTaskButton(proxy)
+                    addButton
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+            }
         }
         .navigationTitle(template.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -562,6 +578,76 @@ private struct TemplateDetailView: View {
         .accessibilityLabel("Add “\(item)” to My Day")
     }
 
+    private static let newItemID = "newItem"
+
+    /// The new to-do's row: type it, and Return (or ＋) puts it in the list; the row stays
+    /// open for the next one. Return on an empty row closes it.
+    private var newItemRow: some View {
+        let tint = RowTint.at(template.items.count)
+        return HStack(spacing: 4) {
+            CheckBubble(isOn: false, tint: tint.accent, size: 26)
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
+            TextField("New to-do", text: $newItem)
+                .font(.rounded(.body, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .focused($newItemFocused)
+                .submitLabel(.done)
+                .onSubmit(addItem)
+                .padding(.vertical, 12)
+            Button(action: addItem) {
+                Image(systemName: newItem.trimmed.isEmpty ? "xmark" : "checkmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(tint.accent)
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color.white.opacity(0.85)))
+                    .overlay(Circle().strokeBorder(tint.edge, lineWidth: 1))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressScaleStyle(scale: 0.86))
+            .accessibilityLabel(newItem.trimmed.isEmpty ? "Cancel" : "Add to the list")
+        }
+        .padding(.leading, 4)
+        .padding(.trailing, 2)
+        .frame(minHeight: 52)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(LinearGradient(colors: [tint.fill.opacity(0.75), tint.fill],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(tint.accent.opacity(0.6), style: StrokeStyle(lineWidth: 1.4, dash: [6, 4]))
+        )
+    }
+
+    /// Add Task: white with a pink edge, above Add to My Day; opens the new to-do's row.
+    private func addTaskButton(_ proxy: ScrollViewProxy) -> some View {
+        Button {
+            Haptics.tap()
+            withAnimation(.snappy) { isAddingItem = true }
+            newItemFocused = true
+            Task {
+                try? await Task.sleep(for: .seconds(0.35))
+                withAnimation(.snappy) { proxy.scrollTo(Self.newItemID, anchor: .bottom) }
+            }
+        } label: {
+            Label("Add Task", systemImage: "plus")
+                .font(.rounded(.headline, weight: .bold))
+                .foregroundStyle(Palette.hotPink)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(Capsule().fill(Color.white))
+                .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.55), lineWidth: 1.5))
+                .shadow(color: Palette.hotPink.opacity(0.18), radius: 8, x: 0, y: 4)
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97))
+        .accessibilityHint("Adds a new to-do to this list")
+    }
+
     private var addButton: some View {
         let titles = titlesToAdd
         return Button {
@@ -572,8 +658,6 @@ private struct TemplateDetailView: View {
         .buttonStyle(PillButtonStyle())
         .disabled(titles.isEmpty)
         .opacity(titles.isEmpty ? 0.6 : 1)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
         .accessibilityHint(titles.isEmpty ? "" : "Adds the to-dos not done yet")
     }
 
@@ -610,6 +694,20 @@ private struct TemplateDetailView: View {
             }
             tickPops[index] = nil
         }
+    }
+
+    private func addItem() {
+        let clean = newItem.trimmed
+        guard !clean.isEmpty else {
+            newItemFocused = false
+            withAnimation(.snappy) { isAddingItem = false }
+            return
+        }
+        withAnimation(.snappy) { template.items.append(clean) }
+        newItem = ""
+        newItemFocused = true
+        Haptics.success()
+        AccessibilityNotification.Announcement("Added “\(clean)” to the list").post()
     }
 
     private func addOne(_ index: Int) {
