@@ -131,6 +131,7 @@ struct JournalPagesHome: View {
         }
         .navigationTitle("My Journal Pages")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .sheet(isPresented: $isFiltering) {
             JournalFilterSheet(filter: $filter, period: $period)
         }
@@ -205,9 +206,9 @@ struct JournalPagesHome: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
-        // iOS 26 softens what lies under the navigation bar; a Pro theme's picture (its title,
-        // castle, sign or girl) stays sharp there, as in its design, until it scrolls away.
-        .modifier(TopScrollEdgeEffect(hidden: !blush && heroIsVisible))
+        // iOS 26 softens what lies under the navigation bar with a white haze; here the
+        // picture shows clear and sharp right up to the top, in every theme.
+        .modifier(TopScrollEdgeEffect(hidden: true))
         .ignoresSafeArea(edges: .top)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             JournalSearchBar(text: $search, focused: $searchFocused, filterCount: filter.count + (period == .allTime ? 0 : 1)) {
