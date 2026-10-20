@@ -974,7 +974,18 @@ struct JournalEntryCard: View {
         return [entry.highlight, entry.gratitude, entry.littleWin].map(\.trimmed).first { !$0.isEmpty } ?? ""
     }
 
+    /// The time, mood, voice and heart, and the day's steps on a line of their own below (one
+    /// row is too narrow for them all: the mood's name would be cut short).
     private var metaRow: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            metaLine
+            if showSteps && !inTrash {
+                StepsChip(date: entry.date, mood: entry.mood)
+            }
+        }
+    }
+
+    private var metaLine: some View {
         HStack(spacing: 8) {
             if inTrash {
                 Label(trashText, systemImage: "trash")
@@ -993,9 +1004,6 @@ struct JournalEntryCard: View {
                 .foregroundStyle(JournalPagesStyle.time)
                 .fixedSize()
                 MoodChip(mood: entry.mood)
-                if showSteps {
-                    StepsChip(date: entry.date, mood: entry.mood)
-                }
                 if entry.hasVoiceNotes {
                     Image(systemName: "mic.fill")
                         .font(.system(size: 14, weight: .bold))
@@ -1737,6 +1745,7 @@ struct StepsChip: View {
                 .background(Capsule().fill(colors.tile))
                 .overlay(Capsule().strokeBorder(colors.label.opacity(0.45), lineWidth: 1.2))
                 .fixedSize()
+                .padding(.top, 6)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(steps) steps walked that day")
             }
