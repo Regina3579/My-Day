@@ -8,8 +8,6 @@ import UniformTypeIdentifiers
 /// if deleted.
 struct TemplatePickerSheet: View {
     let day: Date
-    /// Titles of the day's to-dos, offered when saving a new template.
-    let currentTitles: [String]
     /// Called with the number of to-dos added.
     let onAdded: (Int) -> Void
 
@@ -191,7 +189,7 @@ struct TemplatePickerSheet: View {
                 TemplateEditorView(template: template) { path.removeLast() }
             }
         case .create:
-            TemplateEditorView(currentTitles: currentTitles) { path.removeLast() }
+            TemplateEditorView { path.removeLast() }
         }
     }
 
@@ -870,7 +868,6 @@ private struct TemplateDetailView: View {
 private struct TemplateEditorView: View {
     /// The template being edited (nil when making a new one).
     let template: TaskTemplate?
-    let currentTitles: [String]
     let onDone: () -> Void
 
     @Environment(\.modelContext) private var context
@@ -879,6 +876,8 @@ private struct TemplateEditorView: View {
     @State private var category: TaskCategory
     @State private var items: [Item]
     @State private var newItem = ""
+    /// ＋ Add Task was tapped: the new to-do's field waits under the others.
+    @State private var isAddingItem = false
     @FocusState private var focus: Field?
 
     private struct Item: Identifiable {
@@ -895,10 +894,9 @@ private struct TemplateEditorView: View {
     private static let emojis = ["✨", "🌸", "☀️", "🌅", "🏃‍♀️", "🏋️", "🧺", "🧹", "🛒", "📚", "💼", "🧳",
                                  "✈️", "🍳", "🐶", "💖"]
 
-    /// Makes a new template (today's to-dos can be copied in).
-    init(currentTitles: [String], onDone: @escaping () -> Void) {
+    /// Makes a new template.
+    init(onDone: @escaping () -> Void) {
         template = nil
-        self.currentTitles = currentTitles
         self.onDone = onDone
         _name = State(initialValue: "")
         _emoji = State(initialValue: "✨")
@@ -909,7 +907,6 @@ private struct TemplateEditorView: View {
     /// Edits `template`.
     init(template: TaskTemplate, onDone: @escaping () -> Void) {
         self.template = template
-        currentTitles = []
         self.onDone = onDone
         _name = State(initialValue: template.name)
         _emoji = State(initialValue: template.emoji)
@@ -937,19 +934,26 @@ private struct TemplateEditorView: View {
     private var canSave: Bool { !name.trimmed.isEmpty && !cleanItems.isEmpty }
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 field(label: "Name") {
-                    TextField("", text: $name)
+                    TextField("Template name", text: $name)
                         .accessibilityLabel("Template name")
                         .font(.rounded(.title3, weight: .semibold))
+                        .foregroundStyle(Palette.ink)
                         .submitLabel(.next)
                         .focused($focus, equals: .name)
-                        .onSubmit { focus = .newItem }
+                        .onSubmit { startAdding() }
                         .padding(.horizontal, 16)
                         .frame(minHeight: 52)
                         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(focus == .name ? Palette.hotPink.opacity(0.7) : Palette.bubblegum.opacity(0.45),
+                                          lineWidth: 1.5))
+                        .shadow(color: Palette.hotPink.opacity(0.08), radius: 4, x: 0, y: 2)
                 }
+                .id(Field.name)
 
                 field(label: "Emoji") {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -1004,47 +1008,34 @@ private struct TemplateEditorView: View {
                             }
                             .padding(.leading, 14)
                             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(0.8)))
+                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Palette.bubblegum.opacity(0.3), lineWidth: 1))
+                            .id(Field.item(item.id))
                         }
 
-                        HStack(spacing: 8) {
-                            TextField("Add a to-do", text: $newItem)
-                                .font(.rounded(.body, weight: .medium))
-                                .submitLabel(.done)
-                                .focused($focus, equals: .newItem)
-                                .onSubmit { addItem() }
-                                .padding(.horizontal, 14)
-                                .frame(minHeight: 48)
-                                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
-                            Button {
-                                addItem()
-                            } label: {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundStyle(Color.white)
-                                    .frame(width: 48, height: 48)
-                                    .background(Circle().fill(Palette.hotPink.gradient))
+                        if isAddingItem {
+                            HStack(spacing: 10) {
+                                Text("•")
+                                    .foregroundStyle(Palette.hotPink)
+                                    .accessibilityHidden(true)
+                                TextField("New to-do", text: $newItem)
+                                    .font(.rounded(.body, weight: .medium))
+                                    .foregroundStyle(Palette.ink)
+                                    .submitLabel(.next)
+                                    .focused($focus, equals: .newItem)
+                                    .onSubmit { addItem() }
+                                    .frame(minHeight: 48)
+                                    .accessibilityLabel("New to-do")
                             }
-                            .buttonStyle(PressScaleStyle())
-                            .disabled(newItem.trimmed.isEmpty)
-                            .accessibilityLabel("Add to-do to template")
+                            .padding(.horizontal, 14)
+                            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Palette.hotPink.opacity(0.55), style: StrokeStyle(lineWidth: 1.4, dash: [6, 4])))
+                            .id(Field.newItem)
+                            .transition(.opacity)
                         }
 
-                        if !currentTitles.isEmpty {
-                            Button {
-                                Haptics.tap()
-                                withAnimation(.snappy) {
-                                    let present = Set(items.map(\.text))
-                                    for title in currentTitles where !present.contains(title) {
-                                        items.append(Item(text: title))
-                                    }
-                                }
-                            } label: {
-                                Label("Use today's to-dos", systemImage: "square.and.arrow.down")
-                                    .font(.rounded(.subheadline, weight: .bold))
-                                    .foregroundStyle(Palette.grape)
-                                    .frame(minHeight: 40)
-                            }
-                        }
+                        addTaskButton
                     }
                 }
             }
@@ -1052,6 +1043,18 @@ private struct TemplateEditorView: View {
             .padding(.bottom, 20)
         }
         .scrollDismissesKeyboard(.interactively)
+        // The field being typed in stays in view, above Save Template and the keyboard.
+        .onChange(of: focus) { _, field in
+            guard let field else { return }
+            Task {
+                try? await Task.sleep(for: .seconds(0.35))
+                withAnimation(.snappy) { proxy.scrollTo(field, anchor: .center) }
+            }
+        }
+        .onChange(of: items.count) { _, _ in
+            guard focus == .newItem else { return }
+            withAnimation(.snappy) { proxy.scrollTo(Field.newItem, anchor: .center) }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Button(isEditing ? "Save Changes 💾" : "Save Template 💾", action: save)
                 .buttonStyle(PillButtonStyle())
@@ -1060,11 +1063,41 @@ private struct TemplateEditorView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
         }
+        }
         .navigationTitle(isEditing ? "Edit Template" : "Save as Template")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if !isEditing { focus = .name }
         }
+    }
+
+    /// ＋ Add Task, white with a pink edge (as on a template's list): opens the new to-do's field.
+    private var addTaskButton: some View {
+        Button {
+            Haptics.tap()
+            if isAddingItem && !newItem.trimmed.isEmpty {
+                addItem()
+            } else {
+                startAdding()
+            }
+        } label: {
+            Label("Add Task", systemImage: "plus")
+                .font(.rounded(.headline, weight: .bold))
+                .foregroundStyle(Palette.hotPink)
+                .padding(.horizontal, 22)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Capsule().fill(Color.white))
+                .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.55), lineWidth: 1.5))
+                .shadow(color: Palette.hotPink.opacity(0.15), radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97))
+        .padding(.top, 4)
+        .accessibilityHint("Adds a to-do to this template")
+    }
+
+    private func startAdding() {
+        withAnimation(.snappy) { isAddingItem = true }
+        focus = .newItem
     }
 
     private func field<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
@@ -1078,9 +1111,15 @@ private struct TemplateEditorView: View {
         }
     }
 
+    /// Return (or ＋ Add Task) puts the typed to-do in the list and leaves the field ready for the
+    /// next; Return on an empty field closes it.
     private func addItem() {
         let clean = newItem.trimmed
-        guard !clean.isEmpty else { return }
+        guard !clean.isEmpty else {
+            withAnimation(.snappy) { isAddingItem = false }
+            focus = nil
+            return
+        }
         withAnimation(.snappy) { items.append(Item(text: clean)) }
         newItem = ""
         focus = .newItem

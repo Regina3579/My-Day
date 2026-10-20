@@ -518,7 +518,7 @@ struct TodayToDosView: View {
                 sample: sample
             )
         case .templates:
-            TemplatePickerSheet(day: day, currentTitles: tasks.map(\.title)) { count in
+            TemplatePickerSheet(day: day) { count in
                 show(count == 1 ? "Added 1 to-do ✨" : "Added \(count) to-dos ✨")
             }
         }
