@@ -424,11 +424,11 @@ private struct TemplateCard: View {
 }
 
 extension TemplateCard {
-    /// The topic's three pictures where the plain card's hearts would be: a big one under ⋯, a
-    /// middle one at the right edge and a small one lower down, each tilted a little.
+    /// The topic's three pictures down the card's right side, clear of its words: a big one under
+    /// ⋯, a middle one at the edge and a small one lower down, each tilted a little.
     private func decorations(_ pictures: [String]) -> some View {
         let spots: [(x: CGFloat, y: CGFloat, size: CGFloat, tilt: Double)] = [
-            (318, 150, 66, -10), (368, 226, 50, 12), (300, 268, 40, -6),
+            (330, 148, 68, -10), (376, 222, 50, 12), (372, 292, 40, -6),
         ]
         return ZStack(alignment: .topLeading) {
             ForEach(Array(zip(pictures, spots).enumerated()), id: \.offset) { _, pair in

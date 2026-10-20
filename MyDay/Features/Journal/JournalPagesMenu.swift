@@ -32,8 +32,8 @@ struct JournalPagesMenu: View {
     private static let rows: [(top: CGFloat, bottom: CGFloat)] = [(95, 200), (200, 292), (292, 385), (385, 475), (475, 570)]
     private static let textStart: CGFloat = 160
     private static let textEnd: CGFloat = 402
-    /// The names' size: 35 pixels of the design.
-    private static let fontPixels: CGFloat = 35
+    /// The names' size: 33 pixels of the design.
+    private static let fontPixels: CGFloat = 33
 
     var body: some View {
         Image("JournalMenuCard")
@@ -45,21 +45,22 @@ struct JournalPagesMenu: View {
             .overlay(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     ForEach(Array(items.prefix(Self.rows.count).enumerated()), id: \.element.id) { index, item in
-                        row(item, Self.rows[index])
+                        // Only the first (the tallest row) takes two lines, as in the design.
+                        row(item, Self.rows[index], lines: index == 0 ? 2 : 1)
                     }
                 }
             }
             .accessibilityElement(children: .contain)
     }
 
-    private func row(_ item: Item, _ span: (top: CGFloat, bottom: CGFloat)) -> some View {
+    private func row(_ item: Item, _ span: (top: CGFloat, bottom: CGFloat), lines: Int) -> some View {
         let frame = CGRect(x: 30 * scale, y: span.top * scale,
                            width: (Self.grid.width - 60) * scale, height: (span.bottom - span.top) * scale)
         return Button(action: item.action) {
             Text(item.title)
                 .font(.system(size: Self.fontPixels * scale, weight: .heavy, design: .rounded))
                 .foregroundStyle(Self.ink)
-                .lineLimit(2)
+                .lineLimit(lines)
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.leading)
                 .lineSpacing(-2)
