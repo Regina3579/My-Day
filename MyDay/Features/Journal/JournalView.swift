@@ -308,7 +308,7 @@ struct JournalPagesHome: View {
     /// Where the cards start, under the picture.
     private var contentTop: CGFloat {
         switch theme {
-        case .blushBlossom: 18
+        case .blushBlossom: -18
         case .heavenlyAngelWishes: 2
         case .enchantedFairyGarden: -18
         case .rainbowGlowUnicorn: -28

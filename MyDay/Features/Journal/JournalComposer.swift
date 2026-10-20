@@ -55,10 +55,10 @@ struct JournalScene {
         accessibilityLabel: "My Journal. A safe space for your thoughts, feelings and beautiful moments.")
 
     /// My Journal Pages: its title, the girl and her puppy, the books and "A Happier Me
-    /// Everyday". The panel rises over the table at the bottom (to just under the puppy's
-    /// chin), so the page starts higher; the title stays clear of the back button.
+    /// Everyday". The panel covers the table at the bottom, up to the puppy's paws (its face
+    /// stays in view), and Write a new page sits right at the panel's top.
     static let pages = JournalScene(
-        imageName: "JournalPagesScene", imageSize: CGSize(width: 853, height: 570), buttonsRow: 213, overlapRows: 72,
+        imageName: "JournalPagesScene", imageSize: CGSize(width: 853, height: 570), buttonsRow: 213, overlapRows: 44,
         accessibilityLabel: "My Journal Pages. Every thought and beautiful moment belongs here.")
 
     func scale(width: CGFloat) -> CGFloat {
