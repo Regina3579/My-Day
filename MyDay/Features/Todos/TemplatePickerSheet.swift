@@ -1036,6 +1036,9 @@ private struct TemplateEditorView: View {
                         }
 
                         addTaskButton
+                            // A little room under it, so it never touches Save Template.
+                            .padding(.bottom, 12)
+                            .id(Self.addTaskID)
                     }
                 }
             }
@@ -1043,17 +1046,27 @@ private struct TemplateEditorView: View {
             .padding(.bottom, 20)
         }
         .scrollDismissesKeyboard(.interactively)
-        // The field being typed in stays in view, above Save Template and the keyboard.
+        // The field being typed in stays in view above Save Template and the keyboard; while a
+        // new to-do is typed, ＋ Add Task under it shows too.
         .onChange(of: focus) { _, field in
             guard let field else { return }
             Task {
                 try? await Task.sleep(for: .seconds(0.35))
-                withAnimation(.snappy) { proxy.scrollTo(field, anchor: .center) }
+                withAnimation(.snappy) {
+                    if field == .newItem {
+                        proxy.scrollTo(Self.addTaskID, anchor: .bottom)
+                    } else {
+                        proxy.scrollTo(field, anchor: .center)
+                    }
+                }
             }
         }
         .onChange(of: items.count) { _, _ in
             guard focus == .newItem else { return }
-            withAnimation(.snappy) { proxy.scrollTo(Field.newItem, anchor: .center) }
+            Task {
+                try? await Task.sleep(for: .seconds(0.1))
+                withAnimation(.snappy) { proxy.scrollTo(Self.addTaskID, anchor: .bottom) }
+            }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Button(isEditing ? "Save Changes 💾" : "Save Template 💾", action: save)
@@ -1094,6 +1107,8 @@ private struct TemplateEditorView: View {
         .padding(.top, 4)
         .accessibilityHint("Adds a to-do to this template")
     }
+
+    private static let addTaskID = "addTask"
 
     private func startAdding() {
         withAnimation(.snappy) { isAddingItem = true }
