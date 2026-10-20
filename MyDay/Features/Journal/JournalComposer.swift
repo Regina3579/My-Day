@@ -280,6 +280,8 @@ struct JournalComposer: View {
             }
             .navigationTitle("My Journal")
             .navigationBarTitleDisplayMode(.inline)
+            // The picture shows clear right up to the top: no bar background over it.
+            .toolbarBackground(.hidden, for: .navigationBar)
             .sheet(item: $extra) { extra in
                 extraSheet(extra)
             }
@@ -491,6 +493,7 @@ struct JournalComposer: View {
             }
         }
         .scrollDismissesKeyboard(.interactively)
+        .modifier(ComposerTopEdge())
         .ignoresSafeArea(edges: .top)
     }
 
@@ -621,8 +624,8 @@ struct JournalComposer: View {
                 .accessibilityLabel("More moods")
                 .accessibilityHint("Choose from all the moods")
             }
-            // Two rows of three, so the stars and their names can be big.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            // All six in one row, small, so the page has room for the writing.
+            HStack(spacing: 5) {
                 ForEach(Mood.pickerMoods) { option in
                     moodButton(option)
                 }
@@ -682,25 +685,25 @@ struct JournalComposer: View {
             Haptics.tap()
             SoundEffects.play(.moodStar)
         } label: {
-            VStack(spacing: 6) {
+            VStack(spacing: 3) {
                 Image(option.artName)
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 62)
+                    .frame(height: 36)
                     .scaleEffect(isOn ? 1.08 : 1)
                 Text(option.label)
-                    .font(.rounded(.headline, weight: .heavy))
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .foregroundStyle(isOn ? JournalStyle.ink : JournalStyle.moodLabel)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(0.7)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 4)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 2)
             .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isOn ? JournalStyle.selectedMoodFill : Color.white.opacity(0.7)))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(isOn ? JournalStyle.selectedMoodEdge : Color.clear, lineWidth: 2))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(isOn ? JournalStyle.selectedMoodEdge : Color.clear, lineWidth: 1.5))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1499,5 +1502,17 @@ enum JournalWords {
             }
         }
         return text
+    }
+}
+
+/// No white haze at the top of the writing page (iOS 26's scroll edge effect): the picture stays
+/// clear there.
+private struct ComposerTopEdge: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.scrollEdgeEffectHidden(true, for: .top)
+        } else {
+            content
+        }
     }
 }
