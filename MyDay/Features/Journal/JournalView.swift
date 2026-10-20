@@ -543,7 +543,11 @@ struct JournalPagesHome: View {
         guard !didShowThemeTip else { return }
         Task {
             try? await Task.sleep(for: .seconds(0.45))
-            if showsMenu, !didShowThemeTip, themeRowFrame != .zero { tip = .theme }
+            // About the menu just opened, so it needs only a short gap after another tip.
+            if showsMenu, !didShowThemeTip, themeRowFrame != .zero, TipPacer.mayShow(contextual: true) {
+                TipPacer.shown()
+                tip = .theme
+            }
         }
     }
 
@@ -564,17 +568,20 @@ struct JournalPagesHome: View {
         guard !isOpening, !countedOpening else { return }
         countedOpening = true
         guard JournalLockTipSchedule.countOpeningAndCheck(lockEnabled: lockEnabled), didShowMenuTip else { return }
-        try? await Task.sleep(for: .seconds(0.8))
-        guard !Task.isCancelled, !lockEnabled, !showsMenu, !isFiltering, !choosesTheme, tip == nil else { return }
+        try? await Task.sleep(for: TipPacer.settle)
+        guard !Task.isCancelled, !lockEnabled, !showsMenu, !isFiltering, !choosesTheme, tip == nil,
+              TipPacer.mayShow() else { return }
+        TipPacer.shown()
         showsLockTip = true
     }
 
     /// "More options here!", once, a moment after the journal opens (when nothing else is open).
     private func offerMenuTip() async {
         guard !isOpening, !didShowMenuTip, !showsLockTip else { return }
-        try? await Task.sleep(for: .seconds(0.8))
+        try? await Task.sleep(for: TipPacer.settle)
         guard !Task.isCancelled, !isOpening, !didShowMenuTip, !showsMenu, !isFiltering, !choosesTheme,
-              moreFrame != .zero else { return }
+              moreFrame != .zero, TipPacer.mayShow() else { return }
+        TipPacer.shown()
         tip = .menu
     }
 

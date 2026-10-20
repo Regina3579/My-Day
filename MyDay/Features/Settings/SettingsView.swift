@@ -331,8 +331,8 @@ struct SettingsView: View {
     /// it waits for another visit when something else is open.
     private func showICloudTipIfNew(scrollingWith reader: ScrollViewProxy) async {
         guard router.tab == .settings, !didShowICloudTip else { return }
-        try? await Task.sleep(for: .seconds(0.8))
-        guard !Task.isCancelled, canShowICloudTip else { return }
+        try? await Task.sleep(for: TipPacer.settle)
+        guard !Task.isCancelled, canShowICloudTip, TipPacer.mayShow() else { return }
         if !ICloudTip.fits(iCloudTarget, in: visibleFrame) {
             withAnimation(.easeInOut(duration: 0.4)) {
                 reader.scrollTo("icloud", anchor: UnitPoint(x: 0.5, y: 0.7))
@@ -341,6 +341,7 @@ struct SettingsView: View {
         }
         guard !Task.isCancelled, canShowICloudTip, ICloudTip.fits(iCloudTarget, in: visibleFrame) else { return }
         didShowICloudTip = true
+        TipPacer.shown()
         withAnimation(.easeOut(duration: 0.3)) { router.iCloudTip = iCloudTarget }
     }
 
@@ -350,17 +351,17 @@ struct SettingsView: View {
             && !router.isMenuOpen && lockGoal == nil && !confirmClearDone && !confirmEraseAll && !rating.isShowing
     }
 
-    /// Marks the ten first-time tips as not seen and opens today's To-Dos, where the first three
-    /// come one at a time (the Reminder tip waits for the next to-do opened, the moods and Get a
-    /// Prompt tips for the next journal page, the Quick Add tip for the next time Quick Add opens, the ⋮ menu's two tips for the next visit to My Journal
-    /// Pages, the iCloud tip for the next visit here). My Day
-    /// goes back to its home screen first, so To-Dos opens afresh even when it was already open there.
+    /// Marks the ten first-time tips as not seen and opens today's To-Dos, where the first of
+    /// them comes. The others come back gently, one at a time on later visits, paced by
+    /// `TipPacer`. My Day goes back to its home screen first, so To-Dos opens afresh even when
+    /// it was already open there.
     private func showTipsAgain() {
         for key in [Prefs.didShowQuoteTip, Prefs.didShowVoiceTip, Prefs.didShowPhotoTip, Prefs.didShowMoodTip,
                     Prefs.didShowPromptTip, Prefs.didShowReminderTip, Prefs.didShowICloudTip,
                     Prefs.didShowJournalMenuTip, Prefs.didShowJournalThemeTip, Prefs.didShowQuickAddTip] {
             UserDefaults.standard.set(false, forKey: key)
         }
+        TipPacer.reset()
         Haptics.tap()
         router.goHome()
         let today = appState.today

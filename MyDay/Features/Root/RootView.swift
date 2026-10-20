@@ -229,7 +229,10 @@ struct RootView: View {
                 guard !didShowQuickAddTip else { return }
                 Task {
                     try? await Task.sleep(for: .seconds(0.4))
-                    guard router.isQuickAddOpen, !didShowQuickAddTip, journalChipFrame != .zero else { return }
+                    // About the menu just opened, so it needs only a short gap after another tip.
+                    guard router.isQuickAddOpen, !didShowQuickAddTip, journalChipFrame != .zero,
+                          TipPacer.mayShow(contextual: true) else { return }
+                    TipPacer.shown()
                     withAnimation(.easeOut(duration: 0.25)) { showsQuickAddTip = true }
                 }
             } else if showsQuickAddTip {

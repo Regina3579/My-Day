@@ -23,6 +23,12 @@ enum Prefs {
     static let didShowPromptTip = "didShowJournalPromptTip"
     static let didShowJournalMenuTip = "didShowJournalMenuTip"
     static let didShowQuickAddTip = "didShowQuickAddTip"
+    /// The pacing of the first-time tips (see `TipPacer`): the first use, when a tip last
+    /// showed, and how many showed on which day.
+    static let tipFirstUse = "tipFirstUse"
+    static let tipLastShown = "tipLastShown"
+    static let tipDay = "tipDay"
+    static let tipsToday = "tipsToday"
     /// How many times the journal has opened, and the Journal Lock tip's state (see
     /// `JournalLockTipSchedule`).
     static let journalOpenings = "journalOpenings"

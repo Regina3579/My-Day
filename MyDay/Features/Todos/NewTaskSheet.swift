@@ -273,8 +273,8 @@ struct NewTaskSheet: View {
     /// something else is going on, or when the cloud would not fit under the row.
     private func showReminderTipIfNew() async {
         guard task != nil, focus == nil, canShowReminderTip else { return }
-        try? await Task.sleep(for: .seconds(0.6))
-        guard !Task.isCancelled, canShowReminderTip else { return }
+        try? await Task.sleep(for: TipPacer.settle)
+        guard !Task.isCancelled, canShowReminderTip, TipPacer.mayShow() else { return }
         if detent != .large {
             withAnimation(.snappy) { detent = .large }
             try? await Task.sleep(for: .seconds(0.6))
@@ -283,6 +283,7 @@ struct NewTaskSheet: View {
               ReminderTip.fits(rowFrame: reminderFrame, height: sheetHeight)
         else { return }
         didShowReminderTip = true
+        TipPacer.shown()
         withAnimation(.easeOut(duration: 0.3)) { showsReminderTip = true }
     }
 

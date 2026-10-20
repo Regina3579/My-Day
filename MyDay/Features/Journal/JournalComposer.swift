@@ -399,14 +399,15 @@ struct JournalComposer: View {
 
     // MARK: First-time tips
 
-    /// The first time a page is written: after a moment, point at the ＋ for more moods; once
-    /// that tip is closed (or on a later page), point at Get a Prompt.
+    /// The first time a page is written: once it has been open a moment, point at the ＋ for
+    /// more moods; on a later page (paced by `TipPacer`), at Get a Prompt. One per page.
     private func showTipsIfNew() async {
         guard !didShowMoodTip || !didShowPromptTip else { return }
-        try? await Task.sleep(for: .seconds(0.9))
-        guard !Task.isCancelled, extra == nil else { return }
+        try? await Task.sleep(for: TipPacer.settle)
+        guard !Task.isCancelled, extra == nil, TipPacer.mayShow() else { return }
         if !didShowMoodTip {
             didShowMoodTip = true
+            TipPacer.shown()
             withAnimation(.easeOut(duration: 0.3)) { showsMoodTip = true }
         } else {
             await showPromptTipIfNew()
@@ -416,10 +417,6 @@ struct JournalComposer: View {
     private func closeMoodTip() {
         withAnimation(.easeOut(duration: 0.25)) { showsMoodTip = false }
         Haptics.tap()
-        Task {
-            try? await Task.sleep(for: .seconds(0.7))
-            await showPromptTipIfNew()
-        }
     }
 
     private func openMoodsFromTip() {
@@ -446,6 +443,7 @@ struct JournalComposer: View {
         }
         guard promptTipFits, !didShowPromptTip, !showsMoodTip, extra == nil else { return }
         didShowPromptTip = true
+        TipPacer.shown()
         withAnimation(.easeOut(duration: 0.3)) { showsPromptTip = true }
     }
 
