@@ -7,7 +7,8 @@ struct TodayToDosView: View {
     @Environment(\.modelContext) private var context
     @Environment(RatingPrompt.self) private var rating
     @Environment(MyDayPro.self) private var pro
-    @Environment(\.tabBarClearance) private var tabBarClearance
+    @Environment(Router.self) private var router
+    @Environment(\.hostTab) private var hostTab
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the Completed list is open (also "Show finished to-dos" in Settings).
@@ -91,6 +92,10 @@ struct TodayToDosView: View {
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
+            // A page of its own: the tab bar (My Day · Calendar · Insights · Settings) stays on
+            // the main screens and hides here, so the list has the screen.
+            .onAppear { router.setFullScreen(true, in: hostTab) }
+            .onDisappear { router.setFullScreen(false, in: hostTab) }
             #if DEBUG
             .task { await openDebugRoute() }
             #endif
@@ -302,7 +307,6 @@ struct TodayToDosView: View {
             }
         }
         .modifier(HidesTopScrollEdgeEffect())
-        .tabBarSafeArea()
     }
 
     /// The height of the status bar (and the Dynamic Island), from the app's window.
@@ -329,7 +333,7 @@ struct TodayToDosView: View {
     private var toastView: some View {
         if let toast {
             TodoToast(text: toast)
-                .padding(.bottom, tabBarClearance + (pinsActions ? dockHeight : 0) + 12)
+                .padding(.bottom, (pinsActions ? dockHeight : 0) + 12)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .allowsHitTesting(false)
         }

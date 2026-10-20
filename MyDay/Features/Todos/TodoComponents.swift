@@ -813,62 +813,40 @@ private struct SoftActionButton: View {
 
 // MARK: - Progress
 
-/// The slim "Today's Progress" pinned under the add buttons: the counts, a heart for every
-/// to-do and the kitten's cheer, in about half the height of `TodosProgressCard`.
+/// "Today's Progress" as one very thin line at the very bottom, under the add buttons: the
+/// count, a heart for every to-do and the kitten's cheer.
 struct TodosProgressStrip: View {
     let done: Int
     let total: Int
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Image(systemName: "chart.bar.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(LinearGradient(colors: [Palette.lavender, Palette.grape],
-                                                        startPoint: .top, endPoint: .bottom))
-                        .accessibilityHidden(true)
-                    Text("Today's Progress")
-                        .font(.rounded(.footnote, weight: .heavy))
-                        .foregroundStyle(Palette.ink)
-                    Spacer(minLength: 4)
-                    Text(total == 0 ? "No to-dos yet" : "\(done) of \(total) completed")
-                        .font(.rounded(.caption, weight: .semibold))
-                        .foregroundStyle(Palette.inkSoft)
-                        .contentTransition(.numericText(value: Double(done)))
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                HStack(spacing: 8) {
-                    HeartTrack(done: done, total: total, maxSize: 12)
-                        .frame(height: 14)
-                    Text(TodosProgressCard.cheer(done: done, total: total))
-                        .font(.rounded(.caption, weight: .heavy))
-                        .foregroundStyle(Palette.berry)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .fixedSize()
-                        .contentTransition(.opacity)
-                }
-            }
-            Image("ProgressKitten")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 28)
+        HStack(spacing: 8) {
+            Image(systemName: "chart.bar.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [Palette.lavender, Palette.grape],
+                                                startPoint: .top, endPoint: .bottom))
                 .accessibilityHidden(true)
+            Text(total == 0 ? "No to-dos yet" : "\(done) of \(total)")
+                .font(.rounded(.caption2, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+                .contentTransition(.numericText(value: Double(done)))
+                .fixedSize()
+            HeartTrack(done: done, total: total, maxSize: 10)
+                .frame(height: 11)
+            Text(TodosProgressCard.cheer(done: done, total: total))
+                .font(.rounded(.caption2, weight: .heavy))
+                .foregroundStyle(Palette.berry)
+                .lineLimit(1)
+                .fixedSize()
+                .contentTransition(.opacity)
         }
-        .padding(.leading, 12)
-        .padding(.trailing, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .frame(height: 24)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(LinearGradient(colors: [Color.white.opacity(0.92), Color(hex: 0xFFF0F6)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .shadow(color: Palette.hotPink.opacity(0.12), radius: 8, x: 0, y: 4)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white, lineWidth: 1.5)
+            Capsule()
+                .fill(Color.white.opacity(0.85))
+                .overlay(Capsule().strokeBorder(Color.white, lineWidth: 1))
+                .shadow(color: Palette.hotPink.opacity(0.08), radius: 4, x: 0, y: 2)
         )
         .animation(.spring(response: 0.45, dampingFraction: 0.75), value: done)
         .accessibilityElement(children: .ignore)
