@@ -3,50 +3,38 @@ import SwiftUI
 
 // MARK: - Header scene
 
-/// The compact band of the To-Dos header scene (the image is 853 × 482 px).
-///
-/// Only the lower part is shown: the girl's face sits just below the status bar and the band
-/// ends under the puppy. The picture is drawn a little narrower than the screen, against its
-/// right edge, so the "Today's To-Dos" sign stays clear of the back button.
+/// The To-Dos header picture (853 × 482 px) and how it is framed in the strip at the top.
 enum TodosScene {
     static let imageSize = CGSize(width: 853, height: 482)
-    static let widthFraction: CGFloat = 1
-    /// Image rows (px): the girl's eyes, and the last row shown.
-    static let eyesRow: CGFloat = 300
-    static let bottomRow: CGFloat = 452
-
-    /// Points per image pixel.
-    static func scale(width: CGFloat) -> CGFloat {
-        width * widthFraction / imageSize.width
-    }
-
-    /// The first image row shown: the girl's eyes sit just below the status bar.
-    static func topRow(width: CGFloat, statusBar: CGFloat) -> CGFloat {
-        max(0, eyesRow - (statusBar + 4) / scale(width: width))
-    }
-
-    static func height(width: CGFloat, statusBar: CGFloat) -> CGFloat {
-        (bottomRow - topRow(width: width, statusBar: statusBar)) * scale(width: width)
-    }
+    /// How many of the picture's columns span the screen: it is shown a little larger than the
+    /// screen, so the girl sits toward the top right, beside the Dynamic Island instead of under
+    /// it, and the sign's words start clear of the back button.
+    static let visibleColumns: CGFloat = 591
+    /// Where the words "Today's To-Dos" start (px), and where they end at the bottom.
+    static let signTextColumn: CGFloat = 95
+    static let signBottomRow: CGFloat = 385
+    /// Points from the screen's left edge where the sign's words start (right of the back button).
+    static let signTextInset: CGFloat = 64
 }
 
-/// The illustrated header band: the "Today's To-Dos" sign, the girl and her puppy.
+/// The illustrated strip at the top of To-Dos: the "Today's To-Dos" sign at the left (its words
+/// clear of the back button), the girl toward the top right (clear of the Dynamic Island) and her
+/// puppy, sharp and filling the width.
 struct TodosHero: View {
     let width: CGFloat
-    /// Height of the status bar (not counting the navigation bar).
-    let statusBar: CGFloat
+    /// The strip's height (the list's panel overlaps its last 16 points).
+    let height: CGFloat
 
     var body: some View {
-        let scale = TodosScene.scale(width: width)
-        let top = TodosScene.topRow(width: width, statusBar: statusBar)
-        let height = TodosScene.height(width: width, statusBar: statusBar)
-        let imageWidth = width * TodosScene.widthFraction
-        // The picture across the whole width, sharp (no blurred strip).
+        let scale = width / TodosScene.visibleColumns
+        let left = max(0, TodosScene.signTextColumn - TodosScene.signTextInset / scale)
+        // The sign's last line just above the panel's rounded top.
+        let top = max(0, TodosScene.signBottomRow - (height - 20) / scale)
         Image("TodosScene")
             .resizable()
-            .frame(width: imageWidth, height: TodosScene.imageSize.height * scale)
-            .offset(y: -top * scale)
-            .frame(width: width, height: height, alignment: .top)
+            .frame(width: TodosScene.imageSize.width * scale, height: TodosScene.imageSize.height * scale)
+            .offset(x: -left * scale, y: -top * scale)
+            .frame(width: width, height: height, alignment: .topLeading)
             .clipped()
             .accessibilityHidden(true)
     }

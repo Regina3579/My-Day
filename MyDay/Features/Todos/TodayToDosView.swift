@@ -246,9 +246,7 @@ struct TodayToDosView: View {
         // The status bar, the back button's row, and a strip of the picture under them.
         let band = statusBar + 44 + 22
         return VStack(spacing: 0) {
-            TodosHero(width: width, statusBar: statusBar)
-                .frame(width: width, height: band, alignment: .top)
-                .clipped()
+            TodosHero(width: width, height: band)
             list
                 .background(alignment: .top) { panelBackground }
                 // Rounded at the top; reaching on down, so the pinned panel's backing still
