@@ -69,7 +69,8 @@ struct HomeView: View {
                 DailyQuoteView(date: today, maxWidth: w * 0.33)
                     .padding(.leading, w * 0.09)
             }
-            .padding(.top, topInset + 4)
+            // Raised with the scenery, still just under the clock.
+            .padding(.top, topInset + 4 - layout.lift)
         }
         .frame(width: w, height: layout.heroHeight, alignment: .top)
         .clipped()
@@ -135,18 +136,26 @@ struct HomeLayout {
     /// Brick strip between the journal and the tab bar, as in the design
     /// (about 44 px there; the tab bar clearance already adds 8 points).
     static let bottomMargin: CGFloat = 27.0 / 853.0
+    /// How far the whole page (scenery, header and cards) sits higher than the design's spacing
+    /// under the status bar, so it is centred between the clock and the tab bar.
+    static let pageLift: CGFloat = 12
     /// The cards may shrink to this much of their height before the screen scrolls instead.
     static let minimumSqueeze: CGFloat = 0.82
 
     let width: CGFloat
     /// How far the scenery moves down so the header keeps its place on it.
     let sceneShift: CGFloat
+    /// How much the page is raised: `pageLift`, or less where the status bar leaves no room
+    /// (the header never goes under the clock).
+    let lift: CGFloat
     /// Vertical scale for the cards, so the whole design fits above the tab bar.
     let squeeze: CGFloat
 
     init(width: CGFloat, safeTop: CGFloat, availableHeight: CGFloat) {
         self.width = width
-        sceneShift = min(max(0, safeTop - width * Self.designStatusBar), width * Self.sceneExtension)
+        let designShift = min(max(0, safeTop - width * Self.designStatusBar), width * Self.sceneExtension)
+        lift = min(Self.pageLift, designShift)
+        sceneShift = designShift - lift
         let fixed = sceneShift + width * (Self.cardsTop + Self.bottomMargin)
         let fit = (availableHeight - fixed) / (width * Self.cardRows)
         squeeze = fit.isFinite ? min(1, max(Self.minimumSqueeze, fit)) : 1
