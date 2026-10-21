@@ -255,6 +255,10 @@ struct RowTint {
         case .builtIn(.health): green
         case .builtIn(.learning): yellow
         case .builtIn(.shopping): purple
+        case .builtIn(.entertainment): purple
+        case .builtIn(.hobbies): cycle[5]
+        case .builtIn(.finance): green
+        case .builtIn(.appointments): pink
         case .custom(let custom): CategoryPalette.tint(at: custom.colorIndex)
         }
     }
