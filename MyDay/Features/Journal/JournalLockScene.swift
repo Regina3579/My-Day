@@ -34,7 +34,7 @@ struct JournalLockScene<Content: View>: View {
     static var lilac: Color { Color(hex: 0x8E6CAA) }
 
     /// The picture at the top: 1290 × 560 pixels.
-    private static let heroAspect: CGFloat = 1290.0 / 560.0
+    private static var heroAspect: CGFloat { 1290.0 / 560.0 }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -145,10 +145,12 @@ struct JournalLockScene<Content: View>: View {
         .accessibilityHidden(true)
     }
 
-    private static let clouds: [(x: CGFloat, lift: CGFloat, width: CGFloat, opacity: Double)] = [
-        (0.08, 0.04, 0.42, 0.75), (0.3, 0.0, 0.4, 0.6), (0.55, 0.01, 0.42, 0.55),
-        (0.78, 0.03, 0.42, 0.65), (0.98, 0.06, 0.4, 0.75),
-    ]
+    private static var clouds: [(x: CGFloat, lift: CGFloat, width: CGFloat, opacity: Double)] {
+        [
+            (0.08, 0.04, 0.42, 0.75), (0.3, 0.0, 0.4, 0.6), (0.55, 0.01, 0.42, 0.55),
+            (0.78, 0.03, 0.42, 0.65), (0.98, 0.06, 0.4, 0.75),
+        ]
+    }
 }
 
 /// "Forgot Passcode?" and the like: a soft white pill with a pink edge.
