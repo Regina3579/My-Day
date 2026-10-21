@@ -263,6 +263,7 @@ struct JournalComposer: View {
 
     private var canSave: Bool {
         moodPicked || !photos.isEmpty || !voiceNotes.isEmpty || weather != nil || !tags.isEmpty || !stickers.isEmpty
+            || !upTo.isEmpty || !goalsMet.isEmpty
             || ![title, text, littleWin, gratitude, highlight, lookingForward, place].allSatisfy { $0.trimmed.isEmpty }
     }
 
@@ -276,6 +277,10 @@ struct JournalComposer: View {
                         .opacity(heroIsVisible ? 0 : 1)
                         .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
                         .accessibilityHidden(heroIsVisible)
+                }
+                // Save from the top, any time, without scrolling down to Save Journal Entry.
+                ToolbarItem(placement: .topBarTrailing) {
+                    topSaveButton
                 }
                 if presentation == .page {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -1212,6 +1217,33 @@ struct JournalComposer: View {
         .opacity(canSave ? 1 : 0.6)
     }
 
+    /// "✓ Save" at the top: a glossy pink circle with a white tick and "Save" in pink (on a soft
+    /// white pill; iOS 26 draws its own glass pill around it).
+    private var topSaveButton: some View {
+        Button(action: save) {
+            HStack(spacing: 7) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: [Color(hex: 0xFF7DBE), Color(hex: 0xF5238F)],
+                                             startPoint: .top, endPoint: .bottom))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(Color.white)
+                }
+                .frame(width: 26, height: 26)
+                .shadow(color: JournalStyle.pink.opacity(0.35), radius: 3, x: 0, y: 1)
+                Text("Save")
+                    .font(.rounded(.headline, weight: .heavy))
+                    .foregroundStyle(Color(hex: 0xE8237A))
+            }
+            .modifier(TopSavePill())
+        }
+        .disabled(!canSave || isLoadingPhotos)
+        .opacity(canSave ? 1 : 0.5)
+        .accessibilityLabel("Save")
+        .accessibilityHint("Saves this journal page")
+    }
+
     // MARK: Menu and sheets
 
     private var moreMenu: some View {
@@ -1549,6 +1581,25 @@ private struct ComposerTopEdge: ViewModifier {
             content.scrollEdgeEffectHidden(hidden, for: .top)
         } else {
             content
+        }
+    }
+}
+
+/// Before iOS 26 the top bar draws no pill around its buttons: a soft white one, with a pink edge.
+private struct TopSavePill: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+                .padding(.leading, 2)
+                .padding(.trailing, 4)
+        } else {
+            content
+                .padding(.leading, 5)
+                .padding(.trailing, 12)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(Color.white.opacity(0.9)))
+                .overlay(Capsule().strokeBorder(Color(hex: 0xF6C3D8), lineWidth: 1))
+                .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
         }
     }
 }
