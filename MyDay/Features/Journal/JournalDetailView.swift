@@ -256,6 +256,12 @@ private struct JournalPageExtras: View {
             if !entry.tags.isEmpty {
                 TagChips(tags: entry.tags)
             }
+            if !entry.activities.isEmpty {
+                DayListRow(title: "What I was up to", items: entry.activities)
+            }
+            if !entry.goals.isEmpty {
+                DayListRow(title: "Goals I met", items: entry.goals)
+            }
             let voiceNotes = entry.sortedVoiceNotes
             let voiceCount = voiceNotes.count + (entry.voiceNote == nil ? 0 : 1)
             if let earlier = entry.voiceNote {

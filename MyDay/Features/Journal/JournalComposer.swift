@@ -193,6 +193,13 @@ struct JournalComposer: View {
     @State private var lookingForward: String
     @State private var stickers: String
     @State private var tags: [String]
+    /// "What have you been up to?" and "My Goals": what is ticked for the day, the lists as the
+    /// person has them, and the list being edited.
+    @State private var upTo: Set<String>
+    @State private var goalsMet: Set<String>
+    @State private var activityItems = DayListKind.activities.items
+    @State private var goalItems = DayListKind.goals.items
+    @State private var editingList: DayListKind?
     @State private var place: String
     @State private var weather: JournalWeather?
     @State private var temperature: String
@@ -242,6 +249,8 @@ struct JournalComposer: View {
         _lookingForward = State(initialValue: entry?.lookingForward ?? "")
         _stickers = State(initialValue: entry?.stickers ?? "")
         _tags = State(initialValue: entry?.tags ?? template?.tags ?? [])
+        _upTo = State(initialValue: Set(entry?.activities ?? []))
+        _goalsMet = State(initialValue: Set(entry?.goals ?? []))
         _place = State(initialValue: entry?.place ?? "")
         _weather = State(initialValue: entry?.weather)
         _temperature = State(initialValue: entry?.temperature ?? "")
@@ -291,6 +300,12 @@ struct JournalComposer: View {
             // once it has scrolled away, so the page doesn't run under the title).
             .toolbarBackground(heroIsVisible ? .hidden : .visible, for: .navigationBar)
             .toolbarBackground(JournalBackdrop.base, for: .navigationBar)
+            .sheet(item: $editingList) { kind in
+                DayListEditor(kind: kind) {
+                    activityItems = DayListKind.activities.items
+                    goalItems = DayListKind.goals.items
+                }
+            }
             .sheet(item: $extra) { extra in
                 extraSheet(extra)
             }
@@ -515,6 +530,10 @@ struct JournalComposer: View {
             dayRow
             moodCard
                 .id("mood")
+            DayListCard(kind: .activities, chosen: $upTo, onEdit: { editingList = .activities }, items: activityItems)
+                .id("upto")
+            DayListCard(kind: .goals, chosen: $goalsMet, onEdit: { editingList = .goals }, items: goalItems)
+                .id("goals")
             writeCard
                 .id("write")
             extrasCard
@@ -1312,6 +1331,8 @@ struct JournalComposer: View {
             lookingForward = ""
             stickers = ""
             tags = []
+            upTo = []
+            goalsMet = []
             place = ""
             weather = nil
             temperature = ""
@@ -1364,6 +1385,9 @@ struct JournalComposer: View {
         page.lookingForward = lookingForward.trimmed
         page.stickers = stickers
         page.tags = tags
+        // In the lists' order (anything no longer on them after).
+        page.activities = activityItems.filter(upTo.contains) + upTo.subtracting(activityItems).sorted()
+        page.goals = goalItems.filter(goalsMet.contains) + goalsMet.subtracting(goalItems).sorted()
         page.place = place.trimmed
         page.weather = weather
         page.temperature = temperature

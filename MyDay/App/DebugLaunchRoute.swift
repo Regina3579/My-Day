@@ -81,6 +81,8 @@ enum DebugLaunchRoute {
         page.highlight = "Watching the sunset with my puppy."
         page.stickers = "[nature-08][food-01][animals-02]"
         page.tags = ["Good Vibes", "Grateful"]
+        page.activities = ["Friends", "Relax", "Read", "Gardening"]
+        page.goals = ["Drink Water", "Walk / Steps", "Be Grateful"]
         page.weather = .sunny
         page.temperature = "28°C"
         context.insert(page)
@@ -180,7 +182,8 @@ enum DebugLaunchRoute {
     /// Open Filter on My Journal Pages ("journal-filter").
     @MainActor private static var journalFilter = false
     /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save,
-    /// "journal-proud": the moods).
+    /// "journal-proud": the moods, "journal-upto" and "journal-goals": What have you been up to?
+    /// and My Goals).
     @MainActor private static var journalAnchor: String?
     /// Open "Choose your mood" once the journal appears ("journal-moods").
     @MainActor private static var journalMoods = false
@@ -509,6 +512,12 @@ enum DebugLaunchRoute {
             router.homePath.append(AppRoute.newJournalPage(nil))
         case "journal-middle":
             journalAnchor = "write"
+            openTodaysPage(router, today: today, context: context)
+        case "journal-upto":
+            journalAnchor = "upto"
+            openTodaysPage(router, today: today, context: context)
+        case "journal-goals":
+            journalAnchor = "goals"
             openTodaysPage(router, today: today, context: context)
         case "journal-bottom":
             journalAnchor = "save"

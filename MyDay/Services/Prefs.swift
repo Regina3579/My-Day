@@ -33,6 +33,10 @@ enum Prefs {
     static let tipReplay = "tipReplay"
     /// Whether journal pages show the day's steps from Apple Health.
     static let showSteps = "showJournalSteps"
+    /// The journal's "What have you been up to?" and "My Goals" lists, one per line (see
+    /// `DayListKind`).
+    static let journalActivities = "journalActivities"
+    static let journalGoals = "journalGoals"
     /// How many times the journal has opened, and the Journal Lock tip's state (see
     /// `JournalLockTipSchedule`).
     static let journalOpenings = "journalOpenings"

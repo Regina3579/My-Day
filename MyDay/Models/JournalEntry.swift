@@ -22,6 +22,10 @@ final class JournalEntry {
     var stickers: String = ""
     /// Tags such as "Good Vibes" or "Grateful", one per line (see `tags`).
     var tagsText: String = ""
+    /// What the day held ("Family", "Read") and the goals met ("Drink Water"), one per line (see
+    /// `activities` and `goals`).
+    var activitiesText: String = ""
+    var goalsText: String = ""
     /// Where the page was written ("" when not added).
     var place: String = ""
     /// The weather that was picked (a `JournalWeather` raw value, "" when none) and its
@@ -95,6 +99,16 @@ final class JournalEntry {
     var tags: [String] {
         get { tagsText.split(separator: "\n").map(String.init) }
         set { tagsText = newValue.joined(separator: "\n") }
+    }
+
+    var activities: [String] {
+        get { activitiesText.split(separator: "\n").map(String.init) }
+        set { activitiesText = newValue.joined(separator: "\n") }
+    }
+
+    var goals: [String] {
+        get { goalsText.split(separator: "\n").map(String.init) }
+        set { goalsText = newValue.joined(separator: "\n") }
     }
 
     var weather: JournalWeather? {
