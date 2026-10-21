@@ -58,7 +58,8 @@ final class StepCounter {
         let query = HKStatisticsQueryDescriptor(predicate: predicate, options: .cumulativeSum)
         // Only a read that worked counts: one that failed (say, while the iPhone was locked)
         // is tried again the next time the page shows.
-        guard let result = try? await query.result(for: store) else { return }
+        let result: HKStatistics?
+        do { result = try await query.result(for: store) } catch { return }
         readAt[start] = .now
         guard let total = result?.sumQuantity()?.doubleValue(for: .count()) else { return }
         steps[start] = Int(total.rounded())
