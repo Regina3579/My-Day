@@ -17,6 +17,10 @@ struct SideMenuView: View {
                     row("checklist", "Today's To-Dos", tint: Palette.grape) { router.open(.todos(today)) }
                     row("star.fill", "Today's Priority", tint: Palette.honey) { router.open(.priority(today)) }
                     row("book.closed.fill", "My Journal", tint: Palette.hotPink) { router.open(.journal) }
+                    row("trophy.fill", "Achievements", tint: Palette.honey,
+                        detail: "\(AchievementCenter.shared.earnedCount)/\(Achievement.allCases.count)") {
+                        router.sheet = .achievements
+                    }
 
                     Divider().padding(.vertical, 8)
 
@@ -74,7 +78,8 @@ struct SideMenuView: View {
         }
     }
 
-    private func row(_ icon: String, _ title: String, tint: Color, action: @escaping () -> Void) -> some View {
+    private func row(_ icon: String, _ title: String, tint: Color, detail: String? = nil,
+                     action: @escaping () -> Void) -> some View {
         Button {
             action()
             close()
@@ -89,6 +94,14 @@ struct SideMenuView: View {
                     .font(.rounded(.body, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                 Spacer()
+                if let detail {
+                    Text(detail)
+                        .font(.rounded(.caption, weight: .bold))
+                        .foregroundStyle(Palette.hotPink)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Palette.blush))
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Palette.inkSoft.opacity(0.5))

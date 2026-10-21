@@ -616,6 +616,14 @@ enum DebugLaunchRoute {
         case "rating-card":
             ratingCard = true
             router.open(.todos(today))
+        case "achievements", "menu-achievements":
+            AchievementCenter.shared.preview(earned: [.taskStarter, .firstDay, .streak7, .risingStar, .healthyYou,
+                                                      .firstGoal, .goalMaster, .meTime, .waterHero, .petLover,
+                                                      .earlyBird])
+            if route == "achievements" { router.sheet = .achievements } else { router.isMenuOpen = true }
+        case "achievement-streak", "achievement-goal":
+            AchievementCenter.shared.preview(earned: [.streak7, .goalMaster],
+                                             showing: route == "achievement-streak" ? .streak7 : .goalMaster)
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)
         case let route where route.hasPrefix("todos-"):

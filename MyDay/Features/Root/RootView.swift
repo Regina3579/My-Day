@@ -67,6 +67,13 @@ struct RootView: View {
                         .zIndex(3)
                 }
 
+                if let badge = AchievementCenter.shared.showing {
+                    AchievementPopup(achievement: badge, onSeeAll: seeAllAchievements,
+                                     onClose: { AchievementCenter.shared.close() })
+                        .transition(.opacity)
+                        .zIndex(4)
+                }
+
                 if let target = router.iCloudTip {
                     GeometryReader { tipProxy in
                         ICloudTip(target: target.moved(from: tipProxy.frame(in: .global).origin),
@@ -80,9 +87,14 @@ struct RootView: View {
             .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
             .animation(.easeInOut(duration: 0.25), value: router.showsTabBar)
         }
+        .background { AchievementWatcher() }
         .statusBarHidden(router.hidesStatusBar)
         .sheet(item: sheetBinding) { sheet in
             sheetContent(sheet)
+        }
+        .onChange(of: router.sheet == nil && !router.isMenuOpen) { _, isFree in
+            // A badge earned while a sheet was open pops up once it closes.
+            if isFree { AchievementCenter.shared.showNext() }
         }
         .onChange(of: router.tab) { _, _ in
             router.isQuickAddOpen = false
@@ -122,6 +134,9 @@ struct RootView: View {
             // Each launch, so reminders set by an earlier version carry the current reminder sound.
             ReminderCenter.syncAll(in: modelContext)
             rating.noteActive()
+            AchievementCenter.shared.isScreenBusy = { [router] in
+                router.sheet != nil || router.isMenuOpen
+            }
             rating.isScreenFree = { [router] in
                 router.sheet == nil && !router.isMenuOpen && !router.isQuickAddOpen && router.iCloudTip == nil
             }
@@ -268,6 +283,10 @@ struct RootView: View {
             NavigationStack {
                 RemindersView(showsDoneButton: true)
             }
+        case .achievements:
+            NavigationStack {
+                AchievementsView()
+            }
         }
     }
 
@@ -295,6 +314,12 @@ struct RootView: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
             router.isMenuOpen = false
         }
+    }
+
+    /// The pop-up's See All Achievements: the pop-up goes, and every badge shows.
+    private func seeAllAchievements() {
+        AchievementCenter.shared.close()
+        router.sheet = .achievements
     }
 
     /// "Rate Now": the card goes, then Apple's page to rate My Day opens.

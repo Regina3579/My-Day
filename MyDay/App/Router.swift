@@ -47,6 +47,8 @@ enum AppSheet: Identifiable {
     /// Carrying on with a page already written (that day's page, as a journal is one page a day).
     case editJournal(JournalEntry)
     case reminders
+    /// Every badge: earned ones bright, the rest dimmed.
+    case achievements
 
     var id: String {
         switch self {
@@ -55,6 +57,7 @@ enum AppSheet: Identifiable {
         case .newJournal(let date): "journal-\(date.timeIntervalSince1970)"
         case .editJournal(let entry): "journal-page-\(entry.id.uuidString)"
         case .reminders: "reminders"
+        case .achievements: "achievements"
         }
     }
 }

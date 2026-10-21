@@ -96,4 +96,10 @@ enum Prefs {
     static let didSeedTemplates = "didSeedStarterTemplates"
     /// Set once those examples have been removed (see `SampleContent`).
     static let didRemoveSamples = "didRemoveSampleContent"
+    /// Badges earned (`Achievement` raw value → seconds since 1970).
+    static let achievementsEarned = "achievementsEarned"
+    /// The days My Day was used ("yyyy-MM-dd"), for the streak badges.
+    static let achievementDays = "achievementDaysUsed"
+    /// Set once the badges were first checked (badges deserved before then come quietly).
+    static let achievementsStarted = "achievementsStarted"
 }
