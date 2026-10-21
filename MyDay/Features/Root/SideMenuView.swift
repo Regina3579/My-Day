@@ -93,13 +93,16 @@ struct SideMenuView: View {
                 Text(title)
                     .font(.rounded(.body, weight: .semibold))
                     .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Spacer()
                 if let detail {
                     Text(detail)
                         .font(.rounded(.caption, weight: .bold))
                         .foregroundStyle(Palette.hotPink)
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, 7)
                         .padding(.vertical, 3)
+                        .fixedSize()
                         .background(Capsule().fill(Palette.blush))
                 }
                 Image(systemName: "chevron.right")

@@ -574,6 +574,9 @@ struct AchievementPopup: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: ring * 0.98)
+                // The picture's foot is cut flat where its label was: it fades into the ring.
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0.8), .init(color: .clear, location: 1)],
+                                     startPoint: .top, endPoint: .bottom))
                 .frame(width: ring, height: ring, alignment: .top)
                 .clipShape(Circle())
             Circle()
@@ -687,7 +690,6 @@ struct AchievementPopup: View {
         ("heart.fill", 0.12, 0.36, 30, Color(hex: 0xF7A6E0), 8),
         ("heart.fill", 0.74, 0.13, 24, Color(hex: 0xFF6FAE), 14),
         ("star.fill", 0.87, 0.32, 28, Color(hex: 0xFFC83D), 10),
-        ("heart.fill", 0.85, 0.42, 26, Color(hex: 0xFF8CC6), -10),
         ("sparkle", 0.07, 0.56, 14, Color(hex: 0xFFC83D), 0),
         ("sparkle", 0.92, 0.47, 14, Color(hex: 0xFFC83D), 0),
         ("capsule.fill", 0.08, 0.1, 10, Color(hex: 0x7FB2FF), 40),
