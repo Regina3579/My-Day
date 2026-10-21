@@ -13,6 +13,8 @@ import SwiftUI
 struct JournalPagesMenu: View {
     struct Item: Identifiable {
         let title: String
+        /// A row with a switch at its end (Lock My Journal): on or off.
+        var isOn: Bool?
         let action: () -> Void
         var id: String { title }
     }
@@ -62,15 +64,24 @@ struct JournalPagesMenu: View {
                            width: (Self.grid.width - 60) * scale, height: (span.bottom - span.top) * scale)
         return Button(action: item.action) {
             Text(crowned: item.title)
-                .font(.system(size: Self.fontPixels * scale, weight: .heavy, design: .rounded))
+                .font(.system(size: (item.isOn == nil ? Self.fontPixels : Self.fontPixels - 3) * scale,
+                              weight: .heavy, design: .rounded))
                 .foregroundStyle(Self.ink)
                 .lineLimit(lines)
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.leading)
                 .lineSpacing(-2)
-                .frame(width: (Self.textEnd - Self.textStart) * scale, alignment: .leading)
+                .frame(width: (Self.textEnd - Self.textStart - (item.isOn == nil ? 0 : 22)) * scale,
+                       alignment: .leading)
                 .padding(.leading, (Self.textStart - 30) * scale)
                 .frame(width: frame.width, height: frame.height, alignment: .leading)
+                .overlay(alignment: .trailing) {
+                    if let isOn = item.isOn {
+                        // Over the row's hearts, where a switch belongs.
+                        MenuSwitch(isOn: isOn, scale: scale)
+                            .padding(.trailing, 6 * scale)
+                    }
+                }
         }
         .buttonStyle(MenuRowStyle())
         .frame(width: frame.width, height: frame.height)
@@ -79,6 +90,41 @@ struct JournalPagesMenu: View {
         }
         .offset(x: frame.minX, y: frame.minY)
         .accessibilityLabel(item.title.replacingOccurrences(of: " 👑", with: ", My Day Pro"))
+        .accessibilityValue(item.isOn.map { $0 ? "On" : "Off" } ?? "")
+        .accessibilityAddTraits(item.isOn == nil ? [] : .isToggle)
+    }
+}
+
+/// The pink switch on Lock My Journal: a glossy pink track with a white knob and a little heart
+/// when on, soft lilac-grey when off.
+private struct MenuSwitch: View {
+    let isOn: Bool
+    let scale: CGFloat
+
+    var body: some View {
+        let width = 92 * scale, height = 54 * scale
+        ZStack(alignment: isOn ? .trailing : .leading) {
+            Capsule()
+                .fill(isOn
+                      ? AnyShapeStyle(LinearGradient(colors: [Color(hex: 0xFF8DC0), Color(hex: 0xF0569B)],
+                                                     startPoint: .top, endPoint: .bottom))
+                      : AnyShapeStyle(Color(hex: 0xEADDE6)))
+                .overlay(Capsule().strokeBorder(isOn ? Color(hex: 0xE0418A).opacity(0.5) : Color(hex: 0xD9C5D2),
+                                                lineWidth: 1.5))
+            Circle()
+                .fill(Color.white)
+                .frame(width: height - 8 * scale, height: height - 8 * scale)
+                .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                .overlay {
+                    Image(systemName: isOn ? "heart.fill" : "lock.open.fill")
+                        .font(.system(size: 18 * scale, weight: .bold))
+                        .foregroundStyle(isOn ? Color(hex: 0xF0569B) : Color(hex: 0xB9A3B3))
+                }
+                .padding(4 * scale)
+        }
+        .frame(width: width, height: height)
+        .animation(.spring(response: 0.3, dampingFraction: 0.75), value: isOn)
+        .accessibilityHidden(true)
     }
 }
 

@@ -604,13 +604,14 @@ struct JournalPagesHome: View {
                 closeMenu()
                 choosesTheme = true
             },
-            // With the lock on, it locks the journal right away (it opens again Face ID, pattern or
-            // passcode); otherwise the kitten card offers to set it up (a Pro feature).
-            .init(title: lockEnabled ? "Lock Now" : (pro.isActive ? "Lock My Journal" : "Lock My Journal 👑")) {
+            // A pink switch on the row: sliding it on, the kitten card offers to set the lock up (a
+            // Pro feature); sliding it off asks Face ID, the pattern or the passcode once, then
+            // turns the lock off.
+            .init(title: lockEnabled || pro.isActive ? "Lock My Journal" : "Lock My Journal 👑", isOn: lockEnabled) {
                 closeMenu()
                 if lockEnabled {
                     Haptics.tap()
-                    withAnimation(.easeInOut(duration: 0.3)) { appState.isJournalUnlocked = false }
+                    lockGoal = .turnOff
                 } else {
                     Task {
                         // Once the menu has closed.
