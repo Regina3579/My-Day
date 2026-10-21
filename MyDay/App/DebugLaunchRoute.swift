@@ -370,6 +370,7 @@ enum DebugLaunchRoute {
     }
 
     /// `journal-lock-offer`: the ⋮ menu's Lock My Journal card.
+    @MainActor
     static func takeJournalLockOffer() -> Bool {
         defer { journalLockOffer = false }
         return journalLockOffer
