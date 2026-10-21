@@ -332,12 +332,16 @@ struct TodoRow: View {
 
             Button(action: onOpen) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(task.title)
-                        .font(.rounded(.body, weight: .semibold))
+                    // The title in bold navy with its category's symbol, a little smaller,
+                    // after it ("MASCARA ✨"): the tabs at the top say what each symbol means.
+                    let symbol = Text(verbatim: " " + task.choice.emoji)
+                        .font(.rounded(.subheadline))
+                    Text("\(Text(task.title).strikethrough(task.isCompleted, color: tint.accent.opacity(0.7)))\(symbol)")
+                        .font(.rounded(.body, weight: .bold))
                         .foregroundStyle(task.isCompleted ? Palette.inkSoft.opacity(0.75) : Palette.ink)
-                        .strikethrough(task.isCompleted, color: tint.accent.opacity(0.7))
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
+                        .accessibilityLabel("\(task.title), \(task.choice.label)")
                     TodoMetaLine(task: task)
                 }
                 .padding(.vertical, 7)
@@ -374,7 +378,7 @@ struct TodoRow: View {
         }
         .padding(.leading, 4)
         .padding(.trailing, 2)
-        .frame(minHeight: 52)
+        .frame(minHeight: 48)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(LinearGradient(colors: [tint.fill.opacity(0.75), tint.fill],
@@ -501,8 +505,8 @@ private struct MenuRowStyle: ButtonStyle {
     }
 }
 
-/// "Health · 5:00 PM · 1 of 3 🔔" — the category in its colour, then time, steps done, reminder,
-/// repeat and photo.
+/// "5:00 PM · 1 of 3 · 🔔 🔁" — a to-do's time, steps done, reminder, repeat and photo, on a
+/// second line only when it has any of them (the category is the symbol after the title).
 struct TodoMetaLine: View {
     let task: TaskItem
 
@@ -533,16 +537,18 @@ struct TodoMetaLine: View {
     }
 
     var body: some View {
-        let category = Text(task.choice.label).foregroundStyle(task.choice.textColor)
-        let rest = Text(crowned: details).foregroundStyle(Palette.inkSoft)
-        Text("\(category)\(rest)")
-            .font(.rounded(.caption, weight: .semibold))
-            .lineLimit(1)
-            .accessibilityLabel(spokenText)
+        let line = details.trimmingCharacters(in: CharacterSet(charactersIn: " ·"))
+        if !line.isEmpty {
+            Text(crowned: line)
+                .font(.rounded(.caption, weight: .semibold))
+                .foregroundStyle(Palette.inkSoft)
+                .lineLimit(1)
+                .accessibilityLabel(spokenText)
+        }
     }
 
     private var spokenText: String {
-        var parts = [task.choice.label]
+        var parts: [String] = []
         if let time = task.time {
             parts.append("at " + time.formatted(date: .omitted, time: .shortened))
         }
