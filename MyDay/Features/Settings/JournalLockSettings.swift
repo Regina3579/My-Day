@@ -97,9 +97,14 @@ struct JournalLockSetupSheet: View {
         }
     }
 
+    /// The first step of turning the lock on, drawn as its design (see `JournalLockChooseView`).
+    private var isChoosing: Bool { step == .choose }
+
     var body: some View {
         VStack(spacing: 0) {
-            header
+            if !isChoosing {
+                header
+            }
             ScrollView {
                 content
                     .padding(.horizontal, 20)
@@ -109,7 +114,13 @@ struct JournalLockSetupSheet: View {
             }
             .scrollBounceBehavior(.basedOnSize)
         }
-        .background(MoodChooserStyle.background.ignoresSafeArea())
+        .background {
+            if isChoosing {
+                JournalLockChooseView.background.ignoresSafeArea()
+            } else {
+                MoodChooserStyle.background.ignoresSafeArea()
+            }
+        }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(32)
@@ -169,36 +180,10 @@ struct JournalLockSetupSheet: View {
     private var content: some View {
         switch step {
         case .choose:
-            VStack(spacing: 14) {
-                JournalLockArt(size: 96)
-                Text("How would you like to open your journal?")
-                    .font(.rounded(.title3, weight: .heavy))
-                    .foregroundStyle(JournalPagesStyle.heading)
-                    .multilineTextAlignment(.center)
-                Text("You can change it any time here in Settings.")
-                    .font(.rounded(.subheadline, weight: .semibold))
-                    .foregroundStyle(JournalStyle.soft)
-                    .multilineTextAlignment(.center)
-                VStack(spacing: 10) {
-                    ForEach(JournalLockMethod.allCases) { method in
-                        let available = method.usesSecret || JournalLock.canAuthenticate
-                        Button {
-                            picked(method)
-                        } label: {
-                            JournalLockMethodRow(method: method, isAvailable: available)
-                                .padding(14)
-                                .background(RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color.white.opacity(0.92)))
-                                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .strokeBorder(Color.white, lineWidth: 1.5))
-                                .shadow(color: JournalStyle.pink.opacity(0.12), radius: 8, x: 0, y: 3)
-                        }
-                        .buttonStyle(PressScaleStyle(scale: 0.97))
-                        .disabled(!available)
-                    }
-                }
-                .padding(.top, 6)
-            }
+            JournalLockChooseView(onPick: picked, onClose: { dismiss() })
+                // Edge to edge, as in the design (the scroll view pads the other steps).
+                .padding(.horizontal, -20)
+                .padding(.top, -8)
 
         case .verify(let method):
             VStack(spacing: 14) {
@@ -324,5 +309,152 @@ struct JournalLockSetupSheet: View {
         appState.isJournalUnlocked = true
         Haptics.success()
         dismiss()
+    }
+}
+
+/// "Lock My Journal", as in its design: the picture at the top (the title "Lock My Journal" and
+/// "Keep your thoughts private and safe 💗" in the design's own lettering, the pink journal with
+/// its gold heart lock and the puppy with a pink bow among hearts, sparkles and flowers, on a
+/// cloud; enlarged 4× with Real-ESRGAN, its ✕ and the words on the cloud taken out), then
+/// "How would you like to open your journal?" on the cloud, and a row for each way: its icon
+/// from the design (the green Face ID, purple dots and pink 123 tiles, each with a little heart),
+/// its name and a line about it, hearts and sparkles, and a round choice button.
+struct JournalLockChooseView: View {
+    let onPick: (JournalLockMethod) -> Void
+    let onClose: () -> Void
+
+    @State private var chosen: JournalLockMethod?
+    /// The sheet's width (the picture spans it).
+    @State private var width: CGFloat = 402
+
+    /// The sheet under the picture: the cloud's soft pink, a little deeper at the bottom.
+    static let background = LinearGradient(colors: [Color(hex: 0xFDEDF3), Color(hex: 0xFDE7EF)],
+                                           startPoint: .top, endPoint: .bottom)
+    /// The picture's size, in pixels of the 1024-pixel-wide design.
+    private static let heroSize = CGSize(width: 1024, height: 847)
+    private static let navy = Color(hex: 0x0B0436)
+    private static let soft = Color(hex: 0x7A6496)
+
+    var body: some View {
+        let k = width / Self.heroSize.width
+        VStack(spacing: 0) {
+            hero(width: width, k: k)
+            VStack(spacing: 14 * k) {
+                ForEach(JournalLockMethod.allCases) { method in
+                    row(method)
+                }
+            }
+            .padding(.horizontal, 48 * k)
+            .padding(.top, 16)
+        }
+        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    private func hero(width w: CGFloat, k: CGFloat) -> some View {
+        Image("LockChooseHero")
+            .resizable()
+            .frame(width: w, height: Self.heroSize.height * k)
+            .accessibilityLabel("Lock My Journal. Keep your thoughts private and safe.")
+            .accessibilityAddTraits(.isHeader)
+            .overlay(alignment: .topTrailing) {
+                // Where the design's ✕ is.
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .heavy))
+                        .foregroundStyle(Color(hex: 0xE8237A))
+                        .frame(width: 84 * k, height: 84 * k)
+                        .background(Circle().fill(Color.white))
+                        .shadow(color: Color(hex: 0xE8237A).opacity(0.15), radius: 6, x: 0, y: 3)
+                }
+                .buttonStyle(PressScaleStyle())
+                .padding(.trailing, 50 * k)
+                .padding(.top, 7 * k)
+                .accessibilityLabel("Cancel")
+            }
+            .overlay(alignment: .top) {
+                // On the cloud, where the design writes them.
+                VStack(spacing: 6) {
+                    Text("How would you like to open your journal?")
+                        .font(.rounded(size: max(39 * k, 17), weight: .heavy))
+                        .foregroundStyle(Self.navy)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("You can change it any time in Settings.")
+                        .font(.rounded(size: max(25 * k, 13), weight: .medium))
+                        .foregroundStyle(Self.soft)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(width: 600 * k)
+                .padding(.top, 680 * k)
+            }
+    }
+
+    private func row(_ method: JournalLockMethod) -> some View {
+        let available = method.usesSecret || JournalLock.canAuthenticate
+        let look = Self.look(method)
+        return Button {
+            guard chosen == nil else { return }
+            Haptics.tap()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { chosen = method }
+            Task {
+                try? await Task.sleep(for: .seconds(0.25))
+                onPick(method)
+                chosen = nil
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Image(look.icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 52, height: 50)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(method.title)
+                        .font(.rounded(size: 18, weight: .heavy))
+                        .foregroundStyle(Self.navy)
+                    Text(available ? method.detail : "Set up Face ID or a passcode on your iPhone first.")
+                        .font(.rounded(size: 14, weight: .medium))
+                        .foregroundStyle(Self.soft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 4)
+                Image(look.deco)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 36, height: 38)
+                    .accessibilityHidden(true)
+                ZStack {
+                    Circle().fill(Color.white)
+                    Circle().strokeBorder(Color(hex: 0x8569A0), lineWidth: 2.5)
+                    if chosen == method {
+                        Circle().fill(Color(hex: 0xE8237A)).padding(7)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .frame(width: 26, height: 26)
+                .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 66, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(look.fill))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white, lineWidth: 2))
+            .shadow(color: Color(hex: 0xE58AAE).opacity(0.16), radius: 8, x: 0, y: 3)
+            .opacity(available ? 1 : 0.5)
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97))
+        .disabled(!available)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Each row's icon, hearts and sparkles, and soft colour, as in the design.
+    private static func look(_ method: JournalLockMethod) -> (icon: String, deco: String, fill: Color) {
+        switch method {
+        case .biometrics: ("LockMethodFaceID", "LockMethodDeco1", Color(hex: 0xF5F7F4))
+        case .pattern: ("LockMethodPattern", "LockMethodDeco2", Color(hex: 0xF8E8FB))
+        case .passcode: ("LockMethodPasscode", "LockMethodDeco3", Color(hex: 0xFDE6EE))
+        }
     }
 }
