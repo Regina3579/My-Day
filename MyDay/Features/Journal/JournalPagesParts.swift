@@ -1750,6 +1750,9 @@ struct StepsChip: View {
                 .accessibilityLabel("\(steps) steps walked that day")
             }
         }
-        .task(id: date) { await counter.load(date) }
+        // Read again once Health's permission comes (the first time, the page shows before it).
+        .task(id: "\(date.timeIntervalSinceReferenceDate)-\(counter.permissionVersion)") {
+            await counter.load(date)
+        }
     }
 }

@@ -17,15 +17,24 @@ final class StepCounter {
 
     var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
-    /// Asks once for permission to read steps (Health's own sheet). Health never says whether
-    /// reading was allowed; when it wasn't, the days simply have no steps.
+    /// Goes up each time Health's answer may have changed, so the pages read their steps again.
+    private(set) var permissionVersion = 0
+
+    /// Asks Health for permission to read steps (Health's own sheet) whenever Health says it
+    /// has not been asked yet, then has the pages read their steps again. Health never says
+    /// whether reading was allowed; when it wasn't, the days simply have no steps.
     func requestAccess() async {
-        guard isAvailable, !UserDefaults.standard.bool(forKey: Prefs.askedForSteps) else { return }
+        guard isAvailable else { return }
         #if DEBUG
         if DebugLaunchRoute.isScreenshotRun { return }
         #endif
-        UserDefaults.standard.set(true, forKey: Prefs.askedForSteps)
-        try? await store.requestAuthorization(toShare: [], read: [HKQuantityType(.stepCount)])
+        let read: Set<HKObjectType> = [HKQuantityType(.stepCount)]
+        if let status = try? await store.statusForAuthorizationRequest(toShare: [], read: read),
+           status == .shouldRequest {
+            try? await store.requestAuthorization(toShare: [], read: read)
+        }
+        readAt = [:]
+        permissionVersion += 1
     }
 
     /// The day's steps, reading them from Health when they are not known yet (today's again
@@ -39,16 +48,19 @@ final class StepCounter {
             return
         }
         #endif
-        guard isAvailable, UserDefaults.standard.bool(forKey: Prefs.askedForSteps) else { return }
+        guard isAvailable else { return }
         if let read = readAt[start], !start.isToday || Date().timeIntervalSince(read) < 60 { return }
-        readAt[start] = .now
         let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start
         let predicate = HKSamplePredicate.quantitySample(
             type: HKQuantityType(.stepCount),
             predicate: HKQuery.predicateForSamples(withStart: start, end: end)
         )
         let query = HKStatisticsQueryDescriptor(predicate: predicate, options: .cumulativeSum)
-        guard let total = try? await query.result(for: store)?.sumQuantity()?.doubleValue(for: .count()) else { return }
+        // Only a read that worked counts: one that failed (say, while the iPhone was locked)
+        // is tried again the next time the page shows.
+        guard let result = try? await query.result(for: store) else { return }
+        readAt[start] = .now
+        guard let total = result?.sumQuantity()?.doubleValue(for: .count()) else { return }
         steps[start] = Int(total.rounded())
     }
 
