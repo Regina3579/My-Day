@@ -1022,8 +1022,9 @@ struct CategoryPicker: View {
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
 
     private var choices: [CategoryChoice] {
-        let builtIn = TaskCategory.allCases.map(CategoryChoice.builtIn)
-        return includesCustom ? builtIn + customs.map(CategoryChoice.custom) : builtIn
+        let core = TaskCategory.core.map(CategoryChoice.builtIn)
+        let later = TaskCategory.later.map(CategoryChoice.builtIn)
+        return includesCustom ? core + customs.map(CategoryChoice.custom) + later : core + later
     }
 
     var body: some View {

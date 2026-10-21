@@ -131,6 +131,10 @@ extension TaskCategory {
         case .health: Color(hex: 0x2DAA6A)
         case .learning: Color(hex: 0xE39B0B)
         case .shopping: Color(hex: 0x8A55E8)
+        case .entertainment: Color(hex: 0xB45CE8)
+        case .hobbies: Color(hex: 0xF0645A)
+        case .finance: Color(hex: 0x3BA55C)
+        case .appointments: Color(hex: 0xE8458B)
         }
     }
 
@@ -142,6 +146,10 @@ extension TaskCategory {
         case .health: Color(hex: 0x1F8A52)
         case .learning: Color(hex: 0xAD7200)
         case .shopping: Color(hex: 0x7442D6)
+        case .entertainment: Color(hex: 0x9334C4)
+        case .hobbies: Color(hex: 0xC9413A)
+        case .finance: Color(hex: 0x237A3F)
+        case .appointments: Color(hex: 0xC2185B)
         }
     }
 }
@@ -298,7 +306,8 @@ enum CategoryArt {
         ("SelfCare", ["self", "selfcare", "care", "pamper*", "spa", "bath*"]),
         ("Wellness", ["well*", "wellbeing", "happy", "happiness", "positiv*", "mood*"]),
         ("Study", ["study*", "studies", "school", "exam*", "homework", "college", "university", "class*", "revision"]),
-        ("Planning", ["plan*", "schedul*", "organi*", "calendar", "agenda", "appointment*", "event*"]),
+        ("Appointments", ["appointment*", "dentist*", "booking*", "visit*", "consult*", "checkup*"]),
+        ("Planning", ["plan*", "schedul*", "organi*", "calendar", "agenda", "event*"]),
         ("Cleaning", ["clean*", "laundry", "tidy*", "wash*", "dust*", "declutter*"]),
         ("Spirituality", ["spiritual*", "church", "pray*", "bible", "god", "faith", "worship*", "temple",
                           "mosque", "quran", "devotion*", "jesus"]),

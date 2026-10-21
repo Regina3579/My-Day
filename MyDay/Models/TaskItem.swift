@@ -109,6 +109,11 @@ enum CategoryChoice: Hashable {
 
 enum TaskCategory: String, CaseIterable, Identifiable, Codable {
     case personal, work, health, learning, shopping
+    case entertainment, hobbies, finance, appointments
+
+    /// The first five, then (after the categories people add) the four added later.
+    static let core: [TaskCategory] = [.personal, .work, .health, .learning, .shopping]
+    static let later: [TaskCategory] = [.entertainment, .hobbies, .finance, .appointments]
 
     /// Reads a stored value, including the names used by earlier versions.
     init(storedValue: String) {
@@ -129,6 +134,10 @@ enum TaskCategory: String, CaseIterable, Identifiable, Codable {
         case .health: "🌿"
         case .learning: "📖"
         case .shopping: "🛒"
+        case .entertainment: "🍿"
+        case .hobbies: "🎨"
+        case .finance: "💰"
+        case .appointments: "📅"
         }
     }
 
@@ -139,6 +148,10 @@ enum TaskCategory: String, CaseIterable, Identifiable, Codable {
         case .health: "leaf.fill"
         case .learning: "book.fill"
         case .shopping: "cart.fill"
+        case .entertainment: "popcorn.fill"
+        case .hobbies: "paintpalette.fill"
+        case .finance: "dollarsign.circle.fill"
+        case .appointments: "calendar.badge.clock"
         }
     }
 }

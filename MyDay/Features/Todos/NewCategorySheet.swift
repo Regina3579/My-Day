@@ -136,8 +136,8 @@ struct NewCategorySheet: View {
     }
 
     private static let readyMadeNames = [
-        "Beauty", "Home", "Friends", "Family", "Relationship", "Finance", "Mindfulness", "Sleep", "Food",
-        "Travel", "Entertainment", "Hobbies", "Pets", "Self Care", "Wellness", "Study", "Planning", "Cleaning",
+        "Beauty", "Home", "Friends", "Family", "Relationship", "Mindfulness", "Sleep", "Food",
+        "Travel", "Pets", "Self Care", "Wellness", "Study", "Planning", "Cleaning",
         "Spirituality", "Journaling", "Content Creation", "Goals", "Creativity", "Volunteering",
     ]
 

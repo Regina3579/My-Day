@@ -198,6 +198,8 @@ enum VoiceTaskParser {
     // MARK: Category
 
     private static let keywords: [(TaskCategory, Set<String>)] = [
+        (.appointments, ["appointment", "appointments", "dentist", "booking", "booked", "consultation", "checkup",
+                         "salon", "haircut", "visit"]),
         (.health, ["doctor", "dentist", "gym", "workout", "exercise", "run", "running", "jog", "yoga", "medicine",
                    "medication", "pills", "vitamins", "water", "walk", "hospital", "therapy", "therapist", "meditate",
                    "meditation", "checkup", "pharmacy", "sleep", "stretch", "stretching", "clinic", "health",
@@ -210,9 +212,15 @@ enum VoiceTaskParser {
                      "revision", "school", "lecture", "assignment", "essay", "chapter", "tutorial", "language"]),
         (.shopping, ["buy", "shop", "shopping", "groceries", "grocery", "store", "supermarket", "order", "milk",
                      "bread", "eggs", "market", "mall", "purchase", "gift", "gifts", "fruit", "vegetables"]),
+        (.finance, ["bill", "bills", "pay", "payment", "bank", "budget", "rent", "tax", "taxes", "savings",
+                    "salary", "loan", "emi", "insurance", "money", "transfer", "credit", "card"]),
+        (.entertainment, ["movie", "movies", "film", "netflix", "series", "concert", "game", "games", "gaming",
+                          "tv", "cinema", "theatre", "theater", "show"]),
+        (.hobbies, ["paint", "painting", "draw", "drawing", "craft", "crafts", "knit", "knitting", "sew", "sewing",
+                    "garden", "gardening", "guitar", "piano", "photography", "hobby", "baking", "bake"]),
         (.personal, ["mom", "mum", "dad", "mother", "father", "sister", "brother", "family", "friend", "friends",
-                     "birthday", "anniversary", "clean", "cleaning", "laundry", "dishes", "bills", "bank",
-                     "haircut", "personal", "party", "pet", "dog", "cat", "home", "house"])
+                     "birthday", "anniversary", "clean", "cleaning", "laundry", "dishes",
+                     "personal", "party", "pet", "dog", "cat", "home", "house"])
     ]
 
     /// The category with the most matching words; ties go to the earlier category in the list.

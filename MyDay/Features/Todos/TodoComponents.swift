@@ -143,7 +143,7 @@ struct CategoryChipBar: View {
                 CategoryChip(title: "All", icon: nil, tint: Palette.hotPink, isOn: selection == nil) {
                     selection = nil
                 }
-                ForEach(TaskCategory.allCases) { category in
+                ForEach(TaskCategory.core) { category in
                     chip(.builtIn(category))
                 }
                 ForEach(customs) { custom in
@@ -155,6 +155,10 @@ struct CategoryChipBar: View {
                                 Label("Delete Category", systemImage: "trash")
                             }
                         }
+                }
+                // Entertainment, Hobbies, Finance and Appointments, after the person's own.
+                ForEach(TaskCategory.later) { category in
+                    chip(.builtIn(category))
                 }
                 addChip
             }
