@@ -1697,8 +1697,7 @@ struct ShelfEmpty: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Text(emoji)
-                .font(.system(size: 44))
+            EmojiArt(emoji: emoji, size: 44)
                 .accessibilityHidden(true)
             Text(title)
                 .font(.rounded(.title3, weight: .heavy))

@@ -79,14 +79,50 @@ struct CrownArt: View {
     }
 }
 
-extension Text {
-    /// The words with each 👑 drawn as My Day's crown (a small picture that sits in the line).
-    init(crowned string: String) {
-        let parts = string.components(separatedBy: "👑")
-        var text = Text(verbatim: parts[0])
-        for part in parts.dropFirst() {
-            text = Text("\(text)\(Image("ProCrownInline"))\(Text(verbatim: part))")
+/// The purple camera from its design (hearts, sparkles and a heart in the lens), drawn wherever
+/// My Day shows a camera, in place of 📷 and 📸.
+struct CameraArt: View {
+    var height: CGFloat
+
+    var body: some View {
+        Image("CameraArt")
+            .resizable()
+            .scaledToFit()
+            .frame(height: height)
+            .accessibilityHidden(true)
+    }
+}
+
+/// An emoji at a size, with the purple camera in place of 📷 and 📸.
+struct EmojiArt: View {
+    let emoji: String
+    let size: CGFloat
+
+    var body: some View {
+        if emoji == "📷" || emoji == "📸" {
+            CameraArt(height: size * 0.85)
+        } else {
+            Text(emoji)
+                .font(.system(size: size))
         }
-        self = text
+    }
+}
+
+extension Text {
+    /// The words with each 👑 drawn as My Day's crown and each 📷 or 📸 as the purple camera
+    /// (small pictures that sit in the line).
+    init(crowned string: String) {
+        let pictures = ["👑": "ProCrownInline", "📷": "CameraInline", "📸": "CameraInline"]
+        var text = Text(verbatim: "")
+        var run = ""
+        for character in string {
+            if let name = pictures[String(character)] {
+                text = Text("\(text)\(Text(verbatim: run))\(Image(name))")
+                run = ""
+            } else {
+                run.append(character)
+            }
+        }
+        self = Text("\(text)\(Text(verbatim: run))")
     }
 }

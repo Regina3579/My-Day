@@ -153,7 +153,9 @@ struct TaskPhotoPanel: View {
                     PhotoActionButton(title: "View", symbol: "arrow.up.left.and.arrow.down.right", action: onView)
                     Menu {
                         if CameraAccess.isAvailable {
-                            Button("Take Photo", systemImage: "camera", action: onTake)
+                            Button(action: onTake) {
+                                Label { Text("Take Photo") } icon: { Image("CameraInline") }
+                            }
                         }
                         Button("Choose from Library", systemImage: "photo.on.rectangle", action: onChoose)
                     } label: {
@@ -184,8 +186,7 @@ private struct PhotoSourceButton: View {
             action()
         } label: {
             VStack(spacing: 6) {
-                Text(emoji)
-                    .font(.system(size: 28))
+                EmojiArt(emoji: emoji, size: 28)
                     .accessibilityHidden(true)
                 Text(title)
                     .font(.rounded(.subheadline, weight: .bold))

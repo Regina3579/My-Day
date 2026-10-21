@@ -67,7 +67,7 @@ private struct ProPaywallHeader: View {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Self.perks, id: \.self) { perk in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(perk.emoji)
+                        Text(crowned: perk.emoji)
                             .accessibilityHidden(true)
                         Text(perk.text)
                             .foregroundStyle(ProStyle.body)

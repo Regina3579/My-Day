@@ -171,8 +171,7 @@ struct TemplatesShelf: View {
 
     private func card(_ template: JournalPageTemplate) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(template.emoji)
-                .font(.system(size: 30))
+            EmojiArt(emoji: template.emoji, size: 30)
                 .frame(width: 52, height: 52)
                 .background(Circle().fill(Color.white.opacity(0.9)))
                 .accessibilityHidden(true)
@@ -582,8 +581,7 @@ struct JournalFilterSheet: View {
     private func toggle(_ emoji: String, _ title: String, isOn: Binding<Bool>) -> some View {
         Toggle(isOn: isOn.animation(.snappy)) {
             HStack(spacing: 12) {
-                Text(emoji)
-                    .font(.system(size: 22))
+                EmojiArt(emoji: emoji, size: 22)
                     .frame(width: 34)
                     .accessibilityHidden(true)
                 Text(title)

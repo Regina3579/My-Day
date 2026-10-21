@@ -534,7 +534,7 @@ struct TodoMetaLine: View {
 
     var body: some View {
         let category = Text(task.choice.label).foregroundStyle(task.choice.textColor)
-        let rest = Text(details).foregroundStyle(Palette.inkSoft)
+        let rest = Text(crowned: details).foregroundStyle(Palette.inkSoft)
         Text("\(category)\(rest)")
             .font(.rounded(.caption, weight: .semibold))
             .lineLimit(1)
@@ -638,8 +638,8 @@ struct TodosActionBar: View {
     }
 
     private var photoButton: some View {
-        SoftActionButton(title: "Photo", symbol: "camera.fill", tint: Color(hex: 0x7A4FE0), locked: photoLocked,
-                         action: onPhoto)
+        SoftActionButton(title: "Photo", symbol: "camera.fill", art: "CameraArt", tint: Color(hex: 0x7A4FE0),
+                         locked: photoLocked, action: onPhoto)
     }
 
     private var templateButton: some View {
@@ -761,6 +761,8 @@ private struct VoiceMicButton: View {
 private struct SoftActionButton: View {
     let title: String
     let symbol: String
+    /// A picture from a design to show instead of the symbol (the purple camera).
+    var art: String?
     let tint: Color
     /// A Pro button, for a free account: a little crown on its corner.
     var locked = false
@@ -772,9 +774,16 @@ private struct SoftActionButton: View {
             action()
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(tint)
+                if let art {
+                    Image(art)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 18)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(tint)
+                }
                 Text(title)
                     .font(.rounded(.footnote, weight: .bold))
                     .foregroundStyle(Palette.inkSoft)

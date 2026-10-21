@@ -402,8 +402,7 @@ private struct TemplateCard: View {
         }
         .overlay(alignment: .topLeading) {
             if drawsEmoji {
-                Text(template.emoji)
-                    .font(.system(size: 72 * k))
+                EmojiArt(emoji: template.emoji, size: 72 * k)
                     .frame(width: 128 * k, height: 128 * k)
                     .background(
                         Circle()
@@ -587,8 +586,7 @@ private struct TemplateDetailView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text(template.emoji)
-                .font(.system(size: 40))
+            EmojiArt(emoji: template.emoji, size: 40)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(template.name)

@@ -927,8 +927,7 @@ struct OptionRow<Panel: View>: View {
         VStack(spacing: 0) {
             Button(action: toggle) {
                 HStack(spacing: 12) {
-                    Text(emoji)
-                        .font(.system(size: 19))
+                    EmojiArt(emoji: emoji, size: 19)
                         .frame(width: 36, height: 36)
                         .background(Circle().fill(Color.white))
                         .accessibilityHidden(true)
