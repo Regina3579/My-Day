@@ -251,3 +251,96 @@ struct RowTint {
         }
     }
 }
+
+// MARK: - Category pictures
+
+extension CategoryChoice {
+    /// The category's cute picture from the Task Categories design (Personal's girl with a bow,
+    /// Work's laptop, Health's dumbbell, …); a category of one's own takes the picture its name
+    /// calls for ("BEAUTY" the brushes and mirror, "Bible Study" the chapel), or keeps its emoji
+    /// (nil) when no picture fits.
+    var art: String? {
+        let name: String? = switch self {
+        case .builtIn(let builtIn): "Categories/" + builtIn.rawValue.capitalized
+        case .custom(let custom): CategoryArt.match(custom.name).map { "Categories/" + $0 }
+        }
+        // Only a picture the app has (the emoji otherwise).
+        return name.flatMap { UIImage(named: $0) == nil ? nil : $0 }
+    }
+}
+
+enum CategoryArt {
+    /// The pictures in the Task Categories design, and the words in a name that call for each
+    /// (a word ending in `*` matches any word that starts with it).
+    static let all: [(art: String, words: [String])] = [
+        ("Personal", ["personal", "me", "myself", "private"]),
+        ("Work", ["work*", "job*", "office", "career", "business", "meeting*", "project*"]),
+        ("Health", ["health*", "fitness", "gym", "exercise*", "workout*", "sport*", "doctor*", "medic*"]),
+        ("Learning", ["learn*", "course*", "lesson*", "language*", "skill*", "read*", "book*"]),
+        ("Shopping", ["shop*", "buy*", "grocer*", "mall", "market"]),
+        ("Beauty", ["beauty", "makeup", "make", "skin*", "hair*", "nail*", "cosmetic*", "glam*", "salon"]),
+        ("Home", ["home*", "house*", "chore*", "garden*", "kitchen", "decor*"]),
+        ("Friends", ["friend*", "bestie*", "hangout*", "social"]),
+        ("Family", ["family", "families", "mom*", "mum*", "dad*", "parent*", "kid*", "child*", "baby", "sister*",
+                    "brother*", "grand*"]),
+        ("Relationship", ["relationship*", "love", "partner*", "date*", "dating", "husband", "wife", "romance",
+                          "boyfriend", "girlfriend", "couple*"]),
+        ("Finance", ["financ*", "money", "bill*", "budget*", "bank*", "saving*", "save", "invest*", "pay*",
+                     "tax*", "expense*"]),
+        ("Mindfulness", ["mindful*", "meditat*", "calm", "breath*", "peace*", "relax*", "yoga"]),
+        ("Sleep", ["sleep*", "rest", "nap*", "bed*", "night*"]),
+        ("Food", ["food*", "cook*", "meal*", "recipe*", "eat*", "diet*", "bak*", "lunch", "dinner", "breakfast"]),
+        ("Travel", ["travel*", "trip*", "vacation*", "holiday*", "flight*", "packing", "tour*"]),
+        ("Entertainment", ["entertain*", "game*", "gaming", "movie*", "film*", "tv", "show*", "fun", "music",
+                           "party", "parties"]),
+        ("Hobbies", ["hobby", "hobbies", "art", "paint*", "draw*", "craft*", "knit*", "sew*", "photo*"]),
+        ("Pets", ["pet*", "dog*", "puppy", "puppies", "cat*", "kitten*", "vet"]),
+        ("SelfCare", ["self", "selfcare", "care", "pamper*", "spa", "bath*"]),
+        ("Wellness", ["well*", "wellbeing", "happy", "happiness", "positiv*", "mood*"]),
+        ("Study", ["study*", "studies", "school", "exam*", "homework", "college", "university", "class*", "revision"]),
+        ("Planning", ["plan*", "schedul*", "organi*", "calendar", "agenda", "appointment*", "event*"]),
+        ("Cleaning", ["clean*", "laundry", "tidy*", "wash*", "dust*", "declutter*"]),
+        ("Spirituality", ["spiritual*", "church", "pray*", "bible", "god", "faith", "worship*", "temple",
+                          "mosque", "quran", "devotion*", "jesus"]),
+        ("Journaling", ["journal*", "diary", "diaries", "writ*", "gratitude"]),
+        ("ContentCreation", ["content", "youtube", "video*", "instagram", "tiktok", "creator*", "blog*", "vlog*",
+                             "post*", "reel*", "channel", "edit*"]),
+        ("Goals", ["goal*", "target*", "habit*", "resolution*", "achieve*"]),
+        ("Creativity", ["creativ*", "create", "idea*", "design*", "inspir*", "brainstorm*"]),
+        ("Volunteering", ["volunteer*", "charity", "donat*", "help*", "community", "kindness"]),
+    ]
+
+    /// The picture a category's name calls for, if any.
+    static func match(_ name: String) -> String? {
+        let words = name.lowercased().split { !$0.isLetter }.map(String.init)
+        guard !words.isEmpty else { return nil }
+        for (art, keys) in all {
+            for key in keys {
+                let found = key.hasSuffix("*")
+                    ? words.contains { $0.hasPrefix(String(key.dropLast())) }
+                    : words.contains { $0 == key || $0 == key + "s" }
+                if found { return art }
+            }
+        }
+        return nil
+    }
+}
+
+/// A category's picture (its emoji when it has none), at a size.
+struct CategoryIcon: View {
+    let choice: CategoryChoice
+    var size: CGFloat = 24
+
+    var body: some View {
+        if let art = choice.art {
+            Image(art)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            Text(choice.emoji)
+                .font(.system(size: size * 0.78))
+                .frame(width: size, height: size)
+        }
+    }
+}

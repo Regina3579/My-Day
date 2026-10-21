@@ -592,9 +592,12 @@ private struct TemplateDetailView: View {
                 Text(template.name)
                     .font(.rounded(.title2, weight: .heavy))
                     .foregroundStyle(Palette.ink)
-                Text("\(template.category.emoji) \(template.category.label)")
-                    .font(.rounded(.subheadline, weight: .semibold))
-                    .foregroundStyle(template.category.color)
+                HStack(spacing: 4) {
+                    CategoryIcon(choice: .builtIn(template.category), size: 20)
+                    Text(template.category.label)
+                }
+                .font(.rounded(.subheadline, weight: .semibold))
+                .foregroundStyle(template.category.color)
             }
         }
         .padding(.bottom, 6)

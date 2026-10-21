@@ -176,7 +176,7 @@ struct CategoryChipBar: View {
     }
 
     private func chip(_ choice: CategoryChoice) -> some View {
-        CategoryChip(title: choice.label, icon: choice.emoji, tint: choice.color, textTint: choice.textColor,
+        CategoryChip(title: choice.label, icon: choice.emoji, art: choice.art, tint: choice.color, textTint: choice.textColor,
                      isOn: selection == choice) {
             selection = selection == choice ? nil : choice
         }
@@ -221,6 +221,8 @@ struct CategoryChip: View {
     let title: String
     /// An emoji; `nil` shows a heart (used by "All").
     let icon: String?
+    /// The category's picture, shown instead of the emoji.
+    var art: String?
     let tint: Color
     /// The colour for the name when not chosen (`tint` if nil).
     var textTint: Color?
@@ -233,7 +235,13 @@ struct CategoryChip: View {
             withAnimation(.snappy) { action() }
         } label: {
             HStack(spacing: 5) {
-                if let icon {
+                if let art {
+                    Image(art)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 26, height: 26)
+                        .padding(.vertical, -4)
+                } else if let icon {
                     Text(icon)
                 } else {
                     Image(systemName: "heart.fill")
@@ -350,8 +358,7 @@ struct TodoRow: View {
             .buttonStyle(.plain)
             .accessibilityHint("Shows the details")
 
-            Text(task.choice.emoji)
-                .font(.system(size: 18))
+            CategoryIcon(choice: task.choice, size: 28)
                 .opacity(task.isCompleted ? 0.6 : 1)
                 .accessibilityHidden(true)
 

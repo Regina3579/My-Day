@@ -1041,7 +1041,7 @@ struct CategoryPicker: View {
             Haptics.tap()
         } label: {
             HStack(spacing: 4) {
-                Text(choice.emoji)
+                CategoryIcon(choice: choice, size: 22)
                 Text(choice.label)
                     .foregroundStyle(isOn ? Color.white : choice.textColor)
                     .lineLimit(1)

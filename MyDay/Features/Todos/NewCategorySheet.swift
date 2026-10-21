@@ -38,6 +38,7 @@ struct NewCategorySheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     nameField
+                    readyMade
                     emojiGrid
                     colourRow
                     preview
@@ -92,6 +93,53 @@ struct NewCategorySheet: View {
             }
         }
     }
+
+    /// The Task Categories design's own categories (besides the five built in), each with its
+    /// cute picture: tap one to name the new category after it.
+    private var readyMade: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SheetLabel(text: "Ready-made")
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+                ForEach(Self.readyMadeNames, id: \.self) { title in
+                    let isOn = trimmedName.lowercased() == title.lowercased()
+                    Button {
+                        name = title
+                        Haptics.tap()
+                    } label: {
+                        HStack(spacing: 5) {
+                            if let art = CategoryArt.match(title) {
+                                Image("Categories/" + art)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 26, height: 26)
+                            }
+                            Text(title)
+                                .font(.rounded(.caption, weight: .bold))
+                                .foregroundStyle(Palette.ink)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 6)
+                        .frame(minHeight: 38)
+                        .background(Capsule().fill(isOn ? Palette.blush : Color.white.opacity(0.85)))
+                        .overlay(Capsule().strokeBorder(isOn ? Palette.hotPink : Color.clear, lineWidth: 2))
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    .accessibilityLabel(title)
+                }
+            }
+            Text("Any name works: its picture is chosen from the name, or the emoji below is used.")
+                .font(.rounded(.caption, weight: .medium))
+                .foregroundStyle(Palette.inkSoft)
+        }
+    }
+
+    private static let readyMadeNames = [
+        "Beauty", "Home", "Friends", "Family", "Relationship", "Finance", "Mindfulness", "Sleep", "Food",
+        "Travel", "Entertainment", "Hobbies", "Pets", "Self Care", "Wellness", "Study", "Planning", "Cleaning",
+        "Spirituality", "Journaling", "Content Creation", "Goals", "Creativity", "Volunteering",
+    ]
 
     private var emojiGrid: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -161,6 +209,7 @@ struct NewCategorySheet: View {
         VStack(alignment: .leading, spacing: 8) {
             SheetLabel(text: "Preview")
             CategoryChip(title: trimmedName.isEmpty ? " " : trimmedName, icon: emoji,
+                         art: CategoryArt.match(trimmedName).map { "Categories/" + $0 },
                          tint: CategoryPalette.color(at: chosenColor), isOn: true) {}
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
