@@ -475,6 +475,13 @@ struct PatternPad: View {
                 .fill(color.opacity(isOn ? 0.22 : 0))
                 .frame(width: 74, height: 74)
                 .blur(radius: 4)
+            // The design's soft white button, with its pink edge and glow.
+            Circle()
+                .fill(RadialGradient(colors: [Color.white, Color(hex: 0xFDEDF4)], center: .init(x: 0.42, y: 0.32),
+                                     startRadius: 2, endRadius: 40))
+                .overlay(Circle().strokeBorder(Color(hex: 0xF7C8DB), lineWidth: 2))
+                .shadow(color: Color(hex: 0xE58AAE).opacity(0.25), radius: 6, x: 0, y: 3)
+                .frame(width: 62, height: 62)
             Image("LockPatternNode")
                 .resizable()
                 .scaledToFit()

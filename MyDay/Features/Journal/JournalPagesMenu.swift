@@ -64,14 +64,13 @@ struct JournalPagesMenu: View {
                            width: (Self.grid.width - 60) * scale, height: (span.bottom - span.top) * scale)
         return Button(action: item.action) {
             Text(crowned: item.title)
-                .font(.system(size: (item.isOn == nil ? Self.fontPixels : Self.fontPixels - 3) * scale,
-                              weight: .heavy, design: .rounded))
+                .font(.system(size: Self.fontPixels * scale, weight: .heavy, design: .rounded))
                 .foregroundStyle(Self.ink)
                 .lineLimit(lines)
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.leading)
                 .lineSpacing(-2)
-                .frame(width: (Self.textEnd - Self.textStart - (item.isOn == nil ? 0 : 22)) * scale,
+                .frame(width: (Self.textEnd - Self.textStart + (item.isOn == nil ? 0 : 6)) * scale,
                        alignment: .leading)
                 .padding(.leading, (Self.textStart - 30) * scale)
                 .frame(width: frame.width, height: frame.height, alignment: .leading)
@@ -79,7 +78,7 @@ struct JournalPagesMenu: View {
                     if let isOn = item.isOn {
                         // Over the row's hearts, where a switch belongs.
                         MenuSwitch(isOn: isOn, scale: scale)
-                            .padding(.trailing, 6 * scale)
+                            .padding(.trailing, 2 * scale)
                     }
                 }
         }
@@ -102,7 +101,7 @@ private struct MenuSwitch: View {
     let scale: CGFloat
 
     var body: some View {
-        let width = 92 * scale, height = 54 * scale
+        let width = 76 * scale, height = 46 * scale
         ZStack(alignment: isOn ? .trailing : .leading) {
             Capsule()
                 .fill(isOn
