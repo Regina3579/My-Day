@@ -783,11 +783,11 @@ struct JournalEntryCard: View {
                     }
                     HStack(alignment: .top, spacing: 10) {
                         if !previewText.isEmpty {
+                            // All of it, a little smaller, so the page reads right here on the list.
                             Text(previewText)
-                                .font(.rounded(.subheadline, weight: .medium))
+                                .font(.rounded(size: 14, weight: .medium))
                                 .foregroundStyle(JournalPagesStyle.preview)
                                 .lineSpacing(1)
-                                .lineLimit(3)
                                 .multilineTextAlignment(.leading)
                                 .padding(.trailing, previewClearance)
                         }
@@ -798,6 +798,11 @@ struct JournalEntryCard: View {
             }
             // Each part at its own height, so the photos never squeeze the words to one line.
             .fixedSize(horizontal: false, vertical: true)
+            // Everything else written on the page, small, across the card.
+            if !inTrash {
+                JournalCardDetails(entry: entry)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             // The page's photos, as a row across the card.
             JournalCardPhotos(entry: entry)
                 .fixedSize(horizontal: false, vertical: true)
@@ -824,7 +829,7 @@ struct JournalEntryCard: View {
         }
         .overlay(alignment: .bottomTrailing) {
             // The flowers would cover the last photo's corner.
-            if blush && !inTrash && entry.sortedPhotos.isEmpty {
+            if blush && !inTrash && entry.sortedPhotos.isEmpty && !JournalCardDetails.hasContent(entry) {
                 Image("JournalFlowerCorner")
                     .resizable()
                     .scaledToFit()
@@ -1752,6 +1757,157 @@ struct StepsChip: View {
         // Read again once Health's permission comes (the first time, the page shows before it).
         .task(id: "\(date.timeIntervalSinceReferenceDate)-\(counter.permissionVersion)") {
             await counter.load(date)
+        }
+    }
+}
+
+/// The rest of a page on its card, small, so it can be read while scrolling: what the day held
+/// and the goals met (tiny chips with their pictures), the grateful, highlight, tomorrow and
+/// little-win lines, the weather and place, the tags and the stickers. Only what was written.
+struct JournalCardDetails: View {
+    let entry: JournalEntry
+
+    static func hasContent(_ entry: JournalEntry) -> Bool {
+        !entry.activities.isEmpty || !entry.goals.isEmpty || !entry.tags.isEmpty || !entry.stickers.isEmpty
+            || entry.weather != nil || !entry.place.trimmed.isEmpty
+            || ![entry.gratitude, entry.highlight, entry.lookingForward, entry.littleWin].allSatisfy { $0.trimmed.isEmpty }
+    }
+
+    private static let berry = Color(hex: 0xA80B55)
+
+    var body: some View {
+        if Self.hasContent(entry) {
+            VStack(alignment: .leading, spacing: 7) {
+                if !entry.activities.isEmpty {
+                    chips(label: "Up to", items: entry.activities)
+                }
+                if !entry.goals.isEmpty {
+                    chips(label: "Goals", items: entry.goals)
+                }
+                line(art: "JournalJar", text: entry.gratitude)
+                line(art: "JournalHighlightStar", text: entry.highlight)
+                line(art: "JournalSprout", text: entry.lookingForward)
+                if !entry.littleWin.trimmed.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("🏆").font(.system(size: 13))
+                        Text(entry.littleWin.trimmed)
+                    }
+                    .font(.rounded(size: 13, weight: .medium))
+                    .foregroundStyle(JournalStyle.ink)
+                }
+                if entry.weather != nil || !entry.place.trimmed.isEmpty {
+                    HStack(spacing: 10) {
+                        if let weather = entry.weather {
+                            Label(entry.temperature.isEmpty ? weather.label : "\(weather.label) · \(entry.temperature)",
+                                  systemImage: weather.symbol)
+                                .symbolRenderingMode(.multicolor)
+                        }
+                        if !entry.place.trimmed.isEmpty {
+                            Label(entry.place.trimmed, systemImage: "mappin.circle.fill")
+                                .lineLimit(1)
+                        }
+                    }
+                    .font(.rounded(size: 12, weight: .semibold))
+                    .foregroundStyle(JournalPagesStyle.time)
+                }
+                if !entry.tags.isEmpty {
+                    ChipFlow(spacing: 5) {
+                        ForEach(entry.tags, id: \.self) { tag in
+                            Text("#" + tag)
+                                .font(.rounded(size: 11, weight: .bold))
+                                .foregroundStyle(JournalStyle.pink)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(JournalStyle.pinkFill))
+                        }
+                    }
+                }
+                if !entry.stickers.isEmpty {
+                    StickerRow(stickers: entry.stickers, size: 26)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func chips(label: String, items: [String]) -> some View {
+        ChipFlow(spacing: 5) {
+            Text(label)
+                .font(.rounded(size: 11, weight: .heavy))
+                .foregroundStyle(Self.berry)
+                .padding(.vertical, 4)
+            ForEach(items, id: \.self) { item in
+                HStack(spacing: 4) {
+                    DayItemIcon(title: item, size: 20)
+                    Text(item)
+                        .font(.rounded(size: 11, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x2B1E6B))
+                        .lineLimit(1)
+                }
+                .padding(.leading, 2)
+                .padding(.trailing, 8)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.white.opacity(0.75)))
+                .overlay(Capsule().strokeBorder(Color(hex: 0xF6C3D8), lineWidth: 1))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label): \(items.joined(separator: ", "))")
+    }
+
+    @ViewBuilder
+    private func line(art: String, text: String) -> some View {
+        let text = text.trimmed
+        if !text.isEmpty {
+            HStack(alignment: .top, spacing: 6) {
+                Image(art)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 17, height: 17)
+                    .accessibilityHidden(true)
+                Text(text)
+                    .font(.rounded(size: 13, weight: .medium))
+                    .foregroundStyle(JournalStyle.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+/// Little chips side by side, onto the next line when a line is full.
+struct ChipFlow: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, widest: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > width {
+                y += rowHeight + spacing
+                x = 0
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            widest = max(widest, x - spacing)
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: proposal.width ?? widest, height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                y += rowHeight + spacing
+                x = bounds.minX
+                rowHeight = 0
+            }
+            view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }
