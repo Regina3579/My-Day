@@ -74,8 +74,10 @@ struct JournalPagesHome: View {
     private var theme: JournalTheme { chosenTheme.applying(pro: pro.isActive) }
     private var blush: Bool { theme == .blushBlossom }
 
-    /// Back and ⋮ float over Blush Blossom's picture while it shows.
-    private var floatsButtons: Bool { blush && heroIsVisible && !isOpening }
+    /// Back and ⋮ float over Blush Blossom's page (over its picture, then on its own soft pink
+    /// bar once the picture has scrolled away); the system bar is not used there, so nothing
+    /// sits over them and every tap reaches them.
+    private var floatsButtons: Bool { blush && !isOpening }
 
     var body: some View {
         GeometryReader { proxy in
@@ -149,36 +151,62 @@ struct JournalPagesHome: View {
         // title; once it has scrolled away, the soft pink bar comes back.
         .overlay(alignment: .top) {
             if floatsButtons {
-                HStack {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(JournalStyle.ink)
-                            .frame(width: 40, height: 40)
-                            .background(Circle().fill(Color.white.opacity(0.75)))
-                            .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
-                            .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
+                GeometryReader { top in
+                    // Lower than the very top edge (where iOS keeps its own pull-down swipe, so
+                    // taps there are sometimes missed), level with the Dynamic Island.
+                    let buttonTop = max(top.safeAreaInsets.top - 22, 32)
+                    ZStack(alignment: .top) {
+                        if !heroIsVisible {
+                            JournalBackdrop.base
+                                .frame(height: buttonTop + 46 + 8)
+                                .shadow(color: JournalStyle.pink.opacity(0.12), radius: 6, x: 0, y: 3)
+                                .overlay(alignment: .top) {
+                                    Text("My Journal Pages")
+                                        .font(.rounded(.headline, weight: .bold))
+                                        .foregroundStyle(JournalStyle.ink)
+                                        .frame(height: 46)
+                                        .padding(.top, buttonTop)
+                                }
+                                .transition(.opacity)
+                        }
+                        HStack {
+                            Button {
+                                dismiss()
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(JournalStyle.ink)
+                                    .frame(width: 46, height: 46)
+                                    .background(Circle().fill(Color.white.opacity(0.8)))
+                                    .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
+                                    .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
+                                    .padding(6)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PressScaleStyle())
+                            .accessibilityLabel("Back")
+                            Spacer()
+                            moreMenu
+                                .frame(width: 46, height: 46)
+                                .background(Circle().fill(Color.white.opacity(0.8)))
+                                .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
+                                .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
+                                .padding(6)
+                                .contentShape(Rectangle())
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, buttonTop - 6)
                     }
-                    .buttonStyle(PressScaleStyle())
-                    .accessibilityLabel("Back")
-                    Spacer()
-                    moreMenu
-                        .frame(width: 40, height: 40)
-                        .background(Circle().fill(Color.white.opacity(0.75)))
-                        .overlay(Circle().strokeBorder(Color.white, lineWidth: 1))
-                        .shadow(color: JournalStyle.pink.opacity(0.18), radius: 4, x: 0, y: 2)
+                    .ignoresSafeArea(edges: .top)
+                    .animation(.easeInOut(duration: 0.2), value: heroIsVisible)
                 }
-                .padding(.horizontal, 22)
-                .padding(.top, 12)
-                .ignoresSafeArea(edges: .top)
                 .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: floatsButtons)
-        // The bar itself stays (only its back button and ⋮ hide while they float): a bar that
-        // comes and goes moves the whole page, and that is the shake on opening and scrolling.
+        // Blush Blossom draws its own buttons and bar (above); the other themes keep the system
+        // bar the whole time (a bar that comes and goes moves the whole page).
+        .toolbar(blush ? .hidden : .automatic, for: .navigationBar)
         .navigationBarBackButtonHidden(isOpening || floatsButtons)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -548,6 +576,9 @@ struct JournalPagesHome: View {
             Image(uiImage: PriorityMoreSymbol.image)
                 .foregroundStyle(JournalStyle.pink)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { moreFrame = $0 }
+                // The whole round button takes the tap, not only the three dots.
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .accessibilityLabel("More")
     }
