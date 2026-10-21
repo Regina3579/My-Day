@@ -84,7 +84,7 @@ struct SideMenuView: View {
             action()
             close()
         } label: {
-            HStack(spacing: 14) {
+            HStack(spacing: detail == nil ? 14 : 10) {
                 Image(systemName: icon)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Color.white)
@@ -94,14 +94,14 @@ struct SideMenuView: View {
                     .font(.rounded(.body, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .minimumScaleFactor(0.7)
                 Spacer()
                 if let detail {
                     Text(detail)
-                        .font(.rounded(.caption, weight: .bold))
+                        .font(.rounded(.caption2, weight: .bold))
                         .foregroundStyle(Palette.hotPink)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
                         .fixedSize()
                         .background(Capsule().fill(Palette.blush))
                 }
