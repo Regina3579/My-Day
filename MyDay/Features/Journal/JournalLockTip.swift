@@ -1,10 +1,11 @@
 import SwiftUI
 
 /// When My Journal Pages offers the Journal Lock tip:
-/// - the first time the journal opens, never (let people look around first);
-/// - the second time, once;
+/// - never on the day the journal is first opened (let people look around first);
+/// - the first time the journal opens on a later day (the next day, or whenever they come back),
+///   once;
 /// - Got it: never again; Maybe Later: once more, 7 days later, if the journal is still unlocked;
-/// - once Lock My Journal is on, never again.
+/// - once Lock My Journal is on, or the lock was looked at from the ⋮ menu, never again.
 enum JournalLockTipSchedule {
     static let laterWait: TimeInterval = 7 * 24 * 60 * 60
 
@@ -14,7 +15,13 @@ enum JournalLockTipSchedule {
         if lockEnabled { defaults.set(true, forKey: Prefs.journalLockTipDone) }
         let openings = defaults.integer(forKey: Prefs.journalOpenings) + 1
         defaults.set(openings, forKey: Prefs.journalOpenings)
-        guard !defaults.bool(forKey: Prefs.journalLockTipDone), openings >= 2 else { return false }
+        var firstOpened = defaults.double(forKey: Prefs.journalFirstOpened)
+        if firstOpened == 0 {
+            firstOpened = now.timeIntervalSince1970
+            defaults.set(firstOpened, forKey: Prefs.journalFirstOpened)
+        }
+        let firstDay = Date(timeIntervalSince1970: firstOpened).startOfDay
+        guard !defaults.bool(forKey: Prefs.journalLockTipDone), now.startOfDay > firstDay else { return false }
         let remindAt = defaults.double(forKey: Prefs.journalLockTipRemindAt)
         // Not seen yet (remindAt 0), or seen, put off, and the 7 days are over.
         return remindAt == 0 || now.timeIntervalSince1970 >= remindAt
@@ -43,7 +50,19 @@ enum JournalLockTipSchedule {
 /// **Maybe Later**, **Got it** and ✕. The whole card is the design's own picture (enlarged 4×
 /// with Real-ESRGAN), so its lettering is the design's; ✕ and the two buttons are tappable
 /// where the picture shows them (✕, like a tap outside, is Maybe Later).
+///
+/// From the ⋮ menu's Lock My Journal, the same card asks instead: its last line reads "Choose
+/// Face ID, a pattern or a passcode. 🔒" and the pink button **Lock It** (both written by the
+/// app on the picture, its own words taken out), which goes on to set the lock up.
 struct JournalLockTip: View {
+    enum Kind {
+        /// On its own, a day after the journal first opened: Maybe Later and Got it.
+        case tip
+        /// From the ⋮ menu: Maybe Later and Lock It.
+        case offer
+    }
+
+    var kind: Kind = .tip
     let onGotIt: () -> Void
     let onLater: () -> Void
 
@@ -75,7 +94,9 @@ struct JournalLockTip: View {
         .onAppear {
             SoundEffects.play(.tip)
             withAnimation(.spring(response: reduceMotion ? 0.3 : 0.45, dampingFraction: 0.72)) { shown = true }
-            UIAccessibility.post(notification: .screenChanged, argument: "Tip: your journal, your secret. Keep it private with Journal Lock.")
+            UIAccessibility.post(notification: .screenChanged,
+                                 argument: kind == .tip ? "Tip: your journal, your secret. Keep it private with Journal Lock."
+                                                        : "Your journal, your secret. Lock your journal?")
         }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
@@ -95,15 +116,43 @@ struct JournalLockTip: View {
         func spot(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> CGRect {
             CGRect(x: x0 * scale, y: y0 * scale, width: (x1 - x0) * scale, height: (y1 - y0) * scale)
         }
-        return Image("JournalLockTipArt")
+        return Image(kind == .tip ? "JournalLockTipArt" : "JournalLockMenuArt")
             .resizable()
             .frame(width: width, height: Self.grid.height * scale)
+            .overlay(alignment: .topLeading) {
+                if kind == .offer {
+                    ZStack(alignment: .topLeading) {
+                        // In place of "Go to Settings → Journal Lock to turn it on. 🔒".
+                        Text("Choose Face ID, a pattern or a passcode. 🔒")
+                            .font(.rounded(size: 22.5 * scale, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x9A6BC9))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(width: 640 * scale, height: 34 * scale)
+                            .offset(x: 55 * scale, y: 621 * scale)
+                        // In place of "Got it", between the button's two sparkles.
+                        Text("Lock It")
+                            .font(.rounded(size: 34 * scale, weight: .heavy))
+                            .foregroundStyle(Color.white)
+                            .shadow(color: Color(hex: 0xD81B78).opacity(0.35), radius: 1.5 * scale, x: 0, y: 1.5 * scale)
+                            .lineLimit(1)
+                            .frame(width: 170 * scale, height: 50 * scale)
+                            .offset(x: 472 * scale, y: 707 * scale)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                }
+            }
             .accessibilityElement()
-            .accessibilityLabel("Your Journal, Your Secret! Your thoughts are precious! Keep your journal private with Journal Lock. Go to Settings, Journal Lock, to turn it on.")
+            .accessibilityLabel(kind == .tip
+                ? "Your Journal, Your Secret! Your thoughts are precious! Keep your journal private with Journal Lock. Go to Settings, Journal Lock, to turn it on."
+                : "Your Journal, Your Secret! Your thoughts are precious! Keep your journal private with Journal Lock. Choose Face ID, a pattern or a passcode.")
             .overlay(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     pictureButton("Maybe Later", spot(41, 687, 374, 780), shape: Capsule()) { close(then: onLater) }
-                    pictureButton("Got it", spot(399, 687, 712, 780), shape: Capsule()) { close(then: onGotIt) }
+                    pictureButton(kind == .tip ? "Got it" : "Lock It", spot(399, 687, 712, 780), shape: Capsule()) {
+                        close(then: onGotIt)
+                    }
                     pictureButton("Close", spot(655, 31, 727, 103), shape: Circle()) { close(then: onLater) }
                 }
             }

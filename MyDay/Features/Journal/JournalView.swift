@@ -54,6 +54,11 @@ struct JournalPagesHome: View {
     @State private var tip: JournalMenuTip.Kind?
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     @State private var showsLockTip = false
+    /// The ⋮ menu's Lock My Journal: the same kitten card, asking, then the lock's set-up (or,
+    /// without My Day Pro, its Pro offer).
+    @State private var showsLockOffer = false
+    @State private var lockGoal: JournalLockSetupSheet.Goal?
+    @State private var proOffer: ProFeature?
     /// This opening of the journal has been counted (coming back from a page is not a new one).
     @State private var countedOpening = false
     /// Where ⋮ and the menu's Journal Theme are on screen, for the tips.
@@ -108,6 +113,27 @@ struct JournalPagesHome: View {
                 }
             }
         }
+        .overlay {
+            if showsLockOffer {
+                JournalLockTip(kind: .offer) {
+                    JournalLockTipSchedule.finish()
+                    showsLockOffer = false
+                    if pro.isActive {
+                        lockGoal = .turnOn
+                    } else {
+                        proOffer = .journalLock
+                    }
+                } onLater: {
+                    // Seen from the menu: the tip need not come by itself as well.
+                    JournalLockTipSchedule.finish()
+                    showsLockOffer = false
+                }
+            }
+        }
+        .sheet(item: $lockGoal) { goal in
+            JournalLockSetupSheet(goal: goal)
+        }
+        .proOffer($proOffer)
         .task(id: isOpening) {
             await offerLockTip()
             await offerMenuTip()
@@ -580,6 +606,21 @@ struct JournalPagesHome: View {
                 closeMenu()
                 choosesTheme = true
             },
+            // With the lock on, it locks the journal right away (it opens again Face ID, pattern or
+            // passcode); otherwise the kitten card offers to set it up (a Pro feature).
+            .init(title: lockEnabled ? "Lock Now" : (pro.isActive ? "Lock My Journal" : "Lock My Journal 👑")) {
+                closeMenu()
+                if lockEnabled {
+                    Haptics.tap()
+                    withAnimation(.easeInOut(duration: 0.3)) { appState.isJournalUnlocked = false }
+                } else {
+                    Task {
+                        // Once the menu has closed.
+                        try? await Task.sleep(for: .seconds(0.2))
+                        showsLockOffer = true
+                    }
+                }
+            },
             .init(title: "Trash") {
                 closeMenu()
                 withAnimation(.snappy) { shelf = .trash }
@@ -615,8 +656,8 @@ struct JournalPagesHome: View {
 
     // MARK: First-time tips
 
-    /// The Journal Lock tip, on the second opening of the journal (and once more 7 days after
-    /// Maybe Later), never while Lock My Journal is on. While "More options here!" is still to
+    /// The Journal Lock tip, the first time the journal opens on a later day than its very first
+    /// opening (and once more 7 days after Maybe Later), never while Lock My Journal is on. While "More options here!" is still to
     /// come, that tip goes first and this one waits for the next opening.
     private func offerLockTip() async {
         guard !isOpening, !countedOpening else { return }
@@ -624,7 +665,7 @@ struct JournalPagesHome: View {
         guard JournalLockTipSchedule.countOpeningAndCheck(lockEnabled: lockEnabled), didShowMenuTip else { return }
         try? await Task.sleep(for: TipPacer.settle)
         guard !Task.isCancelled, !lockEnabled, !showsMenu, !isFiltering, !choosesTheme, tip == nil,
-              TipPacer.mayShow() else { return }
+              !showsLockOffer, TipPacer.mayShow() else { return }
         TipPacer.shown()
         showsLockTip = true
     }
@@ -686,6 +727,11 @@ struct JournalPagesHome: View {
         if DebugLaunchRoute.takeJournalMenu() {
             try? await Task.sleep(for: .seconds(0.6))
             openMenu()
+            return
+        }
+        if DebugLaunchRoute.takeJournalLockOffer() {
+            try? await Task.sleep(for: .seconds(0.6))
+            showsLockOffer = true
             return
         }
         if DebugLaunchRoute.takeJournalPage(), let newest = live.first {

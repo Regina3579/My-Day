@@ -4,9 +4,11 @@ import SwiftUI
 /// flowers and sparkles, a pink heart bow on top, and a row for each choice (its picture in a
 /// soft round badge, pink hearts at the end, a thin line between rows). The card, bow, pictures
 /// and hearts are the design's own picture (enlarged 4× with Real-ESRGAN, its words taken out);
-/// the names are written here in thick dark navy, so they stay sharp and easy to read.
+/// the names are written here in thick dark navy, so they stay sharp and easy to read. The
+/// Lock My Journal row (its gold heart lock is the one on the kitten's journal in the Journal
+/// Lock tip) is a copy of the Journal Theme row, added above Trash.
 ///
-/// Everything is placed on the design's grid: the card picture is 520 × 588 pixels of a design
+/// Everything is placed on the design's grid: the card picture is 520 × 680 pixels of a design
 /// 941 pixels across the screen.
 struct JournalPagesMenu: View {
     struct Item: Identifiable {
@@ -15,7 +17,7 @@ struct JournalPagesMenu: View {
         var id: String { title }
     }
 
-    /// The five choices, top to bottom, as the picture shows them.
+    /// The six choices, top to bottom, as the picture shows them.
     let items: [Item]
     /// Points per pixel of the design.
     let scale: CGFloat
@@ -23,13 +25,15 @@ struct JournalPagesMenu: View {
     var onThemeRowFrame: ((CGRect) -> Void)?
 
     /// The picture's size, in pixels of the design.
-    static let grid = CGSize(width: 520, height: 588)
+    static let grid = CGSize(width: 520, height: 680)
     /// Where ⋮'s middle is on the picture's grid (the menu hangs from it).
     static let moreButton = CGPoint(x: 468, y: 52)
 
     private static let ink = Color(hex: 0x0A0A48)
     /// Each row's top and bottom, and where its name starts and must end.
-    private static let rows: [(top: CGFloat, bottom: CGFloat)] = [(95, 200), (200, 292), (292, 385), (385, 475), (475, 570)]
+    private static let rows: [(top: CGFloat, bottom: CGFloat)] = [
+        (95, 200), (200, 292), (292, 385), (385, 475), (475, 567), (567, 662),
+    ]
     private static let textStart: CGFloat = 160
     private static let textEnd: CGFloat = 402
     /// The names' size: 33 pixels of the design.
@@ -57,7 +61,7 @@ struct JournalPagesMenu: View {
         let frame = CGRect(x: 30 * scale, y: span.top * scale,
                            width: (Self.grid.width - 60) * scale, height: (span.bottom - span.top) * scale)
         return Button(action: item.action) {
-            Text(item.title)
+            Text(crowned: item.title)
                 .font(.system(size: Self.fontPixels * scale, weight: .heavy, design: .rounded))
                 .foregroundStyle(Self.ink)
                 .lineLimit(lines)
@@ -74,7 +78,7 @@ struct JournalPagesMenu: View {
             if item.title == "Journal Theme" { onThemeRowFrame?(global) }
         }
         .offset(x: frame.minX, y: frame.minY)
-        .accessibilityLabel(item.title)
+        .accessibilityLabel(item.title.replacingOccurrences(of: " 👑", with: ", My Day Pro"))
     }
 }
 

@@ -176,6 +176,7 @@ enum DebugLaunchRoute {
     @MainActor private static var journalShelf: String?
     /// Open the ⋮ menu on My Journal Pages ("journal-menu").
     @MainActor private static var journalMenu = false
+    @MainActor private static var journalLockOffer = false
     /// Open Filter on My Journal Pages ("journal-filter").
     @MainActor private static var journalFilter = false
     /// Where the journal page scrolls to ("journal-middle": the writing, "journal-bottom": Save,
@@ -368,6 +369,12 @@ enum DebugLaunchRoute {
         return journalMenu
     }
 
+    /// `journal-lock-offer`: the ⋮ menu's Lock My Journal card.
+    static func takeJournalLockOffer() -> Bool {
+        defer { journalLockOffer = false }
+        return journalLockOffer
+    }
+
     @MainActor
     static func takeJournalFilter() -> Bool {
         defer { journalFilter = false }
@@ -432,9 +439,12 @@ enum DebugLaunchRoute {
         UserDefaults.standard.set(arguments[index + 1] != "journal-prompt-tip", forKey: Prefs.didShowPromptTip)
         UserDefaults.standard.set(arguments[index + 1] != "journal-menu-tip", forKey: Prefs.didShowJournalMenuTip)
         UserDefaults.standard.set(arguments[index + 1] != "quickadd-tip", forKey: Prefs.didShowQuickAddTip)
-        // The Journal Lock tip shows only in `journal-lock-tip` (as the journal's second opening).
+        // The Journal Lock tip shows only in `journal-lock-tip` (as the journal's opening on the day
+        // after its first).
         UserDefaults.standard.set(arguments[index + 1] != "journal-lock-tip", forKey: Prefs.journalLockTipDone)
         UserDefaults.standard.set(1, forKey: Prefs.journalOpenings)
+        UserDefaults.standard.set(Date.now.addingTimeInterval(-86_400).timeIntervalSince1970,
+                                  forKey: Prefs.journalFirstOpened)
         UserDefaults.standard.set(0.0, forKey: Prefs.journalLockTipRemindAt)
         UserDefaults.standard.set(arguments[index + 1] != "journal-theme-tip", forKey: Prefs.didShowJournalThemeTip)
         UserDefaults.standard.set(arguments[index + 1] != "todos-reminder-tip", forKey: Prefs.didShowReminderTip)
@@ -485,6 +495,9 @@ enum DebugLaunchRoute {
             journalMenu = true
             router.open(.journal)
         case "journal-menu-tip", "journal-lock-tip":
+            router.open(.journal)
+        case "journal-lock-offer":
+            journalLockOffer = true
             router.open(.journal)
         case "journal-filter":
             journalShelf = JournalShelf.all.rawValue

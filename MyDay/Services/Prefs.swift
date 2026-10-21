@@ -38,6 +38,8 @@ enum Prefs {
     static let journalOpenings = "journalOpenings"
     static let journalLockTipDone = "journalLockTipDone"
     static let journalLockTipRemindAt = "journalLockTipRemindAt"
+    /// When the journal first opened (the Journal Lock tip waits until a later day).
+    static let journalFirstOpened = "journalFirstOpened"
     static let didShowJournalThemeTip = "didShowJournalThemeTip"
     /// Set once the first-time "Task Reminders" tip has been shown on a to-do's Task Details,
     /// pointing at Reminder.
