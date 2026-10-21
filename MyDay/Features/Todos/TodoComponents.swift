@@ -332,11 +332,10 @@ struct TodoRow: View {
 
             Button(action: onOpen) {
                 VStack(alignment: .leading, spacing: 3) {
-                    // The title in bold navy with its category's symbol, a little smaller,
-                    // after it ("MASCARA ✨"): the tabs at the top say what each symbol means.
-                    let symbol = Text(verbatim: " " + task.choice.emoji)
-                        .font(.rounded(.subheadline))
-                    Text("\(Text(task.title).strikethrough(task.isCompleted, color: tint.accent.opacity(0.7)))\(symbol)")
+                    // The title in bold navy; its category is the symbol beside ☆ (the tabs at
+                    // the top say what each symbol means).
+                    Text(task.title)
+                        .strikethrough(task.isCompleted, color: tint.accent.opacity(0.7))
                         .font(.rounded(.body, weight: .bold))
                         .foregroundStyle(task.isCompleted ? Palette.inkSoft.opacity(0.75) : Palette.ink)
                         .multilineTextAlignment(.leading)
@@ -350,6 +349,11 @@ struct TodoRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Shows the details")
+
+            Text(task.choice.emoji)
+                .font(.system(size: 18))
+                .opacity(task.isCompleted ? 0.6 : 1)
+                .accessibilityHidden(true)
 
             importantButton
 
