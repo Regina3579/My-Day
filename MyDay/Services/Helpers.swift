@@ -62,6 +62,15 @@ extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }
 
+/// Opening a sheet or a page smoothly.
+enum Opening {
+    /// About how long a sheet or a page takes to slide in. The keyboard waits this long before
+    /// it rises, so the two never move at once (which makes a sheet jump and shake).
+    static func settle() async {
+        try? await Task.sleep(for: .milliseconds(450))
+    }
+}
+
 enum Greeting {
     static func text(for date: Date = .now, name: String) -> String {
         let base: String

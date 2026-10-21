@@ -76,7 +76,9 @@ struct NewPrioritySheet: View {
                 Button("Delete", role: .destructive, action: deletePriority)
             }
             .task {
-                if priority == nil { titleFocused = true }
+                guard priority == nil else { return }
+                await Opening.settle()
+                titleFocused = true
             }
         }
         .presentationDetents([.medium, .large])

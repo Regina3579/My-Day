@@ -136,7 +136,7 @@ struct NewTaskSheet: View {
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(32)
             .presentationBackground(Self.background)
-            .task { focusTitleIfNeeded() }
+            .task { await focusTitleIfNeeded() }
             .task { await showReminderTipIfNew() }
     }
 
@@ -252,9 +252,11 @@ struct NewTaskSheet: View {
             }
     }
 
-    private func focusTitleIfNeeded() {
+    /// Once the sheet has slid up, the title takes the keyboard.
+    private func focusTitleIfNeeded() async {
         let isNewTask = task == nil && !photoFirst && focus == nil
         if isNewTask || focus == .title {
+            await Opening.settle()
             focusedField = .title
         }
     }

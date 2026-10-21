@@ -57,7 +57,10 @@ struct NewCategorySheet: View {
                         .disabled(!canAdd)
                 }
             }
-            .task { nameFocused = true }
+            .task {
+                await Opening.settle()
+                nameFocused = true
+            }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)

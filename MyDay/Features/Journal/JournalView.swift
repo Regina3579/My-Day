@@ -153,7 +153,9 @@ struct JournalPagesHome: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: floatsButtons)
-        .toolbar(isOpening || floatsButtons ? .hidden : .automatic, for: .navigationBar)
+        // The bar itself stays (only its back button and ⋮ hide while they float): a bar that
+        // comes and goes moves the whole page, and that is the shake on opening and scrolling.
+        .navigationBarBackButtonHidden(isOpening || floatsButtons)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("My Journal Pages")
@@ -164,7 +166,7 @@ struct JournalPagesHome: View {
                     .accessibilityHidden(heroIsVisible)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                if !floatsButtons {
+                if !floatsButtons && !isOpening {
                     moreMenu
                 }
             }

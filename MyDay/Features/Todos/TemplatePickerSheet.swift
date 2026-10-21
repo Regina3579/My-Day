@@ -1082,7 +1082,9 @@ private struct TemplateEditorView: View {
         .navigationTitle(isEditing ? "Edit Template" : "Save as Template")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if !isEditing { focus = .name }
+            guard !isEditing else { return }
+            await Opening.settle()
+            focus = .name
         }
     }
 

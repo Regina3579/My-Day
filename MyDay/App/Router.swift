@@ -85,9 +85,12 @@ final class Router {
     /// Called by a full-screen page when it appears (`true`) and disappears (`false`).
     func setFullScreen(_ isOn: Bool, in tab: AppTab, hidingStatusBar: Bool = false) {
         let step = isOn ? 1 : -1
-        fullScreenPages[tab] = max(0, fullScreenPages[tab, default: 0] + step)
-        if hidingStatusBar {
-            statusBarHidingPages[tab] = max(0, statusBarHidingPages[tab, default: 0] + step)
+        // The tab bar and the clock fade in step with the page sliding in or out, never at once.
+        withAnimation(.easeInOut(duration: 0.3)) {
+            fullScreenPages[tab] = max(0, fullScreenPages[tab, default: 0] + step)
+            if hidingStatusBar {
+                statusBarHidingPages[tab] = max(0, statusBarHidingPages[tab, default: 0] + step)
+            }
         }
     }
 
