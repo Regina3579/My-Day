@@ -4,6 +4,9 @@ import SwiftUI
 /// passcode), the pattern, or the number passcode, whichever was chosen in Settings.
 struct JournalLockView: View {
     @Environment(AppState.self) private var appState
+    @Environment(Router.self) private var router
+    @Environment(\.hostTab) private var hostTab
+    @Environment(\.dismiss) private var dismiss
     @AppStorage(Prefs.journalLockMethod) private var methodRaw = JournalLockMethod.biometrics.rawValue
     @State private var failed = false
 
@@ -16,53 +19,51 @@ struct JournalLockView: View {
 
     var body: some View {
         let method = self.method
-        GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: 14) {
-                    JournalLockArt(size: method.usesSecret ? 88 : 150)
-                    Text("My Journal is locked")
-                        .font(.rounded(.title2, weight: .heavy))
-                        .foregroundStyle(Palette.berry)
-                        .accessibilityAddTraits(.isHeader)
-                    Text(subtitle(method))
-                        .font(.rounded(.subheadline, weight: .semibold))
-                        .foregroundStyle(Palette.inkSoft)
-                        .multilineTextAlignment(.center)
-                    if method.usesSecret {
-                        JournalSecretCheck(method: method) {
-                            withAnimation { appState.isJournalUnlocked = true }
-                        }
-                        .padding(.top, 6)
-                    } else {
-                        Button(action: unlock) {
-                            Label("Unlock with \(JournalLock.methodName)", systemImage: JournalLock.symbolName)
-                        }
-                        .buttonStyle(PillButtonStyle())
-                        .padding(.horizontal, 40)
-                        .padding(.top, 8)
-                        if failed {
-                            Text("Couldn't unlock. Please try again.")
-                                .font(.rounded(.footnote, weight: .medium))
-                                .foregroundStyle(Palette.hotPink)
-                        }
+        JournalLockScene(title: Self.title(method), subtitle: Self.subtitle(method),
+                         ornament: method == .pattern ? .sparkHearts : .hearts,
+                         onBack: { dismiss() }) {
+            if method.usesSecret {
+                JournalSecretCheck(method: method) {
+                    withAnimation { appState.isJournalUnlocked = true }
+                }
+            } else {
+                VStack(spacing: 12) {
+                    Button(action: unlock) {
+                        Label("Unlock with \(JournalLock.methodName)", systemImage: JournalLock.symbolName)
+                    }
+                    .buttonStyle(PillButtonStyle())
+                    .padding(.horizontal, 40)
+                    if failed {
+                        Text("Couldn't unlock. Please try again.")
+                            .font(.rounded(.footnote, weight: .medium))
+                            .foregroundStyle(Palette.hotPink)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                .padding(.top, 10)
             }
-            .scrollBounceBehavior(.basedOnSize)
         }
+        .toolbar(.hidden, for: .navigationBar)
+        // Full screen, as in the designs: no tab bar under the pad.
+        .onAppear { router.setFullScreen(true, in: hostTab) }
+        .onDisappear { router.setFullScreen(false, in: hostTab) }
         .task {
             if !method.usesSecret { unlock() }
         }
     }
 
-    private func subtitle(_ method: JournalLockMethod) -> String {
+    static func title(_ method: JournalLockMethod) -> String {
+        switch method {
+        case .biometrics: "My Journal is Locked"
+        case .pattern: "Draw Your Pattern"
+        case .passcode: "Enter Your Passcode"
+        }
+    }
+
+    static func subtitle(_ method: JournalLockMethod) -> String {
         switch method {
         case .biometrics: "Your thoughts are safe and private. 💖"
-        case .pattern: "Draw your pattern to open it. 💖"
-        case .passcode: "Enter your passcode to open it. 💖"
+        case .pattern: "Connect at least 4 dots to unlock your journal."
+        case .passcode: "Type your 4- or 6-digit number\nto unlock your journal."
         }
     }
 
@@ -142,9 +143,7 @@ struct JournalSecretCheck: View {
             statusLine
                 .frame(minHeight: 22)
 
-            Button("Forgot \(noun)?", action: forgot)
-                .font(.rounded(.subheadline, weight: .bold))
-                .foregroundStyle(JournalStyle.pink)
+            JournalLockPillButton(title: method == .pattern ? "Forgot Pattern?" : "Forgot Passcode?", action: forgot)
         }
         .task(id: waitUntil) {
             guard let waitUntil else { return }
@@ -259,6 +258,8 @@ struct JournalSecretCheck: View {
 /// Choosing a new pattern or passcode: once, then again to confirm.
 struct JournalSecretCreate: View {
     let method: JournalLockMethod
+    /// The ‹ at the top.
+    var onBack: (() -> Void)?
     let onDone: (String) -> Void
 
     @State private var first: String?
@@ -271,17 +272,21 @@ struct JournalSecretCreate: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        JournalLockScene(title: title, subtitle: hint, ornament: method == .pattern ? .sparkHearts : .hearts,
+                         onBack: onBack) {
+            pads
+        }
+    }
+
+    private var pads: some View {
         VStack(spacing: 14) {
-            Text(title)
-                .font(.rounded(.title3, weight: .heavy))
-                .foregroundStyle(JournalPagesStyle.heading)
-                .multilineTextAlignment(.center)
-                .accessibilityAddTraits(.isHeader)
-            Text(message ?? hint)
-                .font(.rounded(.subheadline, weight: .semibold))
-                .foregroundStyle(message == nil ? JournalStyle.soft : LockPadState.wrong.color)
-                .multilineTextAlignment(.center)
-                .frame(minHeight: 20)
+            if let message {
+                Text(message)
+                    .font(.rounded(.subheadline, weight: .bold))
+                    .foregroundStyle(LockPadState.wrong.color)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
             if method == .passcode && first == nil {
                 Picker("Digits", selection: $length) {
                     Text("4 digits").tag(4)
@@ -305,32 +310,30 @@ struct JournalSecretCreate: View {
             .modifier(ShakeEffect(shakes: CGFloat(shakes)))
             .padding(.top, 4)
             if first != nil {
-                Button("Start over") {
+                JournalLockPillButton(title: "Start Over") {
                     withAnimation(.snappy) {
                         first = nil
                         message = nil
                         clear()
                     }
                 }
-                .font(.rounded(.subheadline, weight: .bold))
-                .foregroundStyle(JournalStyle.pink)
             }
         }
     }
 
     private var title: String {
         switch (method, first == nil) {
-        case (.pattern, true): "Draw your new pattern"
-        case (.pattern, false): "Draw it again to confirm"
-        case (_, true): "Choose a \(length)-digit passcode"
-        case (_, false): "Type it again to confirm"
+        case (.pattern, true): "Draw Your Pattern"
+        case (.pattern, false): "Draw It Again"
+        case (_, true): "Choose Your Passcode"
+        case (_, false): "Type It Again"
         }
     }
 
     private var hint: String {
         switch (method, first == nil) {
-        case (.pattern, true): "Join at least 4 dots without lifting your finger."
-        case (_, true): "You'll type it to open your journal."
+        case (.pattern, true): "Connect at least 4 dots to lock your journal."
+        case (_, true): "Pick a \(length)-digit number to lock your journal."
         default: "Just to be sure you remember it."
         }
     }
@@ -463,19 +466,25 @@ struct PatternPad: View {
         .accessibilityLabel("Pattern dots")
     }
 
+    /// A soft white button with a glossy pink heart, from the pattern's design; joined, it glows
+    /// in the pad's colour.
     private func dotView(_ dot: Int, color: Color) -> some View {
         let isOn = dots.contains(dot)
         return ZStack {
             Circle()
-                .fill(isOn ? color.opacity(0.16) : Color.white.opacity(0.75))
+                .fill(color.opacity(isOn ? 0.22 : 0))
+                .frame(width: 74, height: 74)
+                .blur(radius: 4)
+            Image("LockPatternNode")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 66, height: 66)
             Circle()
-                .strokeBorder(isOn ? color : JournalStyle.placeholder.opacity(0.35), lineWidth: 2)
-            Circle()
-                .fill(isOn ? color : JournalStyle.plum.opacity(0.55))
-                .frame(width: isOn ? 20 : 14, height: isOn ? 20 : 14)
+                .strokeBorder(color.opacity(isOn ? 0.9 : 0), lineWidth: 3)
+                .frame(width: 60, height: 60)
         }
-        .frame(width: 60, height: 60)
-        .shadow(color: JournalStyle.pink.opacity(isOn ? 0.25 : 0.1), radius: 5, x: 0, y: 2)
+        .frame(width: 74, height: 74)
+        .scaleEffect(isOn ? 1.06 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isOn)
         .accessibilityElement()
         .accessibilityLabel("Dot \(dot + 1)")
@@ -544,26 +553,36 @@ struct PasscodePad: View {
     /// Called when the last digit is typed.
     let onComplete: (String) -> Void
 
-    private let keySize: CGFloat = 72
+    private let keySize: CGFloat = 66
     private let rows = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]
+    private static let berry = Color(hex: 0xA80B55)
+    private static let keyHeart = Color(hex: 0xF58DB9)
 
     var body: some View {
         VStack(spacing: 22) {
-            HStack(spacing: 16) {
+            // As in the design: little hearts at each end of the row of circles.
+            HStack(spacing: 14) {
+                Image("LockDotOrnL").resizable().scaledToFit().frame(height: 26).accessibilityHidden(true)
                 ForEach(0..<length, id: \.self) { index in
                     let isFilled = index < code.count
                     Circle()
-                        .fill(isFilled ? state.color : Color.white.opacity(0.85))
-                        .overlay(Circle().strokeBorder(state.color.opacity(0.85), lineWidth: 2))
-                        .frame(width: 18, height: 18)
-                        .scaleEffect(isFilled ? 1.1 : 1)
+                        .fill(isFilled
+                              ? AnyShapeStyle(state == .normal
+                                              ? AnyShapeStyle(LinearGradient(colors: [Color(hex: 0xFF9CC8), Color(hex: 0xF0569B)],
+                                                                             startPoint: .top, endPoint: .bottom))
+                                              : AnyShapeStyle(state.color))
+                              : AnyShapeStyle(Color.white.opacity(0.8)))
+                        .overlay(Circle().strokeBorder(state == .normal ? Color(hex: 0xF3A3C6) : state.color, lineWidth: 2.5))
+                        .frame(width: 24, height: 24)
+                        .scaleEffect(isFilled ? 1.08 : 1)
                 }
+                Image("LockDotOrnR").resizable().scaledToFit().frame(height: 26).accessibilityHidden(true)
             }
             .animation(.spring(response: 0.25, dampingFraction: 0.6), value: code)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(code.count) of \(length) digits entered")
 
-            Grid(horizontalSpacing: 22, verticalSpacing: 12) {
+            Grid(horizontalSpacing: 18, verticalSpacing: 10) {
                 ForEach(rows, id: \.self) { row in
                     GridRow {
                         ForEach(row, id: \.self) { digit in
@@ -572,11 +591,9 @@ struct PasscodePad: View {
                     }
                 }
                 GridRow {
-                    Color.clear
-                        .frame(width: keySize, height: keySize)
-                        .accessibilityHidden(true)
-                    key("0")
                     deleteKey
+                    key("0")
+                    doneKey
                 }
             }
             .disabled(isDisabled)
@@ -592,32 +609,65 @@ struct PasscodePad: View {
             Haptics.tap()
             if code.count == length { onComplete(code) }
         } label: {
-            Text(digit)
-                .font(.rounded(size: 30, weight: .bold))
-                .foregroundStyle(JournalPagesStyle.heading)
-                .frame(width: keySize, height: keySize)
-                .background(Circle().fill(Color.white.opacity(0.92)))
-                .overlay(Circle().strokeBorder(JournalStyle.pinkFill, lineWidth: 1.5))
-                .shadow(color: JournalStyle.pink.opacity(0.14), radius: 6, x: 0, y: 3)
+            VStack(spacing: 1) {
+                Text(digit)
+                    .font(.rounded(size: 30, weight: .heavy))
+                    .foregroundStyle(Self.berry)
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Self.keyHeart)
+            }
+            .padding(.top, 4)
+            .frame(width: keySize, height: keySize)
+            .background(keyFace(lilac: false))
         }
         .buttonStyle(PressScaleStyle(scale: 0.9))
         .accessibilityLabel(digit)
+    }
+
+    /// A key from the design: a soft white bubble with a pink edge (lilac for ⌫ and the heart).
+    private func keyFace(lilac: Bool) -> some View {
+        Circle()
+            .fill(RadialGradient(colors: lilac ? [Color(hex: 0xF6EEFD), Color(hex: 0xE6D4F8)]
+                                               : [Color.white, Color(hex: 0xFDECF3)],
+                                 center: .init(x: 0.4, y: 0.3), startRadius: 2, endRadius: keySize * 0.7))
+            .overlay(Circle().strokeBorder(lilac ? Color(hex: 0xD9BEF2) : Color(hex: 0xF7C8DB), lineWidth: 2))
+            .shadow(color: Color(hex: 0xE58AAE).opacity(0.22), radius: 6, x: 0, y: 3)
     }
 
     private var deleteKey: some View {
         Button {
             if !code.isEmpty { code.removeLast() }
         } label: {
-            Image(systemName: "delete.left.fill")
+            Image(systemName: "delete.left")
                 .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(JournalStyle.plum)
+                .foregroundStyle(Color(hex: 0x8A63B8))
                 .frame(width: keySize, height: keySize)
-                .contentShape(Rectangle())
+                .background(keyFace(lilac: true))
         }
         .buttonStyle(PressScaleStyle(scale: 0.9))
         .disabled(code.isEmpty)
-        .opacity(code.isEmpty ? 0.35 : 1)
         .accessibilityLabel("Delete")
+    }
+
+    /// The pink heart: sends the passcode (it is sent by itself, too, once every digit is in).
+    private var doneKey: some View {
+        Button {
+            if code.count == length {
+                onComplete(code)
+            } else {
+                Haptics.tap()
+            }
+        } label: {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFF7DB9), Color(hex: 0xF0418E)],
+                                                startPoint: .top, endPoint: .bottom))
+                .frame(width: keySize, height: keySize)
+                .background(keyFace(lilac: true))
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.9))
+        .accessibilityLabel("Done")
     }
 }
 

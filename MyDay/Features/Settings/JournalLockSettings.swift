@@ -100,19 +100,34 @@ struct JournalLockSetupSheet: View {
     /// The first step of turning the lock on, drawn as its design (see `JournalLockChooseView`).
     private var isChoosing: Bool { step == .choose }
 
+    /// Choosing or checking a pattern or passcode: the pink lock screen from its designs.
+    private var usesScene: Bool {
+        switch step {
+        case .create: true
+        case .verify(let method): method.usesSecret
+        default: false
+        }
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            if !isChoosing {
-                header
+        Group {
+            if usesScene {
+                sceneStep
+            } else {
+                VStack(spacing: 0) {
+                    if !isChoosing {
+                        header
+                    }
+                    ScrollView {
+                        content
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                            .padding(.bottom, 24)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                }
             }
-            ScrollView {
-                content
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
-                    .frame(maxWidth: .infinity)
-            }
-            .scrollBounceBehavior(.basedOnSize)
         }
         .background {
             if isChoosing {
@@ -173,6 +188,32 @@ struct JournalLockSetupSheet: View {
         case .turnOff: "Turn Off the Lock"
         case .switchTo(let method): "Use \(method.title)"
         case .changeSecret: JournalLockMethod.current == .pattern ? "Change Pattern" : "Change Passcode"
+        }
+    }
+
+    @ViewBuilder
+    private var sceneStep: some View {
+        switch step {
+        case .create(let method):
+            JournalSecretCreate(method: method, onBack: backFromCreate) { secret in
+                finish(method, secret: secret)
+            }
+        case .verify(let method):
+            JournalLockScene(title: JournalLockView.title(method), subtitle: "Just to be sure it's you.",
+                             ornament: method == .pattern ? .sparkHearts : .hearts, onBack: { dismiss() }) {
+                JournalSecretCheck(method: method) { verified() }
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    /// ‹ while choosing a pattern or passcode: back to the three ways when turning the lock on.
+    private func backFromCreate() {
+        if case .turnOn = goal {
+            withAnimation(.snappy) { step = .choose }
+        } else {
+            dismiss()
         }
     }
 

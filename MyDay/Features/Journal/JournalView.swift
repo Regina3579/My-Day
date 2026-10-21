@@ -9,8 +9,6 @@ struct JournalView: View {
     var body: some View {
         if lockEnabled && !appState.isJournalUnlocked {
             JournalLockView()
-                .tabBarSafeArea()
-                .background(DreamyBackground(theme: .journal))
                 .navigationTitle("My Journal")
                 .navigationBarTitleDisplayMode(.inline)
         } else {
