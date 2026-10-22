@@ -64,6 +64,9 @@ struct OnThisDayCard: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(height: 120)
+                // A memory trashed, or a new day with fewer: never a blank page.
+                .onChange(of: memories.count) { _, count in page = min(page, max(0, count - 1)) }
+                .onChange(of: today) { _, _ in page = 0 }
                 if memories.count > 1 {
                     HStack(spacing: 6) {
                         ForEach(memories.indices, id: \.self) { index in

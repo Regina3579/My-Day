@@ -38,12 +38,13 @@ struct RootView: View {
                     .padding(.bottom, barBottom)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .ignoresSafeArea(edges: .bottom)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.move(edge: .bottom).combined(with: .opacity)
+                        .animation(.easeInOut(duration: 0.25)))
                 }
 
                 if showsQuickAdd {
                     quickAddLayer(aboveBottom: barBottom + TabBarLayout.height + 40)
-                        .transition(.opacity)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.2)))
                 }
 
                 if router.isMenuOpen {
@@ -84,8 +85,6 @@ struct RootView: View {
                     .zIndex(3)
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: showsQuickAdd)
-            .animation(.easeInOut(duration: 0.25), value: router.showsTabBar)
         }
         .background { AchievementWatcher() }
         .statusBarHidden(router.hidesStatusBar)
@@ -96,7 +95,7 @@ struct RootView: View {
             // A badge earned while a sheet was open pops up once it closes.
             if isFree { AchievementCenter.shared.showNext() }
         }
-        .onChange(of: SharedListStore.shared.listToOpen) { _, target in
+        .onChange(of: SharedListStore.shared.listToOpen, initial: true) { _, target in
             // An invitation was accepted: its list opens.
             guard let target else { return }
             SharedListStore.shared.listToOpen = nil
@@ -135,6 +134,7 @@ struct RootView: View {
             // My Day was installed again.
             TemplateLibrary.removeDuplicateStarters(in: modelContext)
             ReminderCenter.syncAll(in: modelContext)
+            ImportantDayReminders.syncAll(in: modelContext)
         }
         .task {
             SampleContent.removeIfNeeded(in: modelContext)
@@ -146,6 +146,7 @@ struct RootView: View {
             refreshDay()
             // Each launch, so reminders set by an earlier version carry the current reminder sound.
             ReminderCenter.syncAll(in: modelContext)
+            ImportantDayReminders.syncAll(in: modelContext)
             rating.noteActive()
             SharedListStore.shared.start()
             AchievementCenter.shared.isScreenBusy = { [router] in
@@ -380,6 +381,8 @@ private extension View {
     func tabLayer(visible: Bool) -> some View {
         self
             .opacity(visible ? 1 : 0)
+            // The chosen tab always draws above the others.
+            .zIndex(visible ? 1 : 0)
             .allowsHitTesting(visible)
             .accessibilityHidden(!visible)
     }

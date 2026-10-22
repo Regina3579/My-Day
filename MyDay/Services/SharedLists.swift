@@ -138,12 +138,34 @@ final class SharedListStore {
                 database: container.sharedCloudDatabase,
                 stateSerialization: Self.loadState(.shared),
                 delegate: syncDelegate))
+            queueUnsent()
+        }
+    }
+
+    /// Lists and items made before syncing started (offline, no iCloud yet, or in the moment
+    /// before it starts) were never queued: they are sent now.
+    private func queueUnsent() {
+        for list in lists {
+            if list.isMine, list.systemFields == nil {
+                privateEngine?.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: list.zoneID))])
+                queueSave([Self.listRecordID(list.zoneID)], in: list)
+            }
+            let unsent = list.items.filter { $0.systemFields == nil }.map { Self.itemRecordID($0.id, list.zoneID) }
+            if !unsent.isEmpty { queueSave(unsent, in: list) }
+        }
+    }
+
+    /// Starts syncing and waits (a few seconds at most) for it to be ready.
+    private func startAndWait() async {
+        start()
+        for _ in 0..<50 where privateEngine == nil {
+            try? await Task.sleep(for: .milliseconds(100))
         }
     }
 
     /// Fetches what changed in iCloud now (pull to refresh, or a list opening).
     func refresh() async {
-        start()
+        await startAndWait()
         try? await privateEngine?.fetchChanges()
         try? await sharedEngine?.fetchChanges()
     }
@@ -224,6 +246,7 @@ final class SharedListStore {
         guard let list = list(listID) else { throw CKError(.unknownItem) }
         if let existing = try await existingShare(for: list) { return existing }
         guard list.isMine else { throw CKError(.permissionFailure) }
+        await startAndWait()
         try await privateEngine?.sendChanges()
         let share = CKShare(recordZoneID: list.zoneID)
         share[CKShare.SystemFieldKey.title] = "\(list.name) \(list.emoji)"
@@ -291,7 +314,7 @@ final class SharedListStore {
         do {
             _ = try await container.accept(metadata)
             let zoneID = metadata.share.recordID.zoneID
-            start()
+            await startAndWait()
             try? await sharedEngine?.fetchChanges()
             if let joined = lists.first(where: { $0.zoneID == zoneID }) {
                 listToOpen = joined.id
@@ -620,6 +643,25 @@ struct SharedListLink: Identifiable {
         var all = links
         all[choice.key] = listID
         UserDefaults.standard.set(all, forKey: Prefs.sharedCategoryLists)
+        // A new list: nothing of the category has gone into it yet.
+        var sent = sentByCategory
+        sent[choice.key] = []
+        UserDefaults.standard.set(sent, forKey: Prefs.sharedCategoryTasks)
+    }
+
+    /// The to-dos (by id) already put into the category's list.
+    static func sentTasks(for choice: CategoryChoice) -> Set<String> {
+        Set(sentByCategory[choice.key] ?? [])
+    }
+
+    static func noteSent(_ taskIDs: [String], for choice: CategoryChoice) {
+        var sent = sentByCategory
+        sent[choice.key] = Array(Set(sent[choice.key] ?? []).union(taskIDs))
+        UserDefaults.standard.set(sent, forKey: Prefs.sharedCategoryTasks)
+    }
+
+    private static var sentByCategory: [String: [String]] {
+        UserDefaults.standard.dictionary(forKey: Prefs.sharedCategoryTasks) as? [String: [String]] ?? [:]
     }
 
     private static var links: [String: String] {

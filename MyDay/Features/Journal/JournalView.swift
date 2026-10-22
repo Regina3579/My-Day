@@ -373,7 +373,10 @@ struct JournalPagesHome: View {
                         PhotosShelf(entries: pages)
                     }
                 } else {
-                    let months = JournalMonth.group(pages, oldestFirst: filter.oldestFirst)
+                    // This month shows even before its first page when an Important Day falls in it.
+                    let thisMonth = appState.today.startOfMonth
+                    let months = JournalMonth.group(pages, oldestFirst: filter.oldestFirst,
+                                                    alsoMonth: importantDayCards(in: thisMonth).isEmpty ? nil : thisMonth)
                     if months.isEmpty {
                         listHeader(title: shelf.label)
                         emptyState

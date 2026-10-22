@@ -608,17 +608,25 @@ struct TodayToDosView: View {
             return
         }
         let store = SharedListStore.shared
-        let titles = tasks.filter { $0.choice == choice && !$0.isCompleted }.map(\.title)
+        let open = tasks.filter { $0.choice == choice && !$0.isCompleted }
         if let id = SharedListLink.list(for: choice), let list = store.list(id) {
-            let have = Set(list.items.map { $0.title.lowercased() })
-            for title in titles where !have.contains(title.lowercased()) {
-                store.addItem(title, to: id)
+            // Only to-dos not shared before: what members deleted from the list stays deleted.
+            let sent = SharedListLink.sentTasks(for: choice)
+            var have = Set(list.items.map { $0.title.lowercased() })
+            for task in open where !sent.contains(task.id.uuidString) {
+                if have.insert(task.title.lowercased()).inserted {
+                    store.addItem(task.title, to: id)
+                }
             }
+            SharedListLink.noteSent(open.map(\.id.uuidString), for: choice)
             sharing = SharedListLink(id: id)
             return
         }
+        var seen = Set<String>()
+        let titles = open.map(\.title).filter { seen.insert($0.lowercased()).inserted }
         let list = store.makeList(name: choice.label, emoji: choice.emoji, items: titles)
         SharedListLink.remember(list.id, for: choice)
+        SharedListLink.noteSent(open.map(\.id.uuidString), for: choice)
         store.start()
         sharing = SharedListLink(id: list.id)
     }

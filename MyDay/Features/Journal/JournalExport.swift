@@ -80,7 +80,8 @@ enum JournalPDF {
         return url
     }
 
-    private static let contentsPerSheet = 24
+    /// As many as fit an A4 sheet under the Contents title, with room to spare.
+    private static let contentsPerSheet = 22
 
     /// Lays a journal page out on as many sheets as it needs, drawing them when `pdf` is given.
     /// Returns how many sheets it took.
@@ -190,21 +191,34 @@ enum JournalPDFBlocks {
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary).map(UIImage.init(cgImage:))
     }
 
-    /// Splits a very long paragraph at sentence ends, so no piece is taller than a sheet.
+    /// Splits a very long paragraph at sentence ends (in any language), and a sentence too long
+    /// on its own at a space, so no piece is taller than a sheet.
     private static func split(_ paragraph: String) -> [String] {
-        guard paragraph.count > 1400 else { return [paragraph] }
+        let limit = 1200
+        guard paragraph.count > limit else { return [paragraph] }
+        var sentences: [String] = []
+        paragraph.enumerateSubstrings(in: paragraph.startIndex..., options: .bySentences) { sentence, _, _, _ in
+            if let sentence { sentences.append(sentence) }
+        }
         var pieces: [String] = []
         var current = ""
-        for sentence in paragraph.split(separator: ".", omittingEmptySubsequences: false) {
-            let piece = sentence + "."
-            if current.count + piece.count > 1200, !current.isEmpty {
+        for sentence in sentences {
+            if current.count + sentence.count > limit, !current.trimmed.isEmpty {
                 pieces.append(current.trimmed)
                 current = ""
             }
-            current += piece
+            var rest = Substring(sentence)
+            while rest.count > limit {
+                let end = rest.index(rest.startIndex, offsetBy: limit)
+                var cut = end
+                if let space = rest[..<end].lastIndex(of: " "), space > rest.startIndex { cut = space }
+                pieces.append(String(rest[..<cut]).trimmed)
+                rest = rest[cut...]
+            }
+            current += rest
         }
-        if !current.trimmed.isEmpty { pieces.append(String(current.trimmed.dropLast(paragraph.hasSuffix(".") ? 0 : 1))) }
-        return pieces
+        if !current.trimmed.isEmpty { pieces.append(current.trimmed) }
+        return pieces.isEmpty ? [paragraph] : pieces
     }
 }
 
@@ -303,7 +317,7 @@ private struct ContentsSheet: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(Color(hex: 0xF6C3D8), lineWidth: 1.5)
                 .padding(18)
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
                 if isFirst {
                     Text("Contents")
                         .font(.system(size: 30, weight: .heavy, design: .rounded))
@@ -311,6 +325,7 @@ private struct ContentsSheet: View {
                         .padding(.bottom, 8)
                 }
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    VStack(alignment: .leading, spacing: 5) {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(row.0.formatted(.dateTime.day().month(.abbreviated).year()))
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -326,6 +341,7 @@ private struct ContentsSheet: View {
                             .foregroundStyle(PDFStyle.berry)
                     }
                     Divider().overlay(Color(hex: 0xF6C3D8))
+                    }
                 }
             }
             .padding(.horizontal, 54)
@@ -734,10 +750,12 @@ struct ExportJournalSheet: View {
                 return
             }
             let url = await JournalPDF.make(entries, options: final, fileName: final.coverTitle) { value in
-                progress = value
+                if !Task.isCancelled { progress = value }
             }
+            // Stopped: Stop has reset the sheet, and a new export may already be running.
+            guard !Task.isCancelled else { return }
             progress = nil
-            if let url, !Task.isCancelled {
+            if let url {
                 made = MadePDF(url: url)
                 Haptics.success()
             }

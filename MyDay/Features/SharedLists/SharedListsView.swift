@@ -649,7 +649,7 @@ struct ShareListSheet: View {
             } else {
                 inviteViaLabel
             }
-            Text("Anyone with this link, My Day and an iCloud account can join and edit this list.")
+            Text("People you invite can join and edit this list. They need My Day and an iCloud account.")
                 .font(.rounded(.footnote, weight: .medium))
                 .foregroundStyle(Palette.inkSoft)
                 .multilineTextAlignment(.center)

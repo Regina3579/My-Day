@@ -5,7 +5,7 @@ import SwiftUI
 /// its own: pages stay on the iPhone and, with Sync on, in the person's own private iCloud.
 struct SecurityPromise: View {
     static let green = Color(hex: 0x4FBF8F)
-    static let text = "We don't send your data to our servers, and we don't have access to your entries. Everything stays on your iPhone and, if you turn on Sync, in your own private iCloud. No third-party app can read your data."
+    static let text = "We don't send your data to our servers, and we don't have access to your entries. Everything stays on your iPhone and, if you turn on Sync, in your own private iCloud. A list you share is seen only by the people you invite. No third-party app can read your data."
 
     var body: some View {
         VStack(spacing: 12) {

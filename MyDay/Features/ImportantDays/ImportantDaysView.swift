@@ -467,6 +467,15 @@ struct ImportantDayDetailView: View {
     @State private var isEditing = false
 
     var body: some View {
+        // Deleted from its editor: nothing more to draw while the page closes.
+        if day.isDeleted || day.modelContext == nil {
+            Color.clear
+        } else {
+            page
+        }
+    }
+
+    private var page: some View {
         ScrollView {
             VStack(spacing: 16) {
                 ImportantDayPhoto(day: day, cornerRadius: 28)
@@ -659,28 +668,67 @@ enum ImportantDayText {
 // MARK: - Reminders
 
 /// A reminder at 9 in the morning on the day (every year when it repeats).
+@MainActor
 enum ImportantDayReminders {
-    private static func id(_ day: ImportantDay) -> String { "important-day-\(day.id.uuidString)" }
+    private static let prefix = "important-day-"
+    private static func id(_ day: ImportantDay) -> String { prefix + day.id.uuidString }
 
     static func schedule(_ day: ImportantDay) async {
         cancel(day)
-        guard day.remindsMe, await ReminderCenter.requestPermission() else { return }
+        // Read before waiting, while the day is certainly still there.
+        let identifier = id(day)
+        let title = day.title
+        let isBirthday = day.kind == .birthday
         let calendar = Calendar.current
-        var parts = calendar.dateComponents(day.repeatsYearly ? [.month, .day] : [.year, .month, .day], from: day.date)
-        parts.hour = 9
-        if !day.repeatsYearly, let fire = calendar.date(from: parts), fire < .now { return }
+        let trigger: UNCalendarNotificationTrigger
+        if day.repeatsYearly, !Self.isLeapDay(day.date, calendar) {
+            var parts = calendar.dateComponents([.month, .day], from: day.date)
+            parts.hour = 9
+            trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: true)
+        } else {
+            // A one-off day, or 29 February (the 28th in other years): its next time only, set
+            // again each launch.
+            guard let next = day.nextDate(from: .now),
+                  let fire = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: next), fire > .now
+            else { return }
+            trigger = UNCalendarNotificationTrigger(
+                dateMatching: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fire), repeats: false)
+        }
+        guard day.remindsMe, await ReminderCenter.requestPermission() else { return }
         let content = UNMutableNotificationContent()
-        content.title = "\(day.title) 💖"
-        content.body = day.kind == .birthday ? "It's \(day.title) today! Send some love. 🎂"
-            : "Today is \(day.title). A day to remember! ✨"
+        content.title = "\(title) 💖"
+        content.body = isBirthday ? "It's \(title) today! Send some love. 🎂" : "Today is \(title). A day to remember! ✨"
         content.sound = .default
-        let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: day.repeatsYearly)
-        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id(day), content: content,
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: identifier, content: content,
                                                                                trigger: trigger))
     }
 
     static func cancel(_ day: ImportantDay) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id(day)])
+    }
+
+    /// Every day's reminder as it should be now: days added, changed or deleted on another
+    /// device through iCloud, and a 29 February's next time. Run at launch and after iCloud imports.
+    static func syncAll(in context: ModelContext) {
+        let days = (try? context.fetch(FetchDescriptor<ImportantDay>())) ?? []
+        let wanted = Set(days.filter(\.remindsMe).map(id))
+        Task {
+            let pending = await UNUserNotificationCenter.current().pendingNotificationRequests()
+            let stale = pending.map(\.identifier).filter { $0.hasPrefix(prefix) && !wanted.contains($0) }
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: stale)
+            // Only where reminders are already allowed: launching never asks.
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            let allowed: [UNAuthorizationStatus] = [.authorized, .provisional, .ephemeral]
+            guard allowed.contains(settings.authorizationStatus) else { return }
+            for day in days where day.remindsMe && day.modelContext != nil {
+                await schedule(day)
+            }
+        }
+    }
+
+    private static func isLeapDay(_ date: Date, _ calendar: Calendar) -> Bool {
+        let parts = calendar.dateComponents([.month, .day], from: date)
+        return parts.month == 2 && parts.day == 29
     }
 }
 

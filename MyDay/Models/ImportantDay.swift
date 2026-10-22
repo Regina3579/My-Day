@@ -38,7 +38,9 @@ final class ImportantDay {
     func nextDate(from today: Date) -> Date? {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: today)
-        guard repeatsYearly else { return date >= start ? date : nil }
+        // Still to come for the first time (a wedding two years away): the day itself.
+        if date >= start { return date }
+        guard repeatsYearly else { return nil }
         let year = calendar.component(.year, from: start)
         for candidateYear in [year, year + 1] {
             if let day = occurrence(in: candidateYear), day >= start, day >= date { return day }

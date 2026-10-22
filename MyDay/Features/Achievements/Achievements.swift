@@ -453,6 +453,7 @@ struct AchievementRules {
 /// Watches the to-dos and journal pages (kept out of the root view, so their changes redraw
 /// only this) and checks the badges when they change.
 struct AchievementWatcher: View {
+    @Environment(AppState.self) private var appState
     @Query private var tasks: [TaskItem]
     @Query(filter: #Predicate<JournalEntry> { $0.deletedAt == nil }) private var pages: [JournalEntry]
 
@@ -460,7 +461,14 @@ struct AchievementWatcher: View {
     private var signature: String {
         let done = tasks.filter(\.isCompleted).count
         let ticks = pages.reduce(0) { $0 + $1.goals.count + $1.activities.count }
-        return "\(tasks.count)-\(done)-\(pages.count)-\(ticks)"
+        // Moods and which goals are ticked, not only how many (Positive Vibes, Drink Water…).
+        let details = pages.reduce(into: Hasher()) { hasher, page in
+            hasher.combine(page.mood.rawValue)
+            hasher.combine(page.goals)
+        }.finalize()
+        // The day too: opening My Day on a new day counts towards the streaks.
+        let day = appState.today.timeIntervalSinceReferenceDate
+        return "\(tasks.count)-\(done)-\(pages.count)-\(ticks)-\(details)-\(day)"
     }
 
     var body: some View {

@@ -1657,8 +1657,10 @@ struct JournalMonth: Identifiable {
 
     var title: String { month.formatted(.dateTime.month(.wide).year()) }
 
-    static func group(_ pages: [JournalEntry], oldestFirst: Bool) -> [JournalMonth] {
-        let groups = Dictionary(grouping: pages) { $0.date.startOfMonth }
+    /// `alsoMonth` is listed even without pages (this month, when an Important Day falls in it).
+    static func group(_ pages: [JournalEntry], oldestFirst: Bool, alsoMonth: Date? = nil) -> [JournalMonth] {
+        var groups = Dictionary(grouping: pages) { $0.date.startOfMonth }
+        if let alsoMonth, groups[alsoMonth.startOfMonth] == nil { groups[alsoMonth.startOfMonth] = [] }
         let oldest = groups.keys.sorted()
         let months = oldestFirst ? oldest : Array(oldest.reversed())
         return months.map { JournalMonth(month: $0, entries: groups[$0] ?? []) }
