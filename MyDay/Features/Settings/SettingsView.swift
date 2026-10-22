@@ -42,6 +42,8 @@ struct SettingsView: View {
     @State private var opensJournalTheme = false
     /// `settings-more`: More opened for the screenshot.
     @State private var opensMore = false
+    /// `settings-more-apps`: More Great Apps opened for the screenshot.
+    @State private var opensMoreApps = false
     #endif
 
     private var version: String {
@@ -267,9 +269,15 @@ struct SettingsView: View {
                     try? await Task.sleep(for: .seconds(1))
                     opensJournalTheme = true
                 }
-                if DebugLaunchRoute.takeSettingsMore() {
+                switch DebugLaunchRoute.takeSettingsMore() {
+                case "more":
                     try? await Task.sleep(for: .seconds(1))
                     opensMore = true
+                case "apps":
+                    try? await Task.sleep(for: .seconds(1))
+                    opensMoreApps = true
+                default:
+                    break
                 }
                 let showsICloud = DebugLaunchRoute.takeSettingsICloud()
                 if showsICloud {
@@ -297,6 +305,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $opensMore) {
                 MoreView()
+            }
+            .navigationDestination(isPresented: $opensMoreApps) {
+                MoreAppsView()
             }
             #endif
         }

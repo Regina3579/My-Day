@@ -2,8 +2,7 @@ import StoreKit
 import SwiftUI
 
 /// The links in `Info.plist`, so they can be filled in without touching the code: My Day's App
-/// Store ID (`MyDayAppStoreID`, shared with Rate My Day), the developer's App Store ID
-/// (`MyDayDeveloperID`, for More Great Apps), the social pages (`MyDayInstagramURL`,
+/// Store ID (`MyDayAppStoreID`, shared with Rate My Day), the social pages (`MyDayInstagramURL`,
 /// `MyDayFacebookURL`, `MyDayXURL`), a support email (`MyDaySupportEmail`) and the privacy
 /// policy and terms (`MyDayPrivacyURL`, `MyDayTermsURL`). A row or icon whose link is empty
 /// stays hidden.
@@ -24,15 +23,6 @@ enum MoreLinks {
     /// My Day on the App Store, for Tell Your Friends.
     static var appStoreURL: URL? {
         AppReview.appStoreID.flatMap { URL(string: "https://apps.apple.com/app/id\($0)") }
-    }
-
-    /// The developer's page on the App Store: every app they make.
-    static var moreAppsURL: URL? {
-        guard let id = value("MyDayDeveloperID") else { return nil }
-        #if DEBUG
-        if DebugLaunchRoute.isScreenshotRun { return URL(string: id) }
-        #endif
-        return id.allSatisfy(\.isNumber) ? URL(string: "https://apps.apple.com/developer/id\(id)") : nil
     }
 
     static var instagram: URL? { url("MyDayInstagramURL") }
@@ -70,11 +60,11 @@ struct MoreView: View {
                     MoreRow(symbol: "person.2.fill", tint: Color(hex: 0xF0435A), title: "Tell Your Friends",
                             detail: "Share My Day with someone you love")
                 }
-                if let url = MoreLinks.moreAppsURL {
-                    Button { openURL(url) } label: {
-                        MoreRow(symbol: "square.grid.2x2.fill", tint: Color(hex: 0x7BC74D), title: "More Great Apps",
-                                detail: "Other apps from the maker of My Day")
-                    }
+                NavigationLink {
+                    MoreAppsView()
+                } label: {
+                    MoreRow(symbol: "square.grid.2x2.fill", tint: Color(hex: 0x7BC74D), title: "More Great Apps",
+                            detail: "Quiz Island, Coloring Fun, Jesus Words", showsChevron: false)
                 }
                 if MoreLinks.hasSocial {
                     HStack(spacing: 0) {
