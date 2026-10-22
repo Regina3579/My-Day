@@ -131,6 +131,8 @@ struct TodayHeaderCard: View {
 /// added, then ＋ to add one. Press and hold an added category to delete it.
 struct CategoryChipBar: View {
     @Binding var selection: CategoryChoice?
+    /// Shares the chosen category's to-dos (the 👤+ button at the end of the row).
+    var onShare: ((CategoryChoice) -> Void)?
 
     @Environment(\.modelContext) private var context
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
@@ -138,6 +140,40 @@ struct CategoryChipBar: View {
     @State private var pendingDelete: CustomCategory?
 
     var body: some View {
+        HStack(spacing: 0) {
+            chips
+            if let selection, let onShare {
+                shareButton(selection, onShare)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy, value: selection)
+    }
+
+    /// 👤+ as in Microsoft To Do: shares the chosen category with family and friends.
+    private func shareButton(_ choice: CategoryChoice, _ onShare: @escaping (CategoryChoice) -> Void) -> some View {
+        Button {
+            Haptics.tap()
+            onShare(choice)
+        } label: {
+            Image(systemName: "person.badge.plus")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Palette.hotPink)
+                .frame(width: 44, height: 40)
+                .background(Capsule().fill(Color.white))
+                .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.35), lineWidth: 1.2))
+                .shadow(color: Palette.hotPink.opacity(0.18), radius: 6, x: 0, y: 2)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScaleStyle())
+        .padding(.leading, 6)
+        .padding(.trailing, 16)
+        .padding(.bottom, 8)
+        .accessibilityLabel("Share \(choice.label)")
+        .accessibilityHint("Invite family and friends to this list")
+    }
+
+    private var chips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 CategoryChip(title: "All", icon: nil, tint: Palette.hotPink, isOn: selection == nil) {

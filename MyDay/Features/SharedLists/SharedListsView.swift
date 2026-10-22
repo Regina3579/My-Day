@@ -589,6 +589,88 @@ struct ShareListSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                if invitesFirst, let list {
+                    firstInvite(list)
+                } else {
+                    membersList
+                    inviteArea
+                }
+            }
+            .background(Color(hex: 0xFFF5F9).ignoresSafeArea())
+            .navigationTitle("Share List")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.bold)
+                }
+            }
+            .task { await load() }
+            .confirmationDialog("Stop sharing this list?", isPresented: $confirmStop, titleVisibility: .visible) {
+                Button("Stop Sharing", role: .destructive) {
+                    Task {
+                        try? await store.stopSharing(listID)
+                        share = nil
+                        await load()
+                    }
+                }
+            } message: {
+                Text("Everyone else loses the list. It stays in your My Day.")
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(28)
+    }
+
+    /// The person's own list that nobody has joined yet: the paper plane and Invite via…, as in
+    /// the reference.
+    private var invitesFirst: Bool {
+        !isLoading && problem == nil && list?.isMine == true && members.count <= 1
+    }
+
+    private func firstInvite(_ list: SharedList) -> some View {
+        VStack(spacing: 18) {
+            Spacer(minLength: 8)
+            PaperPlaneArt()
+                .frame(width: 210, height: 150)
+                .accessibilityHidden(true)
+            Text("Invite some people. After they join, you'll see them here.")
+                .font(.rounded(.body, weight: .medium))
+                .foregroundStyle(Palette.ink)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            if Self.canMakeInvitations {
+                ShareLink(item: SharedListInvite(listID: list.id, existing: share),
+                          preview: SharePreview("\(list.name) \(list.emoji)")) {
+                    inviteViaLabel
+                }
+            } else {
+                inviteViaLabel
+            }
+            Text("Anyone with this link, My Day and an iCloud account can join and edit this list.")
+                .font(.rounded(.footnote, weight: .medium))
+                .foregroundStyle(Palette.inkSoft)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 20)
+    }
+
+    private var inviteViaLabel: some View {
+        Label("Invite via…", systemImage: "square.and.arrow.up")
+            .font(.rounded(.headline, weight: .bold))
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0xFF5FA8), Palette.hotPink],
+                                     startPoint: .top, endPoint: .bottom)))
+            .shadow(color: Palette.hotPink.opacity(0.3), radius: 8, x: 0, y: 4)
+    }
+
+    private var membersList: some View {
                 List {
                     Section {
                         if isLoading {
@@ -616,34 +698,6 @@ struct ShareListSheet: View {
                 }
                 .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
-
-                inviteArea
-            }
-            .background(Color(hex: 0xFFF5F9).ignoresSafeArea())
-            .navigationTitle("Share List")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.bold)
-                }
-            }
-            .task { await load() }
-            .confirmationDialog("Stop sharing this list?", isPresented: $confirmStop, titleVisibility: .visible) {
-                Button("Stop Sharing", role: .destructive) {
-                    Task {
-                        try? await store.stopSharing(listID)
-                        share = nil
-                        await load()
-                    }
-                }
-            } message: {
-                Text("Everyone else loses the list. It stays in your My Day.")
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-        .presentationCornerRadius(28)
     }
 
     private var list: SharedList? { store.list(listID) }
@@ -768,6 +822,12 @@ struct ShareListSheet: View {
         defer { isLoading = false }
         #if DEBUG
         if DebugLaunchRoute.isScreenshotRun {
+            // A list nobody has joined yet shows the first invitation.
+            if (list?.memberCount ?? 1) <= 1 {
+                members = [SharedListMember(id: "me", name: "Reggie", detail: "", isOwner: true, isMe: true,
+                                            isPending: false, participant: nil)]
+                return
+            }
             members = [
                 SharedListMember(id: "1", name: "Reggie", detail: "reggie@icloud.com", isOwner: true, isMe: true,
                                  isPending: false, participant: nil),
@@ -872,5 +932,39 @@ struct SharedListBackground: View {
         LinearGradient(colors: [Color(hex: 0xFFF4F8), Color(hex: 0xFDE7F1), Color(hex: 0xF3ECFF)],
                        startPoint: .top, endPoint: .bottom)
             .ignoresSafeArea()
+    }
+}
+
+/// A paper plane on its way, with the dashed loop of its flight, in My Day's pinks.
+private struct PaperPlaneArt: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width, h = proxy.size.height
+            ZStack {
+                Path { path in
+                    path.move(to: CGPoint(x: w * 0.08, y: h * 0.2))
+                    path.addCurve(to: CGPoint(x: w * 0.2, y: h * 0.88),
+                                  control1: CGPoint(x: w * 0.36, y: h * 0.2),
+                                  control2: CGPoint(x: w * 0.02, y: h * 0.7))
+                    path.addCurve(to: CGPoint(x: w * 0.56, y: h * 0.62),
+                                  control1: CGPoint(x: w * 0.36, y: h * 1.04),
+                                  control2: CGPoint(x: w * 0.5, y: h * 0.86))
+                }
+                .stroke(Palette.inkSoft.opacity(0.45),
+                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [7, 7]))
+                Image(systemName: "paperplane.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: w * 0.42)
+                    .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFF8CC0), Palette.hotPink],
+                                                    startPoint: .topTrailing, endPoint: .bottomLeading))
+                    .shadow(color: Palette.hotPink.opacity(0.25), radius: 8, x: 0, y: 4)
+                    .position(x: w * 0.74, y: h * 0.36)
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Palette.bubblegum)
+                    .position(x: w * 0.08, y: h * 0.2)
+            }
+        }
     }
 }

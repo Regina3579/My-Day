@@ -606,3 +606,23 @@ final class SharedListSyncDelegate: CKSyncEngineDelegate, @unchecked Sendable {
                                                operationGroup: context.options.operationGroup)
     }
 }
+
+/// A to-do category shared from To-Dos (👤+): which Shared List it became, so sharing it again
+/// opens the same list.
+struct SharedListLink: Identifiable {
+    let id: String
+
+    static func list(for choice: CategoryChoice) -> String? {
+        links[choice.key]
+    }
+
+    static func remember(_ listID: String, for choice: CategoryChoice) {
+        var all = links
+        all[choice.key] = listID
+        UserDefaults.standard.set(all, forKey: Prefs.sharedCategoryLists)
+    }
+
+    private static var links: [String: String] {
+        UserDefaults.standard.dictionary(forKey: Prefs.sharedCategoryLists) as? [String: String] ?? [:]
+    }
+}

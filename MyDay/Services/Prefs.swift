@@ -104,4 +104,6 @@ enum Prefs {
     static let achievementsStarted = "achievementsStarted"
     /// The day "A Little Memory for You!" was closed (seconds since 1970): it comes back tomorrow.
     static let onThisDayClosed = "onThisDayClosedOn"
+    /// Category key → the Shared List it was shared as (👤+ on To-Dos).
+    static let sharedCategoryLists = "sharedCategoryLists"
 }

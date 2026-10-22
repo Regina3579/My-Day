@@ -29,6 +29,8 @@ struct TodayToDosView: View {
     @State private var sheet: TodoSheet?
     /// Photo, tapped by a free account: the My Day Pro pop-up.
     @State private var proOffer: ProFeature?
+    /// The shared list of the category being shared, for its Share List sheet.
+    @State private var sharing: SharedListLink?
     @State private var pendingDelete: TaskItem?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
@@ -269,7 +271,7 @@ struct TodayToDosView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 6)
                 .plainListRow()
-            CategoryChipBar(selection: $filter)
+            CategoryChipBar(selection: $filter, onShare: share)
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
             taskRows
             if pinsActions {
@@ -331,6 +333,9 @@ struct TodayToDosView: View {
             .sheet(item: $sheet) { sheet in
                 sheetContent(sheet)
             }
+            .sheet(item: $sharing) { link in
+                ShareListSheet(listID: link.id)
+            }
             .proOffer($proOffer)
             .confirmationDialog("Delete this to-do?", isPresented: deleteBinding, titleVisibility: .visible,
                                 presenting: pendingDelete) { task in
@@ -373,6 +378,11 @@ struct TodayToDosView: View {
             if let shopping = (openRows + doneRows).first(where: { !$0.steps.isEmpty }) {
                 sheet = .edit(shopping, nil)
             }
+        case "share":
+            // Shopping chosen, and its 👤+ tapped: the Share List sheet, before anyone joins.
+            filter = .builtIn(.shopping)
+            try? await Task.sleep(for: .seconds(0.6))
+            share(.builtIn(.shopping))
         case "voice-shopping":
             // Shopping is the chip chosen, so the spoken to-do goes to Shopping.
             filter = .builtIn(.shopping)
@@ -588,6 +598,30 @@ struct TodayToDosView: View {
         case .delete:
             pendingDelete = task
         }
+    }
+
+    /// 👤+ on a category: its to-dos become a Shared List (the same one each time, with any new
+    /// to-dos added), and the Share List sheet opens to invite people. Free accounts share one
+    /// list, as in Shared Lists.
+    private func share(_ choice: CategoryChoice) {
+        let store = SharedListStore.shared
+        let titles = tasks.filter { $0.choice == choice && !$0.isCompleted }.map(\.title)
+        if let id = SharedListLink.list(for: choice), let list = store.list(id) {
+            let have = Set(list.items.map { $0.title.lowercased() })
+            for title in titles where !have.contains(title.lowercased()) {
+                store.addItem(title, to: id)
+            }
+            sharing = SharedListLink(id: id)
+            return
+        }
+        guard store.canMakeList(isPro: pro.isActive) else {
+            proOffer = .sharedLists
+            return
+        }
+        let list = store.makeList(name: choice.label, emoji: choice.emoji, items: titles)
+        SharedListLink.remember(list.id, for: choice)
+        store.start()
+        sharing = SharedListLink(id: list.id)
     }
 
     private func delete(_ task: TaskItem) {
