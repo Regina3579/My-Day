@@ -1,11 +1,11 @@
 import SwiftUI
 import SwiftData
 
-/// The first screen: the illustrated scene with the native header, daily
-/// message and the three feature cards.
+/// The first screen, as in the design: the girl with her puppy and kitten, "My Day" and the
+/// three cards are one picture, with today's date, the counts and today's quote drawn live on
+/// it, and buttons over the menu, calendar, bell and cards.
 struct HomeView: View {
     @Environment(Router.self) private var router
-    @Environment(\.tabBarClearance) private var tabBarClearance
     @Query private var tasks: [TaskItem]
     @Query private var priorities: [Priority]
     @Query private var entries: [JournalEntry]
@@ -22,224 +22,219 @@ struct HomeView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let layout = HomeLayout(
-                width: proxy.size.width,
-                safeTop: proxy.safeAreaInsets.top,
-                // From the top of the screen down to just above the floating tab bar.
-                availableHeight: proxy.size.height + proxy.safeAreaInsets.top - tabBarClearance
-            )
+            // The whole screen, under the status bar and the tab bar too, as in the design;
+            // a shorter screen scrolls.
+            let screen = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    hero(layout, topInset: proxy.safeAreaInsets.top)
-                    cards(layout)
-                }
+                page(width: proxy.size.width)
+                    .frame(minHeight: screen, alignment: .top)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .tabBarSafeArea()
-            .ignoresSafeArea(edges: .top)
+            .ignoresSafeArea()
         }
-        .background(HomeBackdrop())
+        .background(HomePage.floor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    // MARK: Scene, header and daily message
-
-    private func hero(_ layout: HomeLayout, topInset: CGFloat) -> some View {
-        let w = layout.width
-        return ZStack(alignment: .topLeading) {
-            Image("HomeScene")
-                .resizable()
-                .frame(width: w, height: w * HomeLayout.sceneImageHeight)
-                .mask(
-                    LinearGradient(stops: [.init(color: .black, location: 0.94), .init(color: .clear, location: 1)],
-                                   startPoint: .top, endPoint: .bottom)
-                )
-                .offset(y: layout.sceneShift - w * HomeLayout.sceneExtension)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                HomeHeader(
-                    date: today,
-                    onMenu: {
+    private func page(width w: CGFloat) -> some View {
+        let s = w / HomePage.size.width
+        let todos = CardBadge.Value.progress(open: tasks.filter { !$0.isCompleted }.count, total: tasks.count)
+        let priority = CardBadge.Value.progress(open: priorities.filter { !$0.isCompleted }.count,
+                                                total: priorities.count)
+        let journal = entries.isEmpty ? CardBadge.Value.hidden : .count(entries.count)
+        return Image("HomePage")
+            .resizable()
+            .frame(width: w, height: HomePage.size.height * s)
+            .accessibilityHidden(true)
+            .overlay(alignment: .topLeading) {
+                ZStack(alignment: .topLeading) {
+                    spot(HomePage.menu, s, label: "Menu") {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { router.isMenuOpen = true }
-                    },
-                    onCalendar: { router.tab = .calendar },
-                    onReminders: { router.sheet = .reminders }
-                )
-                DailyQuoteView(date: today, maxWidth: w * 0.33)
-                    .padding(.leading, w * 0.09)
+                    }
+                    spot(HomePage.calendar, s,
+                         label: "Calendar, today is \(today.formatted(date: .complete, time: .omitted))") {
+                        router.tab = .calendar
+                    }
+                    HomePageDate(date: today, scale: s)
+                        .place(HomePage.calendar, s)
+                    spot(HomePage.bell, s, label: "Reminders") { router.sheet = .reminders }
+                    HomePageQuote(date: today, scale: s)
+                        .place(HomePage.quote, s)
+
+                    card(HomePage.todos, s, kind: .todos, badge: todos) {
+                        router.homePath.append(AppRoute.todos(today))
+                    }
+                    card(HomePage.priority, s, kind: .priority, badge: priority) {
+                        router.homePath.append(AppRoute.priority(today))
+                    }
+                    card(HomePage.journal, s, kind: .journal, badge: journal) {
+                        router.homePath.append(AppRoute.journal)
+                    }
+
+                    HomePageBadge(value: todos, tint: HomePage.purple, scale: s)
+                        .place(HomePage.todosBadge, s)
+                    HomePageBadge(value: priority, tint: HomePage.orange, scale: s)
+                        .place(HomePage.priorityBadge, s)
+                    HomePageBadge(value: journal, tint: HomePage.pink, scale: s)
+                        .place(HomePage.journalBadge, s)
+                }
             }
-            // Raised with the scenery, still just under the clock.
-            .padding(.top, topInset + 4 - layout.lift)
-        }
-        .frame(width: w, height: layout.heroHeight, alignment: .top)
-        .clipped()
     }
 
-    // MARK: Feature cards
-
-    private func cards(_ layout: HomeLayout) -> some View {
-        let w = layout.width
-        let k = layout.squeeze
-        let openTasks = tasks.filter { !$0.isCompleted }.count
-        let openPriorities = priorities.filter { !$0.isCompleted }.count
-
-        return VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 0) {
-                HomeFeatureCard(kind: .todos, badge: .progress(open: openTasks, total: tasks.count)) {
-                    router.homePath.append(AppRoute.todos(today))
-                }
-                .frame(width: w * 0.551, height: w * 0.762 * k)
-
-                HomeFeatureCard(kind: .priority, badge: .progress(open: openPriorities, total: priorities.count)) {
-                    router.homePath.append(AppRoute.priority(today))
-                }
-                .frame(width: w * 0.443, height: w * 0.744 * k)
-                .padding(.top, w * 0.023 * k)
-                .padding(.leading, -w * 0.018)
-            }
-            .padding(.leading, w * 0.012)
-            .frame(width: w, alignment: .leading)
-
-            ZStack(alignment: .topLeading) {
-                BookStackArt()
-                    .frame(width: w * 0.225, height: w * 0.387 * k)
-                    .padding(.top, w * 0.076 * k)
-                HomeFeatureCard(kind: .journal,
-                                badge: entries.isEmpty ? CardBadge.Value.hidden : .count(entries.count)) {
-                    router.homePath.append(AppRoute.journal)
-                }
-                .frame(width: w * 0.686, height: w * 0.668 * k)
-                .padding(.leading, w * 0.164)
-            }
-            .frame(width: w, height: w * 0.668 * k, alignment: .topLeading)
-            .padding(.top, -w * 0.041 * k)
+    /// A button over one of the picture's round header icons.
+    private func spot(_ rect: CGRect, _ s: CGFloat, label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Color.clear.contentShape(Rectangle())
         }
-        .padding(.top, -w * (HomeLayout.sceneBody - HomeLayout.cardsTop))
-        .padding(.bottom, w * HomeLayout.bottomMargin)
+        .buttonStyle(HomeSpotStyle(cornerRadius: rect.width * s / 2))
+        .accessibilityLabel(label)
+        .place(rect, s)
+    }
+
+    /// A button over one of the picture's cards.
+    private func card(_ rect: CGRect, _ s: CGFloat, kind: HomeFeatureCard.Kind, badge: CardBadge.Value,
+                      action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Color.clear.contentShape(Rectangle())
+        }
+        .buttonStyle(HomeSpotStyle(cornerRadius: 34 * s))
+        .accessibilityLabel(kind.title)
+        .accessibilityValue(badge.spokenText)
+        .accessibilityHint(kind.subtitle)
+        .place(rect, s)
     }
 }
 
-/// Proportions taken from the 853 px-wide design, as fractions of the screen width.
-struct HomeLayout {
-    /// Soft strip above the scenery, used when the status bar is taller than in the design.
-    static let sceneExtension: CGFloat = 80.0 / 853.0
-    /// The scenery itself (the design's top 490 px).
-    static let sceneBody: CGFloat = 490.0 / 853.0
-    static let sceneImageHeight: CGFloat = 570.0 / 853.0
-    /// Height of the design's status bar.
-    static let designStatusBar: CGFloat = 60.0 / 853.0
-    /// Where the cards begin.
-    static let cardsTop: CGFloat = 470.0 / 853.0
-    /// Card rows below `cardsTop`: notebook and star card, then the journal (which overlaps them slightly).
-    static let cardRows: CGFloat = (650.0 - 35.0 + 570.0) / 853.0
-    /// Brick strip between the journal and the tab bar, as in the design
-    /// (about 44 px there; the tab bar clearance already adds 8 points).
-    static let bottomMargin: CGFloat = 27.0 / 853.0
-    /// How far the whole page (scenery, header and cards) sits higher than the design's spacing
-    /// under the status bar, so it is centred between the clock and the tab bar.
-    static let pageLift: CGFloat = 12
-    /// The cards may shrink to this much of their height before the screen scrolls instead.
-    static let minimumSqueeze: CGFloat = 0.82
+/// Where everything is on the home design (852 × 1846 pixels).
+enum HomePage {
+    static let size = CGSize(width: 852, height: 1846)
+    static let menu = CGRect(x: 25, y: 95, width: 90, height: 90)
+    static let calendar = CGRect(x: 638, y: 96, width: 90, height: 92)
+    static let bell = CGRect(x: 738, y: 98, width: 86, height: 86)
+    static let quote = CGRect(x: 630, y: 212, width: 210, height: 78)
+    static let todos = CGRect(x: 36, y: 612, width: 410, height: 548)
+    static let priority = CGRect(x: 454, y: 612, width: 386, height: 548)
+    static let journal = CGRect(x: 42, y: 1165, width: 798, height: 452)
+    static let todosBadge = CGRect(x: 384, y: 605, width: 64, height: 64)
+    static let priorityBadge = CGRect(x: 773, y: 604, width: 64, height: 64)
+    static let journalBadge = CGRect(x: 748, y: 1155, width: 62, height: 62)
 
-    let width: CGFloat
-    /// How far the scenery moves down so the header keeps its place on it.
-    let sceneShift: CGFloat
-    /// How much the page is raised: `pageLift`, or less where the status bar leaves no room
-    /// (the header never goes under the clock).
-    let lift: CGFloat
-    /// Vertical scale for the cards, so the whole design fits above the tab bar.
-    let squeeze: CGFloat
-
-    init(width: CGFloat, safeTop: CGFloat, availableHeight: CGFloat) {
-        self.width = width
-        let designShift = min(max(0, safeTop - width * Self.designStatusBar), width * Self.sceneExtension)
-        lift = min(Self.pageLift, designShift)
-        sceneShift = designShift - lift
-        let fixed = sceneShift + width * (Self.cardsTop + Self.bottomMargin)
-        let fit = (availableHeight - fixed) / (width * Self.cardRows)
-        squeeze = fit.isFinite ? min(1, max(Self.minimumSqueeze, fit)) : 1
-    }
-
-    var heroHeight: CGFloat { sceneShift + width * Self.sceneBody }
+    static let purple = Color(hex: 0x9B55FC)
+    static let orange = Color(hex: 0xFCA319)
+    static let pink = Color(hex: 0xFC117E)
+    /// The courtyard at the foot of the picture, for a screen taller than it.
+    static let floor = Color(hex: 0xECA684)
 }
 
-/// The warm brick courtyard with petals and soft roses behind the cards.
-struct HomeBackdrop: View {
+private extension View {
+    /// Puts the view on `rect` of the design, drawn `s` points per pixel.
+    func place(_ rect: CGRect, _ s: CGFloat) -> some View {
+        frame(width: rect.width * s, height: rect.height * s)
+            .offset(x: rect.minX * s, y: rect.minY * s)
+    }
+}
+
+/// A soft white glow where the picture is pressed.
+private struct HomeSpotStyle: ButtonStyle {
+    let cornerRadius: CGFloat
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.28 : 0))
+            )
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+/// Today's weekday and date on the picture's pink calendar.
+private struct HomePageDate: View {
+    let date: Date
+    let scale: CGFloat
+
     var body: some View {
-        GeometryReader { proxy in
-            let w = proxy.size.width, h = proxy.size.height
-            ZStack {
-                LinearGradient(colors: [Color(hex: 0xF1D2C9), Color(hex: 0xE9BFB2), Color(hex: 0xF2CACA)],
-                               startPoint: .top, endPoint: .bottom)
-                BrickPattern()
-                    .opacity(0.5)
-                RoseBokeh(size: w * 0.34).position(x: w * 0.02, y: h * 0.93)
-                RoseBokeh(size: w * 0.3).position(x: w * 0.98, y: h * 0.9)
-                RoseBokeh(size: w * 0.16).position(x: w * 0.0, y: h * 0.62)
-                ForEach(Self.blossoms.indices, id: \.self) { index in
-                    let blossom = Self.blossoms[index]
-                    Daisy(petal: Color(hex: 0xFFB8D2), petals: 5)
-                        .frame(width: blossom.size, height: blossom.size)
-                        .rotationEffect(.degrees(blossom.angle))
-                        .position(x: w * blossom.x, y: h * blossom.y)
-                }
-            }
+        VStack(spacing: -3 * scale) {
+            Text(date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(.system(size: 22 * scale, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(hex: 0xEC1C7C))
+            Text(date.formatted(.dateTime.day()))
+                .font(.system(size: 37 * scale, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color(hex: 0x2E0F3A))
         }
-        .ignoresSafeArea()
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .padding(.top, 22 * scale)
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
-
-    private static let blossoms: [(x: CGFloat, y: CGFloat, size: CGFloat, angle: Double)] = [
-        (0.93, 0.6, 16, 10), (0.9, 0.68, 12, -20), (0.96, 0.74, 14, 35),
-        (0.06, 0.84, 15, 5), (0.5, 0.97, 13, -15), (0.3, 0.95, 11, 25), (0.72, 0.96, 12, 40)
-    ]
 }
 
-/// Rows of soft, rounded bricks.
-struct BrickPattern: View {
+/// Today's Daily Motivation, written where the design has "Your pace is the right pace".
+private struct HomePageQuote: View {
+    let date: Date
+    let scale: CGFloat
+
     var body: some View {
-        Canvas { context, size in
-            let rowHeight: CGFloat = 16
-            let brickWidth: CGFloat = 34
-            let gap: CGFloat = 2.5
-            let colors = [Color(hex: 0xD49A89), Color(hex: 0xE0AE9E), Color(hex: 0xCB9281)]
-            var row = 0
-            var y: CGFloat = 0
-            while y < size.height {
-                var x: CGFloat = row.isMultiple(of: 2) ? 0 : -brickWidth / 2
-                var column = 0
-                while x < size.width {
-                    let rect = CGRect(x: x + gap / 2, y: y + gap / 2, width: brickWidth - gap, height: rowHeight - gap)
-                    let color = colors[(row * 7 + column * 3) % colors.count]
-                    context.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(color))
-                    x += brickWidth
-                    column += 1
-                }
-                y += rowHeight
-                row += 1
-            }
+        let quote = DailyMotivation.quote(for: date)
+        VStack(spacing: -4 * scale) {
+            Text(quote.firstLine)
+            Text(quote.secondLine)
         }
+        .font(.custom("ChalkboardSE-Bold", fixedSize: 23 * scale))
+        .foregroundStyle(Color(hex: 0xA40D3D))
+        .multilineTextAlignment(.center)
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .shadow(color: Color.white.opacity(0.9), radius: 3)
+        .rotationEffect(.degrees(-8))
+        .id(quote)
+        .transition(.opacity)
+        .animation(.easeInOut(duration: 0.4), value: quote)
         .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Today's motivation: \(quote.text)")
     }
 }
 
-/// Out-of-focus pink roses, like the blurred flowers in the design's corners.
-struct RoseBokeh: View {
-    let size: CGFloat
+/// The count on a card's corner, as the design draws it: a coloured ball in a white ring. A
+/// check on mint once everything is done, and 0 while the day has nothing yet.
+private struct HomePageBadge: View {
+    let value: CardBadge.Value
+    let tint: Color
+    let scale: CGFloat
 
     var body: some View {
+        let fill = value == .done ? Palette.mint : tint
         ZStack {
-            Circle().fill(Color(hex: 0xF7A8C6)).frame(width: size, height: size)
-            Circle().fill(Color(hex: 0xFFC7DA)).frame(width: size * 0.6, height: size * 0.6)
-                .offset(x: size * 0.25, y: -size * 0.2)
-            Circle().fill(Color(hex: 0xEE86AE)).frame(width: size * 0.45, height: size * 0.45)
-                .offset(x: -size * 0.15, y: size * 0.15)
-            Circle().fill(Color(hex: 0x8CC47E).opacity(0.7)).frame(width: size * 0.3, height: size * 0.3)
-                .offset(x: size * 0.35, y: size * 0.3)
+            Circle().fill(Color.white)
+            Circle()
+                .fill(fill.gradient)
+                .padding(5 * scale)
+            switch value {
+            case .count(let number):
+                Text("\(number)")
+                    .font(.system(size: 30 * scale, weight: .heavy, design: .rounded))
+                    .minimumScaleFactor(0.5)
+                    .padding(.horizontal, 10 * scale)
+            case .done:
+                Image(systemName: "checkmark")
+                    .font(.system(size: 24 * scale, weight: .heavy))
+            case .hidden:
+                Text("0")
+                    .font(.system(size: 30 * scale, weight: .heavy, design: .rounded))
+            }
         }
-        .blur(radius: size * 0.08)
-        .opacity(0.9)
+        .foregroundStyle(Color.white)
+        .shadow(color: fill.opacity(0.35), radius: 4 * scale, x: 0, y: 2 * scale)
+        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: value)
         .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
