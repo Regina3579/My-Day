@@ -411,7 +411,7 @@ struct SharedListView: View {
     private func add(to list: SharedList) {
         let title = newItem.trimmed
         guard !title.isEmpty else { return }
-        withAnimation(.snappy) { store.addItem(title, to: list.id) }
+        withAnimation(.snappy) { _ = store.addItem(title, to: list.id) }
         newItem = ""
         addFocused = true
         Haptics.tap()
