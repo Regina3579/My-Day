@@ -102,4 +102,6 @@ enum Prefs {
     static let achievementDays = "achievementDaysUsed"
     /// Set once the badges were first checked (badges deserved before then come quietly).
     static let achievementsStarted = "achievementsStarted"
+    /// The day "A Little Memory for You!" was closed (seconds since 1970): it comes back tomorrow.
+    static let onThisDayClosed = "onThisDayClosedOn"
 }

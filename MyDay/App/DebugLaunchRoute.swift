@@ -95,6 +95,26 @@ enum DebugLaunchRoute {
         }
         addDemoPages(in: context, today: today)
         addDemoImportantDays(in: context, today: today)
+        addDemoMemory(in: context, today: today)
+    }
+
+    /// A page from this day last year, for On This Day.
+    @MainActor
+    private static func addDemoMemory(in context: ModelContext, today: Date) {
+        guard let lastYear = Calendar.current.date(byAdding: .year, value: -1, to: today),
+              let date = Calendar.current.date(bySettingHour: 18, minute: 30, second: 0, of: lastYear) else { return }
+        let page = JournalEntry(date: date, title: "Picnic in the park 🧺",
+                                body: "Strawberries, sunshine and so much laughing with my best friends.",
+                                mood: .loved)
+        page.createdAt = date
+        page.updatedAt = date
+        context.insert(page)
+        if let data = UIImage(named: "HeroFriends")?.jpegData(compressionQuality: 0.9),
+           let prepared = PhotoProcessor.prepare(data) {
+            let photo = JournalPhoto(imageData: prepared.photo, thumbnailData: prepared.thumbnail, order: 0)
+            context.insert(photo)
+            photo.entry = page
+        }
     }
 
     /// Important Days: a birthday that fell yesterday (on My Journal Pages), a wedding day and a

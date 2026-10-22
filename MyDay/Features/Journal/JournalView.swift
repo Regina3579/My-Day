@@ -360,6 +360,10 @@ struct JournalPagesHome: View {
             // Lazy: a page card is made as it scrolls into view, so a journal of many months
             // scrolls as lightly as a new one.
             LazyVStack(alignment: .leading, spacing: 14) {
+                // On This Day (My Day Pro): a memory from one to three years ago, on All Pages.
+                if shelf == .all, search.trimmed.isEmpty, pro.isActive {
+                    OnThisDayCard(entries: allEntries, today: appState.today)
+                }
                 shelfIntro(pages: pages)
                 if shelf == .photos {
                     listHeader(title: pages.isEmpty ? shelf.label : photoCountTitle(pages))
