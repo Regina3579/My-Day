@@ -19,7 +19,7 @@ enum MyDayStore {
     /// The models kept in the store.
     static let models: [any PersistentModel.Type] = [
         TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, JournalVoiceNote.self,
-        TaskTemplate.self, CustomCategory.self
+        TaskTemplate.self, CustomCategory.self, ImportantDay.self
     ]
 
     /// The iCloud container, as in `MyDay.entitlements` (SwiftData uses the first one listed there).

@@ -33,6 +33,8 @@ struct JournalPagesHome: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \JournalEntry.date, order: .reverse) private var allEntries: [JournalEntry]
+    /// Important Days show in All Pages on the days they fall.
+    @Query(sort: \ImportantDay.createdAt) private var importantDays: [ImportantDay]
     @AppStorage(Prefs.journalTheme) private var chosenTheme: JournalTheme = .blushBlossom
 
     @State private var shelf: JournalShelf = .all
@@ -374,9 +376,20 @@ struct JournalPagesHome: View {
                             monthTitle(month.title)
                                 .padding(.top, 6)
                         }
-                        ForEach(month.entries) { entry in
-                            JournalEntryCard(entry: entry, shelf: shelf)
-                                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                        ForEach(JournalListItem.merge(month.entries, importantDayCards(in: month.month),
+                                                      oldestFirst: filter.oldestFirst)) { item in
+                            switch item {
+                            case .page(let entry):
+                                JournalEntryCard(entry: entry, shelf: shelf)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                            case .day(let day, let date):
+                                NavigationLink {
+                                    ImportantDayDetailView(day: day)
+                                } label: {
+                                    ImportantDayJournalCard(day: day, on: date)
+                                }
+                                .buttonStyle(PressScaleStyle(scale: 0.98))
+                            }
                         }
                     }
                 }
@@ -557,6 +570,19 @@ struct JournalPagesHome: View {
     }
 
     /// What the chosen tab lists, after the dates, the filter and the search.
+    /// The Important Days falling in `month` up to today, on All Pages when nothing is searched
+    /// or filtered (a free account's first two days; every day with My Day Pro).
+    private func importantDayCards(in month: Date) -> [(ImportantDay, Date)] {
+        guard shelf == .all, search.trimmed.isEmpty, filter.count == (filter.oldestFirst ? 1 : 0) else { return [] }
+        let days = pro.isActive ? importantDays : Array(importantDays.prefix(ImportantDaysView.freeLimit))
+        let end = month.adding(months: 1)
+        return days.flatMap { day in
+            day.pastOccurrences(through: appState.today)
+                .filter { $0 >= month && $0 < end }
+                .map { (day, $0) }
+        }
+    }
+
     private var shown: [JournalEntry] {
         let query = search.trimmed
         let pages = periodPages(shelf == .trash ? trashed : live).filter { entry in

@@ -21,6 +21,9 @@ struct SideMenuView: View {
                         detail: SharedListStore.shared.lists.isEmpty ? nil : "\(SharedListStore.shared.lists.count)") {
                         router.open(.sharedLists)
                     }
+                    row("gift.fill", "Important Days", tint: Palette.hotPink) {
+                        router.open(.importantDays)
+                    }
                     row("trophy.fill", "Achievements", tint: Palette.honey,
                         detail: "\(AchievementCenter.shared.earnedCount)/\(Achievement.allCases.count)") {
                         router.sheet = .achievements

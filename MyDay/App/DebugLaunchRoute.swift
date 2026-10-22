@@ -94,6 +94,32 @@ enum DebugLaunchRoute {
             note.entry = page
         }
         addDemoPages(in: context, today: today)
+        addDemoImportantDays(in: context, today: today)
+    }
+
+    /// Important Days: a birthday that fell yesterday (on My Journal Pages), a wedding day and a
+    /// graduation to come.
+    @MainActor
+    private static func addDemoImportantDays(in context: ModelContext, today: Date) {
+        let calendar = Calendar.current
+        let yesterday = today.adding(days: -1)
+        let birthday = calendar.date(byAdding: .year, value: -70, to: yesterday) ?? yesterday
+        let mom = ImportantDay(title: "Mom's Birthday", kind: .birthday, date: birthday, repeatsYearly: true)
+        if let data = UIImage(named: "HeroFriends")?.jpegData(compressionQuality: 0.9),
+           let prepared = PhotoProcessor.prepare(data) {
+            mom.photoData = prepared.photo
+            mom.thumbnailData = prepared.thumbnail
+        }
+        mom.createdAt = today.adding(days: -30)
+        context.insert(mom)
+        let weddingDate = calendar.date(byAdding: .year, value: -12, to: today.adding(days: 40)) ?? today
+        let wedding = ImportantDay(title: "Wedding Day", kind: .relationship, date: weddingDate, repeatsYearly: true)
+        wedding.createdAt = today.adding(days: -29)
+        context.insert(wedding)
+        let graduation = ImportantDay(title: "Graduation Day", kind: .education, date: today.adding(days: 75),
+                                      repeatsYearly: false)
+        graduation.createdAt = today.adding(days: -28)
+        context.insert(graduation)
     }
 
     /// Earlier pages for My Journal Pages: a week of moods, photos, a favourite, a little win,
@@ -218,6 +244,7 @@ enum DebugLaunchRoute {
     @MainActor private static var ratingCard = false
     @MainActor private static var sharedListMembers = false
     @MainActor private static var settingsMore: String?
+    @MainActor private static var importantDayAdd = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Move the last template to the front in Templates, as a press-and-hold drag would
@@ -344,6 +371,13 @@ enum DebugLaunchRoute {
     static func takeSettingsMore() -> String? {
         defer { settingsMore = nil }
         return settingsMore
+    }
+
+    /// `important-day-add`: Add New Day's Important Day cards open for the screenshot.
+    @MainActor
+    static func takeImportantDayAdd() -> Bool {
+        defer { importantDayAdd = false }
+        return importantDayAdd
     }
 
     /// `shared-list-members`: the list's Share List sheet opens for the screenshot.
@@ -644,6 +678,11 @@ enum DebugLaunchRoute {
         case "settings-more", "settings-more-apps":
             settingsMore = route == "settings-more" ? "more" : "apps"
             router.tab = .settings
+        case "important-days":
+            router.open(.importantDays)
+        case "important-day-add":
+            router.open(.importantDays)
+            importantDayAdd = true
         case "shared-lists", "shared-list", "shared-list-members":
             SharedListStore.shared.loadDemo()
             router.open(.sharedLists)

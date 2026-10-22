@@ -463,6 +463,11 @@ struct SettingsView: View {
         for entry in allEntries {
             context.delete(entry)
         }
+        let allDays = (try? context.fetch(FetchDescriptor<ImportantDay>())) ?? []
+        for day in allDays {
+            ImportantDayReminders.cancel(day)
+            context.delete(day)
+        }
         try? context.save()
         Haptics.success()
     }

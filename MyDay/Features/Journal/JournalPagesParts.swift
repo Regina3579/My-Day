@@ -1621,6 +1621,34 @@ struct JournalSearchBar: View {
 
 // MARK: - Small pieces
 
+/// A page, or an Important Day on the day it falls, in My Journal Pages.
+enum JournalListItem: Identifiable {
+    case page(JournalEntry)
+    case day(ImportantDay, Date)
+
+    var id: String {
+        switch self {
+        case .page(let entry): entry.id.uuidString
+        case .day(let day, let date): "\(day.id.uuidString)-\(date.timeIntervalSince1970)"
+        }
+    }
+
+    private var date: Date {
+        switch self {
+        case .page(let entry): entry.date
+        // Before that day's pages when newest first (after them when oldest first).
+        case .day(_, let date): date.addingTimeInterval(86_399)
+        }
+    }
+
+    /// The month's pages with its Important Days among them, by date.
+    static func merge(_ pages: [JournalEntry], _ days: [(ImportantDay, Date)], oldestFirst: Bool) -> [JournalListItem] {
+        let items = pages.map(JournalListItem.page) + days.map { JournalListItem.day($0.0, $0.1) }
+        guard !days.isEmpty else { return items }
+        return items.sorted { oldestFirst ? $0.date < $1.date : $0.date > $1.date }
+    }
+}
+
 /// Pages grouped by month, newest month first (or oldest first).
 struct JournalMonth: Identifiable {
     let month: Date
