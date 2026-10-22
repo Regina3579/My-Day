@@ -7,22 +7,21 @@ struct GreatApp: Identifiable {
     let name: String
     let subtitle: String
     let blurb: String
-    /// The cute tile shown until (or instead of) its App Store icon.
-    let emoji: String
-    let colors: [Color]
+    /// Its App Store icon, in `GreatApps/`.
+    let icon: String
 
     var storeURL: URL { URL(string: "https://apps.apple.com/app/id\(id)")! }
 
     static let all: [GreatApp] = [
         GreatApp(id: "6816495354", name: "Quiz Island", subtitle: "Adventure Fun",
                  blurb: "Sail to a sunny island full of fun quizzes and adventures.",
-                 emoji: "🏝️", colors: [Color(hex: 0x5FD3F3), Color(hex: 0x2E9BE6)]),
+                 icon: "GreatApps/QuizIsland"),
         GreatApp(id: "6785565605", name: "Coloring Fun", subtitle: "Color & Draw",
                  blurb: "Color, draw and make beautiful pictures in bright colours.",
-                 emoji: "🎨", colors: [Color(hex: 0xFFB36B), Color(hex: 0xFF6FAE)]),
+                 icon: "GreatApps/ColoringFun"),
         GreatApp(id: "6763797554", name: "Jesus Words", subtitle: "New Testament",
                  blurb: "Read the words of Jesus from the New Testament, every day.",
-                 emoji: "📖", colors: [Color(hex: 0xFFE08A), Color(hex: 0xE9A93C)]),
+                 icon: "GreatApps/JesusWords"),
     ]
 }
 
@@ -103,53 +102,17 @@ private struct GreatAppCard: View {
     }
 }
 
-/// The app's own App Store icon, looked up from Apple's iTunes Search API when online; a cute
-/// emoji tile in its colours until then (or offline).
+/// The app's own App Store icon, with iOS's rounded corners.
 private struct GreatAppIcon: View {
     let app: GreatApp
-    @State private var iconURL: URL?
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(LinearGradient(colors: app.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(Text(app.emoji).font(.system(size: 38)))
-            if let iconURL {
-                AsyncImage(url: iconURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.clear
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
-            }
-        }
-        .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(Color.black.opacity(0.06)))
-        .accessibilityHidden(true)
-        .task { iconURL = await GreatAppIcons.url(for: app.id) }
-    }
-}
-
-/// Finds each app's icon once per launch with Apple's iTunes lookup.
-@MainActor
-enum GreatAppIcons {
-    private static var found: [String: URL] = [:]
-
-    private struct Lookup: Decodable {
-        struct Result: Decodable { let artworkUrl512: String? }
-        let results: [Result]
-    }
-
-    static func url(for appID: String) async -> URL? {
-        #if DEBUG
-        if DebugLaunchRoute.isScreenshotRun { return nil }
-        #endif
-        if let url = found[appID] { return url }
-        guard let lookup = URL(string: "https://itunes.apple.com/lookup?id=\(appID)"),
-              let (data, _) = try? await URLSession.shared.data(from: lookup),
-              let decoded = try? JSONDecoder().decode(Lookup.self, from: data),
-              let text = decoded.results.first?.artworkUrl512,
-              let url = URL(string: text) else { return nil }
-        found[appID] = url
-        return url
+        Image(app.icon)
+            .resizable()
+            .scaledToFill()
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(Color.black.opacity(0.06)))
+            .accessibilityHidden(true)
     }
 }
