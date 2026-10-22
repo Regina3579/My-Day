@@ -21,17 +21,17 @@ struct HomeView: View {
     }
 
     var body: some View {
+        // The whole screen, under the status bar and the tab bar too, as in the design; a
+        // shorter screen scrolls. The reader spans the whole screen itself, so only its width
+        // is read (never the safe area, which made the layout go round and round).
         GeometryReader { proxy in
-            // The whole screen, under the status bar and the tab bar too, as in the design;
-            // a shorter screen scrolls.
-            let screen = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
             ScrollView(.vertical, showsIndicators: false) {
                 page(width: proxy.size.width)
-                    .frame(minHeight: screen, alignment: .top)
             }
             .scrollBounceBehavior(.basedOnSize)
             .ignoresSafeArea()
         }
+        .ignoresSafeArea()
         .background(HomePage.floor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
