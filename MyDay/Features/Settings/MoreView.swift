@@ -7,6 +7,7 @@ import SwiftUI
 /// `MyDayFacebookURL`, `MyDayXURL`), a support email (`MyDaySupportEmail`) and the privacy
 /// policy and terms (`MyDayPrivacyURL`, `MyDayTermsURL`). A row or icon whose link is empty
 /// stays hidden.
+@MainActor
 enum MoreLinks {
     private static func value(_ key: String) -> String? {
         #if DEBUG
