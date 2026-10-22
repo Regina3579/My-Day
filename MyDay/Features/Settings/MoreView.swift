@@ -260,6 +260,8 @@ struct AboutMyDayView: View {
                 LabeledContent("Made with", value: "💖 for beautiful days")
             }
 
+            SecurityPromiseSection()
+
             if MoreLinks.supportEmail != nil || MoreLinks.privacy != nil || MoreLinks.terms != nil {
                 Section {
                     if let url = MoreLinks.supportEmail {

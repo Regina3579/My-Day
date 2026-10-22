@@ -384,6 +384,9 @@ struct JournalLockChooseView: View {
                 ForEach(JournalLockMethod.allCases) { method in
                     row(method)
                 }
+                SecurityPromise()
+                    .padding(.top, 10)
+                    .padding(.bottom, 24)
             }
             .padding(.horizontal, 48 * k)
             .padding(.top, 16)

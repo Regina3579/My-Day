@@ -202,6 +202,8 @@ struct SettingsView: View {
                     Text("Tips")
                 }
 
+                SecurityPromiseSection()
+
                 Section("Your data") {
                     Button {
                         confirmClearDone = true

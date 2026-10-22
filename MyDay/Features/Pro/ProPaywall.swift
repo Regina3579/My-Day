@@ -77,6 +77,9 @@ private struct ProPaywallHeader: View {
             }
             .font(.rounded(.subheadline, weight: .semibold))
             .padding(.horizontal, 24)
+            SecurityPromise()
+                .padding(.horizontal, 20)
+                .padding(.top, 6)
         }
         .padding(.top, 8)
     }
