@@ -40,6 +40,8 @@ struct SettingsView: View {
     @State private var opensReminderSound = false
     /// `settings-journal-theme` and `pro-themes`: Journal Theme opened for the screenshot.
     @State private var opensJournalTheme = false
+    /// `settings-more`: More opened for the screenshot.
+    @State private var opensMore = false
     #endif
 
     private var version: String {
@@ -213,6 +215,13 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        MoreView()
+                    } label: {
+                        Label("More: Friends, Apps, About & Subscription", systemImage: "ellipsis.circle.fill")
+                            .foregroundStyle(Palette.grape)
+                    }
+                    .id("more")
                     Button(action: rateMyDay) {
                         Label("Rate My Day ⭐️", systemImage: "star.bubble.fill")
                             .foregroundStyle(Palette.hotPink)
@@ -258,6 +267,10 @@ struct SettingsView: View {
                     try? await Task.sleep(for: .seconds(1))
                     opensJournalTheme = true
                 }
+                if DebugLaunchRoute.takeSettingsMore() {
+                    try? await Task.sleep(for: .seconds(1))
+                    opensMore = true
+                }
                 let showsICloud = DebugLaunchRoute.takeSettingsICloud()
                 if showsICloud {
                     // The simulator has no iCloud account: a demo of the status after a sync.
@@ -281,6 +294,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $opensJournalTheme) {
                 JournalThemeView()
+            }
+            .navigationDestination(isPresented: $opensMore) {
+                MoreView()
             }
             #endif
         }

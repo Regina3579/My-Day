@@ -217,6 +217,7 @@ enum DebugLaunchRoute {
     /// Show the "Enjoying My Day?" rating card over To-Dos ("rating-card").
     @MainActor private static var ratingCard = false
     @MainActor private static var sharedListMembers = false
+    @MainActor private static var settingsMore = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Move the last template to the front in Templates, as a press-and-hold drag would
@@ -335,6 +336,13 @@ enum DebugLaunchRoute {
     static func takeSettingsRate() -> Bool {
         defer { settingsRate = false }
         return settingsRate
+    }
+
+    /// `settings-more`: Settings → More opens for the screenshot.
+    @MainActor
+    static func takeSettingsMore() -> Bool {
+        defer { settingsMore = false }
+        return settingsMore
     }
 
     /// `shared-list-members`: the list's Share List sheet opens for the screenshot.
@@ -632,6 +640,9 @@ enum DebugLaunchRoute {
         case "achievement-streak", "achievement-goal":
             AchievementCenter.shared.preview(earned: [.streak7, .goalMaster],
                                              showing: route == "achievement-streak" ? .streak7 : .goalMaster)
+        case "settings-more":
+            settingsMore = true
+            router.tab = .settings
         case "shared-lists", "shared-list", "shared-list-members":
             SharedListStore.shared.loadDemo()
             router.open(.sharedLists)

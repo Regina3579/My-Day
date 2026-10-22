@@ -8,6 +8,20 @@
 	<false/>
 	<key>MyDayAppStoreID</key>
 	<string></string>
+	<key>MyDayDeveloperID</key>
+	<string></string>
+	<key>MyDayFacebookURL</key>
+	<string></string>
+	<key>MyDayInstagramURL</key>
+	<string></string>
+	<key>MyDayPrivacyURL</key>
+	<string></string>
+	<key>MyDaySupportEmail</key>
+	<string></string>
+	<key>MyDayTermsURL</key>
+	<string></string>
+	<key>MyDayXURL</key>
+	<string></string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
