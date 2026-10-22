@@ -96,6 +96,19 @@ struct RootView: View {
             // A badge earned while a sheet was open pops up once it closes.
             if isFree { AchievementCenter.shared.showNext() }
         }
+        .onChange(of: SharedListStore.shared.listToOpen) { _, target in
+            // An invitation was accepted: its list opens.
+            guard let target else { return }
+            SharedListStore.shared.listToOpen = nil
+            router.sheet = nil
+            router.isMenuOpen = false
+            if target == "lists" {
+                router.open(.sharedLists)
+            } else {
+                router.open(.sharedLists)
+                router.push(.sharedList(target), in: .home)
+            }
+        }
         .onChange(of: router.tab) { _, _ in
             router.isQuickAddOpen = false
             router.iCloudTip = nil
@@ -134,6 +147,7 @@ struct RootView: View {
             // Each launch, so reminders set by an earlier version carry the current reminder sound.
             ReminderCenter.syncAll(in: modelContext)
             rating.noteActive()
+            SharedListStore.shared.start()
             AchievementCenter.shared.isScreenBusy = { [router] in
                 router.sheet != nil || router.isMenuOpen
             }

@@ -13,9 +13,12 @@ struct TemplatePickerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Environment(Router.self) private var router
+    @Environment(MyDayPro.self) private var pro
     @Query(sort: [SortDescriptor(\TaskTemplate.sortOrder), SortDescriptor(\TaskTemplate.createdAt)])
     private var templates: [TaskTemplate]
     @State private var path: [TemplateRoute] = []
+    @State private var proOffer: ProFeature?
     @State private var pendingDelete: TaskTemplate?
     /// The card being moved (press and hold, then drag).
     @State private var dragging: TaskTemplate?
@@ -110,6 +113,7 @@ struct TemplatePickerSheet: View {
             }
             #endif
         }
+        .proOffer($proOffer)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(32)
@@ -182,6 +186,7 @@ struct TemplatePickerSheet: View {
                                    onAdd: { titles in add(titles, from: template) },
                                    onAddOne: { title in addOne(title, from: template) },
                                    onEdit: { path.append(.edit(id)) },
+                                   onShare: { share(template) },
                                    onDelete: { delete(template) })
             }
         case .edit(let id):
@@ -191,6 +196,21 @@ struct TemplatePickerSheet: View {
         case .create:
             TemplateEditorView { path.removeLast() }
         }
+    }
+
+    /// Share as a List: a new shared list with the template's name, emoji and to-dos, opened
+    /// on Shared Lists (one free list; more with My Day Pro).
+    private func share(_ template: TaskTemplate) {
+        let store = SharedListStore.shared
+        guard store.canMakeList(isPro: pro.isActive) else {
+            proOffer = .sharedLists
+            return
+        }
+        let list = store.makeList(name: template.name, emoji: template.emoji, items: template.items)
+        Haptics.success()
+        dismiss()
+        router.open(.sharedLists)
+        router.push(.sharedList(list.id), in: .home)
     }
 
     private var deleteBinding: Binding<Bool> {
@@ -487,6 +507,8 @@ private struct TemplateDetailView: View {
     /// Adds one to-do to the day; Templates stays open.
     let onAddOne: (String) -> Void
     let onEdit: () -> Void
+    /// Share as a List: makes a shared list from this template.
+    let onShare: () -> Void
     let onDelete: () -> Void
 
     @AppStorage(Prefs.showCompletedTemplateItems) private var showCompleted = false
@@ -563,6 +585,7 @@ private struct TemplateDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Share as a List", systemImage: "person.2", action: onShare)
                 Button("Edit Template", systemImage: "pencil", action: onEdit)
                 Button("Delete Template", systemImage: "trash", role: .destructive) {
                     confirmDelete = true

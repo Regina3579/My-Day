@@ -37,6 +37,10 @@ enum AppRoute: Hashable {
     case editJournalPage(JournalEntry)
     /// A page just written on the full page: it says it was saved.
     case savedJournalPage(JournalEntry)
+    /// Shared Lists: lists made together with family and friends.
+    case sharedLists
+    /// One shared list, by its `SharedList.id`.
+    case sharedList(String)
 }
 
 /// Sheets that can be opened from anywhere in the app.
@@ -179,6 +183,8 @@ extension View {
             case .editJournalPage(let entry):
                 JournalComposer(entry: entry, date: entry.date, presentation: .page)
             case .savedJournalPage(let entry): JournalDetailView(entry: entry, justSaved: true)
+            case .sharedLists: SharedListsView()
+            case .sharedList(let id): SharedListView(listID: id)
             }
         }
         .navigationDestination(for: JournalEntry.self) { entry in

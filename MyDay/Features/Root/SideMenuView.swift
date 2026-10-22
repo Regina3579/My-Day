@@ -17,6 +17,10 @@ struct SideMenuView: View {
                     row("checklist", "Today's To-Dos", tint: Palette.grape) { router.open(.todos(today)) }
                     row("star.fill", "Today's Priority", tint: Palette.honey) { router.open(.priority(today)) }
                     row("book.closed.fill", "My Journal", tint: Palette.hotPink) { router.open(.journal) }
+                    row("person.2.fill", "Shared Lists", tint: Palette.grape,
+                        detail: SharedListStore.shared.lists.isEmpty ? nil : "\(SharedListStore.shared.lists.count)") {
+                        router.open(.sharedLists)
+                    }
                     row("trophy.fill", "Achievements", tint: Palette.honey,
                         detail: "\(AchievementCenter.shared.earnedCount)/\(Achievement.allCases.count)") {
                         router.sheet = .achievements

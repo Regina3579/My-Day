@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import CloudKit
 
 @main
 struct MyDayApp: App {
@@ -54,7 +55,17 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // Silent pushes tell the shared lists (and the iCloud store) that something changed.
+        application.registerForRemoteNotifications()
         return true
+    }
+
+    /// The scene delegate below receives Shared Lists invitations.
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = SharedListSceneDelegate.self
+        return configuration
     }
 
     nonisolated func userNotificationCenter(
@@ -62,5 +73,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound]
+    }
+}
+
+/// Someone tapped an invitation to a shared list (in Messages, Mail or a link): with
+/// `CKSharingSupported` in `Info.plist`, iOS opens My Day and hands the invitation here, while
+/// running or at launch. They join the list, and it opens.
+final class SharedListSceneDelegate: NSObject, UIWindowSceneDelegate {
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard let metadata = connectionOptions.cloudKitShareMetadata else { return }
+        Task { @MainActor in await SharedListStore.shared.accept(metadata) }
+    }
+
+    func windowScene(_ windowScene: UIWindowScene, userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata) {
+        Task { @MainActor in await SharedListStore.shared.accept(cloudKitShareMetadata) }
     }
 }

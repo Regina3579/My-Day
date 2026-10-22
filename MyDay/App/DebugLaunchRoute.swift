@@ -216,6 +216,7 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsRate = false
     /// Show the "Enjoying My Day?" rating card over To-Dos ("rating-card").
     @MainActor private static var ratingCard = false
+    @MainActor private static var sharedListMembers = false
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Move the last template to the front in Templates, as a press-and-hold drag would
@@ -334,6 +335,13 @@ enum DebugLaunchRoute {
     static func takeSettingsRate() -> Bool {
         defer { settingsRate = false }
         return settingsRate
+    }
+
+    /// `shared-list-members`: the list's Share List sheet opens for the screenshot.
+    @MainActor
+    static func takeSharedListMembers() -> Bool {
+        defer { sharedListMembers = false }
+        return sharedListMembers
     }
 
     @MainActor
@@ -624,6 +632,13 @@ enum DebugLaunchRoute {
         case "achievement-streak", "achievement-goal":
             AchievementCenter.shared.preview(earned: [.streak7, .goalMaster],
                                              showing: route == "achievement-streak" ? .streak7 : .goalMaster)
+        case "shared-lists", "shared-list", "shared-list-members":
+            SharedListStore.shared.loadDemo()
+            router.open(.sharedLists)
+            if route != "shared-lists", let first = SharedListStore.shared.lists.first {
+                router.push(.sharedList(first.id), in: .home)
+            }
+            sharedListMembers = route == "shared-list-members"
         case "newtask": router.sheet = .newTask(today)
         case "newjournal": router.sheet = .newJournal(.now)
         case let route where route.hasPrefix("todos-"):
