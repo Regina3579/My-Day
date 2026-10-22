@@ -600,33 +600,22 @@ struct TodayToDosView: View {
         }
     }
 
-    /// 👤+ on a category (My Day Pro): its to-dos become a Shared List (the same one each time,
-    /// with any new to-dos added), and the Share List sheet opens to invite people.
+    /// 👤+ on a category (My Day Pro): the category becomes a Shared List, kept the same as its
+    /// to-dos from today on, both ways (`SharedCategorySync`), and the Share List sheet opens to
+    /// invite people.
     private func share(_ choice: CategoryChoice) {
         guard pro.isActive else {
             proOffer = .shareCategory
             return
         }
         let store = SharedListStore.shared
-        let open = tasks.filter { $0.choice == choice && !$0.isCompleted }
-        if let id = SharedListLink.list(for: choice), let list = store.list(id) {
-            // Only to-dos not shared before: what members deleted from the list stays deleted.
-            let sent = SharedListLink.sentTasks(for: choice)
-            var have = Set(list.items.map { $0.title.lowercased() })
-            for task in open where !sent.contains(task.id.uuidString) {
-                if have.insert(task.title.lowercased()).inserted {
-                    store.addItem(task.title, to: id)
-                }
-            }
-            SharedListLink.noteSent(open.map(\.id.uuidString), for: choice)
+        if let id = SharedListLink.list(for: choice), store.list(id) != nil {
             sharing = SharedListLink(id: id)
             return
         }
-        var seen = Set<String>()
-        let titles = open.map(\.title).filter { seen.insert($0.lowercased()).inserted }
-        let list = store.makeList(name: choice.label, emoji: choice.emoji, items: titles)
-        SharedListLink.remember(list.id, for: choice)
-        SharedListLink.noteSent(open.map(\.id.uuidString), for: choice)
+        let list = store.makeList(name: choice.label, emoji: choice.emoji)
+        SharedListLink.remember(list.id, for: choice, from: day)
+        SharedCategorySync.sync(tasks: tasks, customs: [], in: context, today: day)
         store.start()
         sharing = SharedListLink(id: list.id)
     }

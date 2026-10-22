@@ -196,12 +196,16 @@ final class SharedListStore {
         queueSave([Self.listRecordID(lists[index].zoneID)], in: lists[index])
     }
 
-    func addItem(_ title: String, to listID: String) {
-        guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
-        let item = SharedItem(title: title, addedBy: Self.myFirstName)
+    /// Adds an item; returns its id.
+    @discardableResult
+    func addItem(_ title: String, to listID: String, isDone: Bool = false) -> String? {
+        guard let index = lists.firstIndex(where: { $0.id == listID }) else { return nil }
+        var item = SharedItem(title: title, addedBy: Self.myFirstName)
+        item.isDone = isDone
         lists[index].items.append(item)
         save()
         queueSave([Self.itemRecordID(item.id, lists[index].zoneID)], in: lists[index])
+        return item.id
     }
 
     func update(_ itemID: String, in listID: String, _ change: (inout SharedItem) -> Void) {
@@ -630,41 +634,42 @@ final class SharedListSyncDelegate: CKSyncEngineDelegate, @unchecked Sendable {
     }
 }
 
-/// A to-do category shared from To-Dos (👤+): which Shared List it became, so sharing it again
-/// opens the same list.
+/// A to-do category shared from To-Dos (👤+): which Shared List it became, and from which day
+/// its to-dos are kept in that list (see `SharedCategorySync`).
 struct SharedListLink: Identifiable {
     let id: String
+
+    /// Category key → list id, for every shared category.
+    static var all: [String: String] { links }
 
     static func list(for choice: CategoryChoice) -> String? {
         links[choice.key]
     }
 
-    static func remember(_ listID: String, for choice: CategoryChoice) {
+    static func remember(_ listID: String, for choice: CategoryChoice, from day: Date) {
         var all = links
         all[choice.key] = listID
         UserDefaults.standard.set(all, forKey: Prefs.sharedCategoryLists)
-        // A new list: nothing of the category has gone into it yet.
-        var sent = sentByCategory
-        sent[choice.key] = []
-        UserDefaults.standard.set(sent, forKey: Prefs.sharedCategoryTasks)
+        var starts = startDays
+        starts[choice.key] = day.startOfDay.timeIntervalSinceReferenceDate
+        UserDefaults.standard.set(starts, forKey: Prefs.sharedCategoryStart)
     }
 
-    /// The to-dos (by id) already put into the category's list.
-    static func sentTasks(for choice: CategoryChoice) -> Set<String> {
-        Set(sentByCategory[choice.key] ?? [])
-    }
-
-    static func noteSent(_ taskIDs: [String], for choice: CategoryChoice) {
-        var sent = sentByCategory
-        sent[choice.key] = Array(Set(sent[choice.key] ?? []).union(taskIDs))
-        UserDefaults.standard.set(sent, forKey: Prefs.sharedCategoryTasks)
-    }
-
-    private static var sentByCategory: [String: [String]] {
-        UserDefaults.standard.dictionary(forKey: Prefs.sharedCategoryTasks) as? [String: [String]] ?? [:]
+    /// The day sharing began: to-dos of that day on are in the list (a category shared before
+    /// this was kept takes today, once).
+    static func start(for key: String, today: Date) -> Date {
+        if let start = startDays[key] { return Date(timeIntervalSinceReferenceDate: start) }
+        var starts = startDays
+        starts[key] = today.startOfDay.timeIntervalSinceReferenceDate
+        UserDefaults.standard.set(starts, forKey: Prefs.sharedCategoryStart)
+        return today.startOfDay
     }
 
     private static var links: [String: String] {
         UserDefaults.standard.dictionary(forKey: Prefs.sharedCategoryLists) as? [String: String] ?? [:]
+    }
+
+    private static var startDays: [String: Double] {
+        UserDefaults.standard.dictionary(forKey: Prefs.sharedCategoryStart) as? [String: Double] ?? [:]
     }
 }

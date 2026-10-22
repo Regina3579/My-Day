@@ -106,6 +106,8 @@ enum Prefs {
     static let onThisDayClosed = "onThisDayClosedOn"
     /// Category key → the Shared List it was shared as (👤+ on To-Dos).
     static let sharedCategoryLists = "sharedCategoryLists"
-    /// Category key → the to-dos (ids) already put into its Shared List.
-    static let sharedCategoryTasks = "sharedCategoryTasks"
+    /// Category key → the day its to-dos started going into its Shared List.
+    static let sharedCategoryStart = "sharedCategoryStart"
+    /// Shared List id → each to-do's item in it, as last matched (`SharedCategorySync`).
+    static let sharedCategoryPairs = "sharedCategoryPairs"
 }

@@ -86,7 +86,10 @@ struct RootView: View {
                 }
             }
         }
-        .background { AchievementWatcher() }
+        .background {
+            AchievementWatcher()
+            SharedCategoryWatcher()
+        }
         .statusBarHidden(router.hidesStatusBar)
         .sheet(item: sheetBinding) { sheet in
             sheetContent(sheet)
