@@ -91,7 +91,9 @@ final class SharedListStore {
     /// The last thing that went wrong, for a gentle note on screen.
     var problem: String?
 
-    @ObservationIgnored let container = SharedListCloud.container
+    /// Made on first use only (a build without the iCloud entitlement, like the screenshot
+    /// runs', must never touch CloudKit).
+    var container: CKContainer { SharedListCloud.container }
     @ObservationIgnored private var privateEngine: CKSyncEngine?
     @ObservationIgnored private var sharedEngine: CKSyncEngine?
     @ObservationIgnored private var syncDelegate: SharedListSyncDelegate?
