@@ -168,9 +168,11 @@ struct JournalDetailView: View {
         options.includesCover = false
         options.includesContents = false
         options.coverTitle = name
-        if let url = JournalPDF.make([entry], options: options, fileName: name) {
-            exported = MadePDF(url: url)
-            Haptics.success()
+        Task {
+            if let url = await JournalPDF.make([entry], options: options, fileName: name) {
+                exported = MadePDF(url: url)
+                Haptics.success()
+            }
         }
     }
 
