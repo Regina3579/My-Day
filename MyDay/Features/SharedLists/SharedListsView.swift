@@ -701,25 +701,20 @@ struct ShareListSheet: View {
             VStack(spacing: 14) {
                 if list.isMine {
                     HStack(spacing: 12) {
-                        ShareLink(item: SharedListInvite(listID: list.id, existing: share),
-                                  preview: SharePreview("\(list.name) \(list.emoji)")) {
-                            Text("Invite People")
-                                .font(.rounded(.headline, weight: .bold))
-                                .foregroundStyle(Color.white)
-                                .frame(maxWidth: .infinity, minHeight: 54)
-                                .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(LinearGradient(colors: [Color(hex: 0xFF5FA8), Palette.hotPink],
-                                                         startPoint: .top, endPoint: .bottom)))
+                        if Self.canMakeInvitations {
+                            ShareLink(item: SharedListInvite(listID: list.id, existing: share),
+                                      preview: SharePreview("\(list.name) \(list.emoji)")) {
+                                inviteLabel
+                            }
+                            ShareLink(item: SharedListInvite(listID: list.id, existing: share),
+                                      preview: SharePreview("\(list.name) \(list.emoji)")) {
+                                shareIconLabel
+                            }
+                            .accessibilityLabel("Share invitation link")
+                        } else {
+                            inviteLabel
+                            shareIconLabel
                         }
-                        ShareLink(item: SharedListInvite(listID: list.id, existing: share),
-                                  preview: SharePreview("\(list.name) \(list.emoji)")) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(Palette.hotPink)
-                                .frame(width: 54, height: 54)
-                                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white))
-                        }
-                        .accessibilityLabel("Share invitation link")
                     }
                     Text("People you invite can see and edit this list. They need My Day and an iCloud account.")
                         .font(.rounded(.footnote, weight: .medium))
@@ -739,6 +734,34 @@ struct ShareListSheet: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
         }
+    }
+
+    /// The invitation link needs iCloud (CloudKit): screenshot runs, built without the
+    /// iCloud entitlement, show the buttons only.
+    private static var canMakeInvitations: Bool {
+        #if DEBUG
+        return !DebugLaunchRoute.isScreenshotRun
+        #else
+        return true
+        #endif
+    }
+
+    private var inviteLabel: some View {
+        Text("Invite People")
+            .font(.rounded(.headline, weight: .bold))
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0xFF5FA8), Palette.hotPink],
+                                     startPoint: .top, endPoint: .bottom)))
+    }
+
+    private var shareIconLabel: some View {
+        Image(systemName: "square.and.arrow.up")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(Palette.hotPink)
+            .frame(width: 54, height: 54)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white))
     }
 
     private func load() async {
