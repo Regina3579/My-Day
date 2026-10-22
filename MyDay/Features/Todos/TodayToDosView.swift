@@ -271,7 +271,7 @@ struct TodayToDosView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 6)
                 .plainListRow()
-            CategoryChipBar(selection: $filter, onShare: share)
+            CategoryChipBar(selection: $filter, sharesForPro: !pro.isActive, onShare: share)
                 .plainListRow(EdgeInsets(top: 2, leading: 0, bottom: 0, trailing: 0))
             taskRows
             if pinsActions {
@@ -600,10 +600,13 @@ struct TodayToDosView: View {
         }
     }
 
-    /// 👤+ on a category: its to-dos become a Shared List (the same one each time, with any new
-    /// to-dos added), and the Share List sheet opens to invite people. Free accounts share one
-    /// list, as in Shared Lists.
+    /// 👤+ on a category (My Day Pro): its to-dos become a Shared List (the same one each time,
+    /// with any new to-dos added), and the Share List sheet opens to invite people.
     private func share(_ choice: CategoryChoice) {
+        guard pro.isActive else {
+            proOffer = .shareCategory
+            return
+        }
         let store = SharedListStore.shared
         let titles = tasks.filter { $0.choice == choice && !$0.isCompleted }.map(\.title)
         if let id = SharedListLink.list(for: choice), let list = store.list(id) {
@@ -612,10 +615,6 @@ struct TodayToDosView: View {
                 store.addItem(title, to: id)
             }
             sharing = SharedListLink(id: id)
-            return
-        }
-        guard store.canMakeList(isPro: pro.isActive) else {
-            proOffer = .sharedLists
             return
         }
         let list = store.makeList(name: choice.label, emoji: choice.emoji, items: titles)

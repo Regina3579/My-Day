@@ -131,6 +131,8 @@ struct TodayHeaderCard: View {
 /// added, then ＋ to add one. Press and hold an added category to delete it.
 struct CategoryChipBar: View {
     @Binding var selection: CategoryChoice?
+    /// The 👤+ button wears a crown: sharing a category is My Day Pro.
+    var sharesForPro = false
     /// Shares the chosen category's to-dos (the 👤+ button at the end of the row).
     var onShare: ((CategoryChoice) -> Void)?
 
@@ -163,13 +165,20 @@ struct CategoryChipBar: View {
                 .background(Capsule().fill(Color.white))
                 .overlay(Capsule().strokeBorder(Palette.hotPink.opacity(0.35), lineWidth: 1.2))
                 .shadow(color: Palette.hotPink.opacity(0.18), radius: 6, x: 0, y: 2)
+                .overlay(alignment: .topTrailing) {
+                    if sharesForPro {
+                        CrownArt(height: 14)
+                            .offset(x: 4, y: -6)
+                    }
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(PressScaleStyle())
+        .padding(.top, sharesForPro ? 4 : 0)
         .padding(.leading, 6)
         .padding(.trailing, 16)
         .padding(.bottom, 8)
-        .accessibilityLabel("Share \(choice.label)")
+        .accessibilityLabel(sharesForPro ? "Share \(choice.label), My Day Pro" : "Share \(choice.label)")
         .accessibilityHint("Invite family and friends to this list")
     }
 
