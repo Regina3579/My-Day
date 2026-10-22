@@ -9,6 +9,8 @@ struct HomeView: View {
     @Query private var tasks: [TaskItem]
     @Query private var priorities: [Priority]
     @Query private var entries: [JournalEntry]
+    /// The screen's width (the picture spans it).
+    @State private var width: CGFloat = 402
     private let today: Date
 
     init(today: Date) {
@@ -21,17 +23,15 @@ struct HomeView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            // The whole screen, under the status bar and the tab bar too, as in the design;
-            // a shorter screen scrolls.
-            let screen = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-            ScrollView(.vertical, showsIndicators: false) {
-                page(width: proxy.size.width)
-                    .frame(minHeight: screen, alignment: .top)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .ignoresSafeArea()
+        // The whole screen, under the status bar and the tab bar too, as in the design; a
+        // shorter screen scrolls. Only the width is measured, so the page's height never
+        // depends on the safe area it fills.
+        ScrollView(.vertical, showsIndicators: false) {
+            page(width: width)
         }
+        .scrollBounceBehavior(.basedOnSize)
+        .ignoresSafeArea()
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .background(HomePage.floor.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
     }
