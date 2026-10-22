@@ -69,7 +69,7 @@ struct MoreAppsView: View {
 }
 
 /// An app's card: its icon, name, subtitle, a line about it and a pink Get button.
-private struct GreatAppCard: View {
+struct GreatAppCard: View {
     let app: GreatApp
 
     var body: some View {
@@ -103,7 +103,7 @@ private struct GreatAppCard: View {
 }
 
 /// The app's own App Store icon, with iOS's rounded corners.
-private struct GreatAppIcon: View {
+struct GreatAppIcon: View {
     let app: GreatApp
 
     var body: some View {
@@ -114,5 +114,48 @@ private struct GreatAppIcon: View {
             .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).strokeBorder(Color.black.opacity(0.06)))
             .accessibilityHidden(true)
+    }
+}
+
+/// The three apps side by side, always in view (Settings and More): each icon and name, opening
+/// the app on the App Store.
+struct GreatAppsStrip: View {
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("💝 More Great Apps")
+                .font(.rounded(.headline, weight: .heavy))
+                .foregroundStyle(Palette.ink)
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(GreatApp.all) { app in
+                    Button {
+                        openURL(app.storeURL)
+                        Haptics.tap()
+                    } label: {
+                        VStack(spacing: 6) {
+                            GreatAppIcon(app: app)
+                                .frame(width: 68, height: 68)
+                                .shadow(color: Palette.hotPink.opacity(0.15), radius: 5, x: 0, y: 3)
+                            Text(app.name)
+                                .font(.rounded(.caption, weight: .heavy))
+                                .foregroundStyle(Palette.ink)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            Text("Get")
+                                .font(.rounded(.caption2, weight: .heavy))
+                                .foregroundStyle(Color.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 4)
+                                .background(Capsule().fill(Palette.hotPink.gradient))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PressScaleStyle(scale: 0.95))
+                    .accessibilityLabel("\(app.name): \(app.subtitle). Opens the App Store.")
+                }
+            }
+        }
+        .padding(.vertical, 6)
     }
 }

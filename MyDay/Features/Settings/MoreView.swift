@@ -55,16 +55,30 @@ struct MoreView: View {
 
     var body: some View {
         Form {
+            // The apps in view at once, with nothing to open first.
+            Section {
+                ForEach(GreatApp.all) { app in
+                    Button {
+                        openURL(app.storeURL)
+                        Haptics.tap()
+                    } label: {
+                        GreatAppCard(app: app)
+                    }
+                    .buttonStyle(PressScaleStyle(scale: 0.97))
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                    .listRowBackground(Color.clear)
+                }
+            } header: {
+                Text("💝 More Great Apps")
+                    .font(.rounded(.headline, weight: .heavy))
+                    .foregroundStyle(Palette.ink)
+                    .textCase(nil)
+            }
+
             Section {
                 ShareLink(item: MoreLinks.shareMessage) {
                     MoreRow(symbol: "person.2.fill", tint: Color(hex: 0xF0435A), title: "Tell Your Friends",
                             detail: "Share My Day with someone you love")
-                }
-                NavigationLink {
-                    MoreAppsView()
-                } label: {
-                    MoreRow(symbol: "square.grid.2x2.fill", tint: Color(hex: 0x7BC74D), title: "More Great Apps",
-                            detail: "Quiz Island, Coloring Fun, Jesus Words", showsChevron: false)
                 }
                 if MoreLinks.hasSocial {
                     HStack(spacing: 0) {

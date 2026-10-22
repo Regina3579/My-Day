@@ -216,11 +216,16 @@ struct SettingsView: View {
                     }
                 }
 
+                // The other apps, always in view.
+                Section {
+                    GreatAppsStrip()
+                }
+
                 Section {
                     NavigationLink {
                         MoreView()
                     } label: {
-                        Label("More: Friends, Apps, About & Subscription", systemImage: "ellipsis.circle.fill")
+                        Label("More: Friends, About & Subscription", systemImage: "ellipsis.circle.fill")
                             .foregroundStyle(Palette.grape)
                     }
                     .id("more")
