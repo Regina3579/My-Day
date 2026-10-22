@@ -59,6 +59,8 @@ struct JournalPagesHome: View {
     @State private var showsLockOffer = false
     @State private var lockGoal: JournalLockSetupSheet.Goal?
     @State private var proOffer: ProFeature?
+    /// Export My Journal (My Day Pro): its sheet is open.
+    @State private var exportsJournal = false
     /// This opening of the journal has been counted (coming back from a page is not a new one).
     @State private var countedOpening = false
     /// Where ⋮ and the menu's Journal Theme are on screen, for the tips.
@@ -229,6 +231,9 @@ struct JournalPagesHome: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(heroIsVisible ? .hidden : .visible, for: .navigationBar)
         .toolbarBackground(JournalBackdrop.base, for: .navigationBar)
+        .sheet(isPresented: $exportsJournal) {
+            ExportJournalSheet()
+        }
         .sheet(isPresented: $isFiltering) {
             JournalFilterSheet(filter: $filter, period: $period)
         }
@@ -675,6 +680,14 @@ struct JournalPagesHome: View {
                         try? await Task.sleep(for: .seconds(0.2))
                         showsLockOffer = true
                     }
+                }
+            },
+            .init(title: pro.isActive ? "Export My Journal" : "Export My Journal 👑") {
+                closeMenu()
+                if pro.isActive {
+                    exportsJournal = true
+                } else {
+                    proOffer = .journalExport
                 }
             },
             .init(title: "Trash") {

@@ -5,6 +5,7 @@ import SwiftData
 struct JournalDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    @Environment(MyDayPro.self) private var pro
     @AppStorage(Prefs.journalLock) private var lockEnabled = false
     let entry: JournalEntry
     /// The page was just written: "Saved to your journal 💖" shows for a moment.
@@ -13,6 +14,9 @@ struct JournalDetailView: View {
     @State private var isEditing = false
     @State private var confirmDelete = false
     @State private var showsSaved = false
+    @State private var proOffer: ProFeature?
+    /// Export This Page: the PDF just made, to preview and share.
+    @State private var exported: MadePDF?
 
     var body: some View {
         Group {
@@ -56,6 +60,14 @@ struct JournalDetailView: View {
                     } label: {
                         Label("Edit Page", systemImage: "pencil")
                     }
+                    Button(action: exportPage) {
+                        Label {
+                            Text(pro.isActive ? "Export This Page" : "Export This Page 👑")
+                            Text("Beautiful PDF with your memories")
+                        } icon: {
+                            Image(systemName: "doc.richtext")
+                        }
+                    }
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
@@ -70,6 +82,10 @@ struct JournalDetailView: View {
         .sheet(isPresented: $isEditing, onDismiss: { loadImages() }) {
             NewJournalEntrySheet(entry: entry)
         }
+        .sheet(item: $exported) { pdf in
+            JournalPDFPreview(url: pdf.url, title: entry.date.formatted(.dateTime.day().month(.abbreviated).year()))
+        }
+        .proOffer($proOffer)
         .confirmationDialog("Move this page to Trash?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Move to Trash", role: .destructive, action: moveToTrash)
         } message: {
@@ -139,6 +155,23 @@ struct JournalDetailView: View {
 
     private func loadImages() {
         images = entry.sortedPhotos.compactMap { UIImage(data: $0.imageData) }
+    }
+
+    /// Export This Page (My Day Pro): this day's memories as a PDF, to preview and share.
+    private func exportPage() {
+        guard pro.isActive else {
+            proOffer = .journalExport
+            return
+        }
+        let name = "My Day – " + entry.date.formatted(.dateTime.day().month(.wide).year())
+        var options = JournalPDF.Options()
+        options.includesCover = false
+        options.includesContents = false
+        options.coverTitle = name
+        if let url = JournalPDF.make([entry], options: options, fileName: name) {
+            exported = MadePDF(url: url)
+            Haptics.success()
+        }
     }
 
     private func moveToTrash() {

@@ -6,9 +6,10 @@ import SwiftUI
 /// and hearts are the design's own picture (enlarged 4× with Real-ESRGAN, its words taken out);
 /// the names are written here in thick dark navy, so they stay sharp and easy to read. The
 /// Lock My Journal row (its gold heart lock is the one on the kitten's journal in the Journal
-/// Lock tip) is a copy of the Journal Theme row, added above Trash.
+/// Lock tip) is a copy of the Journal Theme row, added above Trash; Export My Journal (the
+/// notebook sticker) is a copy of the Lock row, added below it.
 ///
-/// Everything is placed on the design's grid: the card picture is 520 × 680 pixels of a design
+/// Everything is placed on the design's grid: the card picture is 520 × 772 pixels of a design
 /// 941 pixels across the screen.
 struct JournalPagesMenu: View {
     struct Item: Identifiable {
@@ -19,7 +20,7 @@ struct JournalPagesMenu: View {
         var id: String { title }
     }
 
-    /// The six choices, top to bottom, as the picture shows them.
+    /// The seven choices, top to bottom, as the picture shows them.
     let items: [Item]
     /// Points per pixel of the design.
     let scale: CGFloat
@@ -27,14 +28,14 @@ struct JournalPagesMenu: View {
     var onThemeRowFrame: ((CGRect) -> Void)?
 
     /// The picture's size, in pixels of the design.
-    static let grid = CGSize(width: 520, height: 680)
+    static let grid = CGSize(width: 520, height: 772)
     /// Where ⋮'s middle is on the picture's grid (the menu hangs from it).
     static let moreButton = CGPoint(x: 468, y: 52)
 
     private static let ink = Color(hex: 0x0A0A48)
     /// Each row's top and bottom, and where its name starts and must end.
     private static let rows: [(top: CGFloat, bottom: CGFloat)] = [
-        (95, 200), (200, 292), (292, 385), (385, 475), (475, 567), (567, 662),
+        (95, 200), (200, 292), (292, 385), (385, 475), (475, 567), (567, 659), (659, 754),
     ]
     private static let textStart: CGFloat = 160
     private static let textEnd: CGFloat = 402
