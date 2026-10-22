@@ -177,6 +177,9 @@ enum DebugLaunchRoute {
             page.gratitude = demo.gratitude
             page.lookingForward = demo.lookingForward
             page.tags = demo.tags
+            // Goals ticked, for the Goal Reports (a different few each day).
+            let goals = DayListKind.goals.defaults
+            page.goals = Array(goals.dropFirst(demo.days % 3).prefix(3 + (demo.days * 5) % 6))
             page.createdAt = date
             page.updatedAt = date
             if let trashed = demo.trashedDaysAgo {
@@ -245,6 +248,7 @@ enum DebugLaunchRoute {
     @MainActor private static var sharedListMembers = false
     @MainActor private static var settingsMore: String?
     @MainActor private static var importantDayAdd = false
+    @MainActor private static var goalReportSpan: String?
     /// Open the first template's editor in Templates ("todos-template-edit").
     @MainActor private static var templateEdit = false
     /// Move the last template to the front in Templates, as a press-and-hold drag would
@@ -371,6 +375,13 @@ enum DebugLaunchRoute {
     static func takeSettingsMore() -> String? {
         defer { settingsMore = nil }
         return settingsMore
+    }
+
+    /// `goal-report`, `goal-report-month`, `goal-report-year`: the report's span for the screenshot.
+    @MainActor
+    static func takeGoalReportSpan() -> String? {
+        defer { goalReportSpan = nil }
+        return goalReportSpan
     }
 
     /// `important-day-add`: Add New Day's Important Day cards open for the screenshot.
@@ -678,6 +689,9 @@ enum DebugLaunchRoute {
         case "settings-more", "settings-more-apps":
             settingsMore = route == "settings-more" ? "more" : "apps"
             router.tab = .settings
+        case "goal-report", "goal-report-month", "goal-report-year":
+            goalReportSpan = route == "goal-report" ? "week" : route == "goal-report-month" ? "month" : "year"
+            router.open(.goalReport)
         case "important-days":
             router.open(.importantDays)
         case "important-day-add":

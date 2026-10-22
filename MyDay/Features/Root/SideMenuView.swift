@@ -24,6 +24,9 @@ struct SideMenuView: View {
                     row("gift.fill", "Important Days", tint: Palette.hotPink) {
                         router.open(.importantDays)
                     }
+                    row("chart.bar.xaxis", "Goal Reports", tint: Palette.grape) {
+                        router.open(.goalReport)
+                    }
                     row("trophy.fill", "Achievements", tint: Palette.honey,
                         detail: "\(AchievementCenter.shared.earnedCount)/\(Achievement.allCases.count)") {
                         router.sheet = .achievements

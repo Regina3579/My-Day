@@ -39,6 +39,8 @@ enum AppRoute: Hashable {
     case savedJournalPage(JournalEntry)
     /// Important Days: birthdays, anniversaries and special days with their countdowns.
     case importantDays
+    /// Goal Report: a week, month or year of goals ticked on journal pages.
+    case goalReport
     /// Shared Lists: lists made together with family and friends.
     case sharedLists
     /// One shared list, by its `SharedList.id`.
@@ -186,6 +188,7 @@ extension View {
                 JournalComposer(entry: entry, date: entry.date, presentation: .page)
             case .savedJournalPage(let entry): JournalDetailView(entry: entry, justSaved: true)
             case .importantDays: ImportantDaysView()
+            case .goalReport: GoalReportView()
             case .sharedLists: SharedListsView()
             case .sharedList(let id): SharedListView(listID: id)
             }
