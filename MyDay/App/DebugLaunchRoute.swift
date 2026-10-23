@@ -247,6 +247,8 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsReminderSound = false
     /// Scroll Settings to My Day Pro ("pro-settings").
     @MainActor private static var settingsPro = false
+    /// `pro-paywall` opens Unlock My Day Pro; `pro-paywall-features` also scrolls to the features.
+    @MainActor static var paywall: String?
     /// `settings-journal-theme` and `pro-themes`: Settings → Journal Theme.
     @MainActor private static var settingsJournalTheme = false
     /// The My Day Pro pop-up a screen shows once it is ready ("pro-reflections").
@@ -639,6 +641,9 @@ enum DebugLaunchRoute {
             router.tab = .settings
         case "pro-settings":
             settingsPro = true
+            router.tab = .settings
+        case "pro-paywall", "pro-paywall-features":
+            paywall = route
             router.tab = .settings
         case "heavenly-journal", "fairy-journal", "unicorn-journal", "rose-journal", "rainy-journal", "candy-journal":
             router.open(.journal)

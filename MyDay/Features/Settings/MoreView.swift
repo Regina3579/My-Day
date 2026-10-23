@@ -135,7 +135,7 @@ struct MoreView: View {
         .background(DreamyBackground(theme: .garden))
         .navigationTitle("More")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showsPaywall) { ProPaywall() }
+        .fullScreenCover(isPresented: $showsPaywall) { ProPaywall() }
         .manageSubscriptionsSheet(isPresented: $managesSubscription)
     }
 

@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import StoreKit
 
-/// My Day Pro: an auto-renewable subscription (monthly or yearly) that unlocks the Pro features
+/// My Day Pro: an auto-renewable subscription (monthly or yearly), or Lifetime (paid once), that unlocks the Pro features
 /// (`ProFeature`). The to-dos and the journal's writing stay free for everyone.
 ///
 /// Nothing is ever deleted when a subscription ends: photos, voice notes, stickers, moods and
@@ -13,7 +13,12 @@ import StoreKit
 @Observable
 final class MyDayPro {
     /// The subscriptions, as set up in App Store Connect (one subscription group, "My Day Pro").
-    static let productIDs = ["com.regina3579.myday.pro.yearly", "com.regina3579.myday.pro.monthly"]
+    static let yearlyID = "com.regina3579.myday.pro.yearly"
+    static let monthlyID = "com.regina3579.myday.pro.monthly"
+    static let productIDs = [yearlyID, monthlyID]
+    /// Lifetime: a one-time purchase (a non-consumable in App Store Connect).
+    static let lifetimeID = "com.regina3579.myday.pro.lifetime"
+    static let allProductIDs = productIDs + [lifetimeID]
 
     /// Whether My Day Pro is active. It starts from the last check, so Pro screens don't flicker
     /// at launch, and is then confirmed with the App Store.
@@ -51,7 +56,7 @@ final class MyDayPro {
         var active = false
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result,
-                  Self.productIDs.contains(transaction.productID),
+                  Self.allProductIDs.contains(transaction.productID),
                   transaction.revocationDate == nil
             else { continue }
             if let expiry = transaction.expirationDate, expiry < .now { continue }

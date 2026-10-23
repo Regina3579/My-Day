@@ -45,7 +45,7 @@ private struct ProOfferScreen: View {
 
     var body: some View {
         ProUnlockCard(feature: feature, onUnlock: { showsPaywall = true }, onLater: onClose)
-            .sheet(isPresented: $showsPaywall, onDismiss: onClose) {
+            .fullScreenCover(isPresented: $showsPaywall, onDismiss: onClose) {
                 ProPaywall()
             }
     }

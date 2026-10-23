@@ -105,7 +105,15 @@ struct ProSettingsSection: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(ProStyle.card)
-        .sheet(isPresented: $showsPaywall) {
+        #if DEBUG
+        .task {
+            if DebugLaunchRoute.paywall != nil {
+                try? await Task.sleep(for: .seconds(0.6))
+                showsPaywall = true
+            }
+        }
+        #endif
+        .fullScreenCover(isPresented: $showsPaywall) {
             ProPaywall()
         }
     }
