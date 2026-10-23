@@ -226,6 +226,10 @@ struct ProPaywall: View {
         } catch {
             loadFailed = true
         }
+        #if DEBUG
+        // Screenshot runs have no App Store (they show the design's prices).
+        if DebugLaunchRoute.isScreenshotRun { return }
+        #endif
         if loadFailed { note = "Prices couldn't load. Check your connection and try again." }
     }
 
