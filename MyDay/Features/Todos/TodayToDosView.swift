@@ -330,7 +330,11 @@ struct TodayToDosView: View {
 
     private var withSheets: some View {
         page
-            .sheet(item: $sheet) { sheet in
+            .sheet(item: Binding(get: { sheet?.isEdit == true ? nil : sheet }, set: { sheet = $0 })) { sheet in
+                sheetContent(sheet)
+            }
+            // Task Details covers the whole screen.
+            .fullScreenCover(item: Binding(get: { sheet?.isEdit == true ? sheet : nil }, set: { sheet = $0 })) { sheet in
                 sheetContent(sheet)
             }
             .sheet(item: $sharing) { link in
@@ -670,6 +674,12 @@ enum TodoSheet: Identifiable {
     case draft(TaskDraft)
     case voice(sample: String?)
     case templates
+
+    /// Task Details (an existing to-do), shown full screen.
+    var isEdit: Bool {
+        if case .edit = self { return true }
+        return false
+    }
 
     var id: String {
         switch self {

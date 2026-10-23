@@ -114,7 +114,7 @@ struct NewTaskSheet: View {
         _newPhoto = State(initialValue: draft.photo?.photo)
         _photoChanged = State(initialValue: draft.photo != nil)
         _expanded = State(initialValue: focus == .title ? nil : focus)
-        _detent = State(initialValue: existing != nil && focus == nil ? .medium : .large)
+        _detent = State(initialValue: .large)
     }
 
     /// The next full hour on `day` (or today's next hour when `day` is today).
@@ -131,6 +131,8 @@ struct NewTaskSheet: View {
     // The body is split into small steps so the compiler can type-check each one quickly.
     var body: some View {
         withDialogs
+            // Task Details opens full screen: its own background behind everything.
+            .background(Self.background.ignoresSafeArea())
             .proOffer($proOffer)
             .presentationDetents([.medium, .large], selection: $detent)
             .presentationDragIndicator(.visible)
@@ -177,7 +179,9 @@ struct NewTaskSheet: View {
             }
             titleField
             stepsSection
-            categorySection
+            if task == nil {
+                categorySection
+            }
             options
             if task != nil {
                 deleteButton
@@ -355,7 +359,14 @@ struct NewTaskSheet: View {
 
     private var titleField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SheetLabel(text: "Task")
+            HStack(alignment: .center) {
+                SheetLabel(text: "Task")
+                Spacer(minLength: 8)
+                // A to-do already has its category: just that one, beside it (tap to change).
+                if task != nil {
+                    CategoryMenuChip(selection: $category)
+                }
+            }
             TextField("", text: $title)
                 .font(.rounded(.title3, weight: .semibold))
                 .foregroundStyle(Palette.ink)
@@ -1081,5 +1092,44 @@ extension CategoryPicker {
             ),
             includesCustom: false
         )
+    }
+}
+
+/// A to-do's category as one chip (in Task Details, beside the task's name). Tapping it lists
+/// the categories, for the rare change.
+struct CategoryMenuChip: View {
+    @Binding var selection: CategoryChoice
+    @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
+
+    private var choices: [CategoryChoice] {
+        TaskCategory.core.map(CategoryChoice.builtIn) + customs.map(CategoryChoice.custom)
+            + TaskCategory.later.map(CategoryChoice.builtIn)
+    }
+
+    var body: some View {
+        Menu {
+            Picker("Category", selection: $selection) {
+                ForEach(choices, id: \.key) { choice in
+                    Text("\(choice.emoji) \(choice.label)").tag(choice)
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                CategoryIcon(choice: selection, size: 22)
+                Text(selection.label)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .heavy))
+            }
+            .font(.rounded(.footnote, weight: .bold))
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 34)
+            .background(Capsule().fill(selection.color.gradient))
+            .shadow(color: selection.color.opacity(0.3), radius: 4, x: 0, y: 2)
+            .contentShape(Capsule())
+        }
+        .accessibilityLabel("Category: \(selection.label)")
+        .accessibilityHint("Changes the category")
     }
 }
