@@ -321,7 +321,7 @@ struct TodaysPriorityView: View {
         PriorityCard(rank: rank, priority: priority,
                      onToggle: { toggle(priority) },
                      onOpen: { editing = priority })
-            .plainListRow(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .plainListRow(EdgeInsets(top: 3, leading: 16, bottom: 3, trailing: 16))
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) {
                     delete(priority)
@@ -699,7 +699,8 @@ struct PriorityCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 14) {
+        // Compact, so more of the day's priorities fit on the screen.
+        HStack(spacing: 10) {
             Group {
                 if let rank {
                     Text("\(rank)")
@@ -708,17 +709,17 @@ struct PriorityCard: View {
                         .accessibilityHidden(true)
                 }
             }
-            .font(.rounded(.title3, weight: .heavy))
+            .font(.rounded(.subheadline, weight: .heavy))
             .foregroundStyle(Color.white)
-            .frame(width: 44, height: 44)
+            .frame(width: 30, height: 30)
             .background(
                 Circle().fill(LinearGradient(colors: [Color(hex: 0xFFE27A), Palette.honey],
                                              startPoint: .top, endPoint: .bottom))
             )
-            .shadow(color: Palette.honey.opacity(0.4), radius: 6, x: 0, y: 3)
+            .shadow(color: Palette.honey.opacity(0.35), radius: 3, x: 0, y: 2)
 
             Text(priority.title)
-                .font(.rounded(.headline, weight: .bold))
+                .font(.rounded(.subheadline, weight: .bold))
                 .strikethrough(priority.isCompleted, color: Palette.honey)
                 .foregroundStyle(priority.isCompleted ? Color.secondary : Palette.cocoa)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -727,19 +728,34 @@ struct PriorityCard: View {
                 .accessibilityAddTraits(.isButton)
 
             Button(action: onToggle) {
-                CheckBubble(isOn: priority.isCompleted, tint: Palette.honey, size: 32)
+                CheckBubble(isOn: priority.isCompleted, tint: Palette.honey, size: 26)
+                    // A full-size tap target around the smaller tick.
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(priority.isCompleted ? "Mark as not done" : "Mark as done")
         }
-        .cuteCard(tint: Palette.honey, padding: 16)
+        .padding(.leading, 10)
+        .padding(.trailing, 2)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.88))
+                .shadow(color: Palette.honey.opacity(0.18), radius: 6, x: 0, y: 3)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.white, lineWidth: 1.5)
+        )
         .overlay(alignment: .trailing) {
-            // Over the tick (the card's padding is 16).
+            // Over the tick (centred in its 44-point target, 2 from the edge).
             if tickPops > 0 {
                 TickPop()
                     .id(tickPops)
-                    .frame(width: 32, height: 32)
-                    .padding(.trailing, 16)
+                    .frame(width: 26, height: 26)
+                    .padding(.trailing, 11)
             }
         }
         .onChange(of: priority.isCompleted) { wasDone, isDone in
