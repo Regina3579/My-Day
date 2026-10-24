@@ -131,10 +131,9 @@ struct NewTaskSheet: View {
     // The body is split into small steps so the compiler can type-check each one quickly.
     var body: some View {
         withDialogs
-            // Task Details opens full screen: its own background behind everything.
-            .background(Self.background.ignoresSafeArea())
             .proOffer($proOffer)
-            .presentationDetents([.medium, .large], selection: $detent)
+            // Task Details opens at full height, just under the top; a swipe down closes it.
+            .presentationDetents(task == nil ? [.medium, .large] : [.large], selection: $detent)
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(32)
             .presentationBackground(Self.background)
