@@ -10,6 +10,9 @@ struct RemindersView: View {
     @AppStorage(Prefs.morningTime) private var morningTime = 8.0 * 3600
     @AppStorage(Prefs.eveningOn) private var eveningOn = false
     @AppStorage(Prefs.eveningTime) private var eveningTime = 21.0 * 3600
+    /// More times for each, after the first ("64800,72000").
+    @AppStorage(Prefs.morningExtraTimes) private var morningExtras = ""
+    @AppStorage(Prefs.eveningExtraTimes) private var eveningExtras = ""
     @Query(filter: #Predicate<TaskItem> { $0.isCompleted == false && $0.reminderEnabled == true })
     private var remindedTasks: [TaskItem]
     @State private var status: UNAuthorizationStatus = .notDetermined
@@ -50,6 +53,7 @@ struct RemindersView: View {
                 }
                 if morningOn {
                     DatePicker("Time", selection: timeBinding($morningTime), displayedComponents: .hourAndMinute)
+                    moreTimes($morningExtras, after: morningTime)
                 }
             } header: {
                 Text("Morning")
@@ -61,6 +65,7 @@ struct RemindersView: View {
                 }
                 if eveningOn {
                     DatePicker("Time", selection: timeBinding($eveningTime), displayedComponents: .hourAndMinute)
+                    moreTimes($eveningExtras, after: eveningTime)
                 }
             } header: {
                 Text("Evening")
@@ -122,6 +127,71 @@ struct RemindersView: View {
         .onChange(of: eveningOn) { _, isOn in reminderSwitched(isOn) }
         .onChange(of: morningTime) { _, _ in syncDaily() }
         .onChange(of: eveningTime) { _, _ in syncDaily() }
+        .onChange(of: morningExtras) { _, _ in syncDaily() }
+        .onChange(of: eveningExtras) { _, _ in syncDaily() }
+    }
+
+    // MARK: More times
+
+    /// The reminder's other times ("Time 2", "Time 3"…, each with − to remove it), and
+    /// "＋ Add another time" while there is room.
+    @ViewBuilder
+    private func moreTimes(_ stored: Binding<String>, after first: Double) -> some View {
+        let times = Self.times(stored.wrappedValue)
+        ForEach(times.indices, id: \.self) { index in
+            HStack(spacing: 10) {
+                Button {
+                    var all = times
+                    all.remove(at: index)
+                    withAnimation { stored.wrappedValue = Self.text(all) }
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.red.opacity(0.85))
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Remove time \(index + 2)")
+                DatePicker("Time \(index + 2)", selection: Binding(
+                    get: { Self.date(times[index]) },
+                    set: { date in
+                        var all = times
+                        all[index] = Self.seconds(date)
+                        stored.wrappedValue = Self.text(all)
+                    }
+                ), displayedComponents: .hourAndMinute)
+            }
+        }
+        if times.count + 1 < ReminderCenter.maxDailyTimes {
+            Button {
+                // Two hours after the latest time, wrapping round midnight.
+                let latest = ([first] + times).max() ?? first
+                let next = (latest + 2 * 3600).truncatingRemainder(dividingBy: 24 * 3600)
+                withAnimation { stored.wrappedValue = Self.text(times + [next]) }
+                Haptics.tap()
+            } label: {
+                Label("Add another time", systemImage: "plus.circle.fill")
+                    .font(.rounded(.body, weight: .semibold))
+                    .foregroundStyle(Palette.hotPink)
+            }
+        }
+    }
+
+    private static func times(_ text: String) -> [Double] {
+        text.split(separator: ",").compactMap { Double($0) }
+    }
+
+    private static func text(_ times: [Double]) -> String {
+        times.map { String(Int($0)) }.joined(separator: ",")
+    }
+
+    private static func date(_ seconds: Double) -> Date {
+        let minutes = Int(seconds) / 60
+        return Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now) ?? .now
+    }
+
+    private static func seconds(_ date: Date) -> Double {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return Double((parts.hour ?? 0) * 3600 + (parts.minute ?? 0) * 60)
     }
 
     private func timeBinding(_ seconds: Binding<Double>) -> Binding<Date> {
@@ -152,8 +222,8 @@ struct RemindersView: View {
     }
 
     private func syncDaily() {
-        ReminderCenter.scheduleDaily(.morning, enabled: morningOn, secondsFromMidnight: morningTime)
-        ReminderCenter.scheduleDaily(.evening, enabled: eveningOn, secondsFromMidnight: eveningTime)
+        ReminderCenter.scheduleDaily(.morning, enabled: morningOn, times: [morningTime] + Self.times(morningExtras))
+        ReminderCenter.scheduleDaily(.evening, enabled: eveningOn, times: [eveningTime] + Self.times(eveningExtras))
     }
 
     private func refreshStatus() async {

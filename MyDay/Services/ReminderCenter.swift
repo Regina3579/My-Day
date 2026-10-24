@@ -132,8 +132,14 @@ enum ReminderCenter {
 
     // MARK: Daily reminders
 
-    static func scheduleDaily(_ kind: Daily, enabled: Bool, secondsFromMidnight: Double) {
-        center.removePendingNotificationRequests(withIdentifiers: [kind.rawValue])
+    /// The most times a day one daily reminder can come.
+    static let maxDailyTimes = 5
+
+    /// Schedules a daily reminder at each of `times` (seconds from midnight), every day.
+    static func scheduleDaily(_ kind: Daily, enabled: Bool, times: [Double]) {
+        // The first time keeps the reminder's original id; more times get "-2", "-3"…
+        let ids = [kind.rawValue] + (2...maxDailyTimes).map { "\(kind.rawValue)-\($0)" }
+        center.removePendingNotificationRequests(withIdentifiers: ids)
         guard enabled else { return }
 
         Task {
@@ -146,12 +152,14 @@ enum ReminderCenter {
             content.body = kind.body
             content.sound = .default
 
-            let totalMinutes = Int(secondsFromMidnight) / 60
-            var parts = DateComponents()
-            parts.hour = totalMinutes / 60
-            parts.minute = totalMinutes % 60
-            let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: true)
-            try? await center.add(UNNotificationRequest(identifier: kind.rawValue, content: content, trigger: trigger))
+            for (id, seconds) in zip(ids, Set(times).sorted()) {
+                let totalMinutes = Int(seconds) / 60
+                var parts = DateComponents()
+                parts.hour = totalMinutes / 60
+                parts.minute = totalMinutes % 60
+                let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: true)
+                try? await center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+            }
         }
     }
 }

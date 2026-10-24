@@ -90,6 +90,9 @@ enum Prefs {
     static let morningTime = "morningReminderSeconds"
     static let eveningOn = "eveningReminderOn"
     static let eveningTime = "eveningReminderSeconds"
+    /// More times for the same reminder (seconds from midnight, comma separated), after the first.
+    static let morningExtraTimes = "morningReminderExtraSeconds"
+    static let eveningExtraTimes = "eveningReminderExtraSeconds"
     /// Set by earlier versions, which added example to-dos, a priority and a journal page.
     static let didSeedWelcome = "didSeedWelcomeContent"
     /// Set once the starter templates have been added to the store (see `TemplateLibrary`).
