@@ -261,6 +261,8 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsICloud = false
     /// The first-time iCloud tip on Settings, with a demo "Up to date" status ("settings-icloud-tip").
     @MainActor private static var settingsICloudTip = false
+    /// The privacy note before Health asks for the steps, over My Journal ("health-privacy").
+    @MainActor private static var healthPrivacy = false
     /// Scroll Settings to Tips, with Show tips again ("settings-tips").
     @MainActor private static var settingsTips = false
     /// Scroll Settings to Rate My Day ("settings-rate").
@@ -371,6 +373,12 @@ enum DebugLaunchRoute {
     static func takeSettingsICloud() -> Bool {
         defer { settingsICloud = false }
         return settingsICloud
+    }
+
+    @MainActor
+    static func takeHealthPrivacy() -> Bool {
+        defer { healthPrivacy = false }
+        return healthPrivacy
     }
 
     @MainActor
@@ -583,6 +591,9 @@ enum DebugLaunchRoute {
             journalMenu = true
             router.open(.journal)
         case "journal-menu-tip", "journal-lock-tip":
+            router.open(.journal)
+        case "health-privacy":
+            healthPrivacy = true
             router.open(.journal)
         case "journal-lock-offer":
             journalLockOffer = true

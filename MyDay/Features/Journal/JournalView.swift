@@ -46,6 +46,8 @@ struct JournalPagesHome: View {
     @State private var confirmEmptyTrash = false
     @State private var choosesTheme = false
     @AppStorage(Prefs.showSteps) private var showSteps = true
+    /// The privacy note before Health asks for the steps.
+    @State private var explainsSteps = false
     @State private var showsMenu = false
     /// The menu card has grown in (it pops from ⋮).
     @State private var menuShown = false
@@ -257,12 +259,23 @@ struct JournalPagesHome: View {
         .onAppear { router.setFullScreen(true, in: hostTab, hidingStatusBar: true) }
         .onDisappear { router.setFullScreen(false, in: hostTab, hidingStatusBar: true) }
         // The first time the pages show (after the opening picture), Health is asked for the
-        // steps on each page.
+        // steps on each page, after the privacy note says what that means.
         .task(id: isOpening) {
             guard !isOpening, showSteps else { return }
             try? await Task.sleep(for: .seconds(1))
-            await StepCounter.shared.requestAccess()
+            #if DEBUG
+            if DebugLaunchRoute.takeHealthPrivacy() {
+                explainsSteps = true
+                return
+            }
+            #endif
+            if await StepCounter.shared.needsPermission() {
+                explainsSteps = true
+            } else {
+                await StepCounter.shared.requestAccess()
+            }
         }
+        .healthPrivacyNote(isPresented: $explainsSteps)
     }
 
     // MARK: Layout

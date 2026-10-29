@@ -273,7 +273,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "My Day uses the camera when you take a photo for a to-do.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "My Day uses Face ID to keep your journal private.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "My Day shows the steps you walked each day on your journal pages. It only reads your step count and never changes anything in Health.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "My Day reads only your daily step count, to show it on your journal pages. No other health data is read, nothing in Health is ever changed, and your steps never leave your iPhone.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "My Day adds the name of the place you are to a journal page, only when you tap Use My Location.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "My Day listens when you add a to-do or a priority with your voice, or record a voice note for your journal.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "My Day turns your spoken words into a to-do or a priority. You always check it before it is added.";
@@ -309,7 +309,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "My Day uses the camera when you take a photo for a to-do.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "My Day uses Face ID to keep your journal private.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "My Day shows the steps you walked each day on your journal pages. It only reads your step count and never changes anything in Health.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "My Day reads only your daily step count, to show it on your journal pages. No other health data is read, nothing in Health is ever changed, and your steps never leave your iPhone.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "My Day adds the name of the place you are to a journal page, only when you tap Use My Location.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "My Day listens when you add a to-do or a priority with your voice, or record a voice note for your journal.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "My Day turns your spoken words into a to-do or a priority. You always check it before it is added.";

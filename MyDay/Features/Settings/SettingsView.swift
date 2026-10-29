@@ -22,6 +22,8 @@ struct SettingsView: View {
     @Environment(MyDayPro.self) private var pro
     @AppStorage(Prefs.journalLock) private var journalLock = false
     @AppStorage(Prefs.showSteps) private var showSteps = true
+    /// The privacy note before Health asks for the steps.
+    @State private var explainsSteps = false
     @AppStorage(Prefs.journalLockMethod) private var lockMethodRaw = JournalLockMethod.biometrics.rawValue
     @AppStorage(Prefs.didShowICloudTip) private var didShowICloudTip = false
     /// Where Settings → iCloud is, and the part of the screen the list shows (between the
@@ -143,7 +145,14 @@ struct SettingsView: View {
                             Label("Show my steps", systemImage: "figure.walk")
                         }
                         .onChange(of: showSteps) { _, isOn in
-                            if isOn { Task { await StepCounter.shared.requestAccess() } }
+                            guard isOn else { return }
+                            Task {
+                                if await StepCounter.shared.needsPermission() {
+                                    explainsSteps = true
+                                } else {
+                                    await StepCounter.shared.requestAccess()
+                                }
+                            }
                         }
                     }
                     Toggle(isOn: lockToggle) {
@@ -335,6 +344,7 @@ struct SettingsView: View {
             JournalLockSetupSheet(goal: goal)
         }
         .proOffer($proOffer)
+        .healthPrivacyNote(isPresented: $explainsSteps)
         .confirmationDialog("Clear finished to-dos and priorities?", isPresented: $confirmClearDone, titleVisibility: .visible) {
             Button("Clear finished items", role: .destructive, action: clearFinished)
         }

@@ -20,6 +20,19 @@ final class StepCounter {
     /// Goes up each time Health's answer may have changed, so the pages read their steps again.
     private(set) var permissionVersion = 0
 
+    /// The only thing My Day reads from Health.
+    private static let read: Set<HKObjectType> = [HKQuantityType(.stepCount)]
+
+    /// Whether Health has not asked for the steps yet, so `HealthPrivacyNote` shows first.
+    func needsPermission() async -> Bool {
+        guard isAvailable else { return false }
+        #if DEBUG
+        if DebugLaunchRoute.isScreenshotRun { return false }
+        #endif
+        let status = try? await store.statusForAuthorizationRequest(toShare: [], read: Self.read)
+        return status == .shouldRequest
+    }
+
     /// Asks Health for permission to read steps (Health's own sheet) whenever Health says it
     /// has not been asked yet, then has the pages read their steps again. Health never says
     /// whether reading was allowed; when it wasn't, the days simply have no steps.
@@ -28,10 +41,9 @@ final class StepCounter {
         #if DEBUG
         if DebugLaunchRoute.isScreenshotRun { return }
         #endif
-        let read: Set<HKObjectType> = [HKQuantityType(.stepCount)]
-        if let status = try? await store.statusForAuthorizationRequest(toShare: [], read: read),
+        if let status = try? await store.statusForAuthorizationRequest(toShare: [], read: Self.read),
            status == .shouldRequest {
-            try? await store.requestAuthorization(toShare: [], read: read)
+            try? await store.requestAuthorization(toShare: [], read: Self.read)
         }
         readAt = [:]
         permissionVersion += 1
