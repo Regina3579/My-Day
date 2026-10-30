@@ -35,7 +35,7 @@ App Store Connect → **Business** (*Agreements, Tax, and Banking*):
 ### Step 3. Websites you must have (Apple rejects the app without them)
 Apple requires a **Privacy Policy URL** (required for every app, and especially for apps that use HealthKit)
 and a **Support URL**. Free ways to host them: Google Sites, Notion (public page), or GitHub
-Pages.
+Pages (ready-made pages are in the `website/` folder: see Step 3 in the chat guide).
 1. Publish the **Privacy Policy** in Part 3 of this guide on a public page.
 2. Publish a simple **Support** page: the app name, a support e-mail, and a line such as
    "Questions or ideas? Write to us at …".
