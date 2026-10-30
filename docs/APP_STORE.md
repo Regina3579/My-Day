@@ -239,7 +239,7 @@ MY JOURNAL
 • Add photos, stickers, voice notes, the place and the weather
 • Journal templates: Gratitude, Daily Reflection, Dream Journal, Self-Care and more
 • See your daily steps from Apple Health on your pages (optional, read only)
-• Search and filter every page, and keep favourites
+• Search and filter every page, and keep favorites
 
 AND MUCH MORE
 • Calendar: every day's to-dos, priorities and journal page at a glance
