@@ -126,7 +126,7 @@ The App Store will show **"Data Not Collected"**.
 **Monetization → In-App Purchases** → **＋**:
 - Type **Non-Consumable**, Reference Name `My Day Pro Lifetime`, Product ID
   `com.regina3579.myday.pro.lifetime`.
-- **Price**: ₹2,499 (or your choice).
+- **Price**: ₹2,999.
 - Localization and Review Information from Part 3, plus the same screenshot.
 
 A first subscription or in-app purchase must be **submitted together with an app version**

@@ -193,7 +193,7 @@ struct ProPaywall: View {
         // Screenshot runs have no App Store: the design's prices.
         if DebugLaunchRoute.isScreenshotRun {
             return ["com.regina3579.myday.pro.yearly": "₹899.00", "com.regina3579.myday.pro.monthly": "₹99.00",
-                    "com.regina3579.myday.pro.lifetime": "₹2,499.00"][id]
+                    "com.regina3579.myday.pro.lifetime": "₹2,999.00"][id]
         }
         #endif
         return nil
