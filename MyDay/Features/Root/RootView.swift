@@ -1,0 +1,403 @@
+import SwiftUI
+import SwiftData
+import Combine
+import StoreKit
+
+/// Hosts the four tabs, the floating tab bar (hidden under full-screen pages), the Quick Add
+/// menu, the side menu, the "Enjoying My Day?" rating card and the app-wide sheets.
+struct RootView: View {
+    @AppStorage(Prefs.didShowQuickAddTip) private var didShowQuickAddTip = false
+    @State private var showsQuickAddTip = false
+    /// Where Add Journal and the Quick Add button are on screen, for the tip.
+    @State private var journalChipFrame = CGRect.zero
+    @State private var quickAddButtonFrame = CGRect.zero
+    @Environment(Router.self) private var router
+    @Environment(AppState.self) private var appState
+    @Environment(DataStore.self) private var store
+    @Environment(RatingPrompt.self) private var rating
+    @Environment(MyDayPro.self) private var pro
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
+    @AppStorage(Prefs.carryOver) private var carryOver = true
+
+    var body: some View {
+        GeometryReader { proxy in
+            let barBottom = TabBarLayout.bottomPadding(safeAreaBottom: proxy.safeAreaInsets.bottom)
+            let reserved = max(0, TabBarLayout.height + barBottom - proxy.safeAreaInsets.bottom) + 8
+
+            ZStack(alignment: .bottom) {
+                tabs(reserved: reserved)
+
+                if router.showsTabBar {
+                    BottomTabBar(selection: tabBinding) { tab in
+                        router.popToRoot(tab)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, barBottom)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .ignoresSafeArea(edges: .bottom)
+                    .transition(.move(edge: .bottom).combined(with: .opacity)
+                        .animation(.easeInOut(duration: 0.25)))
+                }
+
+                if showsQuickAdd {
+                    quickAddLayer(aboveBottom: barBottom + TabBarLayout.height + 40)
+                        .transition(.opacity.animation(.easeInOut(duration: 0.2)))
+                }
+
+                if router.isMenuOpen {
+                    Color.black.opacity(0.28)
+                        .ignoresSafeArea()
+                        .onTapGesture { closeMenu() }
+                        .transition(.opacity)
+                        .zIndex(1)
+                        .accessibilityLabel("Close menu")
+                        .accessibilityAddTraits(.isButton)
+
+                    SideMenuView(today: appState.today, close: { closeMenu() })
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .transition(.move(edge: .leading))
+                        .zIndex(2)
+                }
+
+                if rating.isShowing {
+                    RatingCard(onRate: rateNow, onLater: { rating.later() })
+                        .transition(.opacity)
+                        .zIndex(3)
+                }
+
+                if let badge = AchievementCenter.shared.showing {
+                    AchievementPopup(achievement: badge, onSeeAll: seeAllAchievements,
+                                     onClose: { AchievementCenter.shared.close() })
+                        .transition(.opacity)
+                        .zIndex(4)
+                }
+
+                if let target = router.iCloudTip {
+                    GeometryReader { tipProxy in
+                        ICloudTip(target: target.moved(from: tipProxy.frame(in: .global).origin),
+                                  size: tipProxy.size, onTry: syncFromICloudTip, onDismiss: closeICloudTip)
+                    }
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(3)
+                }
+            }
+        }
+        .background {
+            AchievementWatcher()
+            SharedCategoryWatcher()
+        }
+        .statusBarHidden(router.hidesStatusBar)
+        .sheet(item: sheetBinding) { sheet in
+            sheetContent(sheet)
+        }
+        .onChange(of: router.sheet == nil && !router.isMenuOpen) { _, isFree in
+            // A badge earned while a sheet was open pops up once it closes.
+            if isFree { AchievementCenter.shared.showNext() }
+        }
+        .onChange(of: SharedListStore.shared.listToOpen, initial: true) { _, target in
+            // An invitation was accepted: its list opens.
+            guard let target else { return }
+            SharedListStore.shared.listToOpen = nil
+            router.sheet = nil
+            router.isMenuOpen = false
+            if target == "lists" {
+                router.open(.sharedLists)
+            } else {
+                router.open(.sharedLists)
+                router.push(.sharedList(target), in: .home)
+            }
+        }
+        .onChange(of: router.tab) { _, _ in
+            router.isQuickAddOpen = false
+            router.iCloudTip = nil
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                refreshDay()
+                rating.noteActive()
+            case .background: appState.isJournalUnlocked = false
+            default: break
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            refreshDay()
+        }
+        .onChange(of: pro.isActive) { _, _ in
+            // The Reminder Sound is a Pro one, or back to Gentle Bloom: reminders already set
+            // take the sound that now applies.
+            ReminderCenter.syncAll(in: modelContext)
+        }
+        .onChange(of: store.syncStatus.imports) { _, _ in
+            // Changes came from iCloud: from another device, or everything coming back after
+            // My Day was installed again.
+            TemplateLibrary.removeDuplicateStarters(in: modelContext)
+            ReminderCenter.syncAll(in: modelContext)
+            ImportantDayReminders.syncAll(in: modelContext)
+        }
+        .task {
+            SampleContent.removeIfNeeded(in: modelContext)
+            TemplateLibrary.seedIfNeeded(in: modelContext)
+            JournalTrash.purgeExpired(in: modelContext)
+            #if DEBUG
+            DebugLaunchRoute.addDemoData(in: modelContext)
+            #endif
+            refreshDay()
+            // Each launch, so reminders set by an earlier version carry the current reminder sound.
+            ReminderCenter.syncAll(in: modelContext)
+            ImportantDayReminders.syncAll(in: modelContext)
+            rating.noteActive()
+            SharedListStore.shared.start()
+            AchievementCenter.shared.isScreenBusy = { [router] in
+                router.sheet != nil || router.isMenuOpen
+            }
+            rating.isScreenFree = { [router] in
+                router.sheet == nil && !router.isMenuOpen && !router.isQuickAddOpen && router.iCloudTip == nil
+            }
+            #if DEBUG
+            DebugLaunchRoute.apply(to: router, today: appState.today, context: modelContext)
+            if DebugLaunchRoute.takeRatingCard() {
+                // `rating-card`: the card over To-Dos, for the screenshot.
+                try? await Task.sleep(for: .seconds(1.5))
+                rating.preview()
+            }
+            #endif
+        }
+    }
+
+    // MARK: Tabs
+
+    private func tabs(reserved: CGFloat) -> some View {
+        ZStack {
+            NavigationStack(path: homePathBinding) {
+                HomeView(today: appState.today)
+                    .appDestinations()
+            }
+            .environment(\.hostTab, .home)
+            .tabLayer(visible: router.tab == .home)
+
+            NavigationStack(path: calendarPathBinding) {
+                CalendarView()
+                    .appDestinations()
+            }
+            .environment(\.hostTab, .calendar)
+            .tabLayer(visible: router.tab == .calendar)
+
+            NavigationStack {
+                InsightsView()
+            }
+            .environment(\.hostTab, .insights)
+            .tabLayer(visible: router.tab == .insights)
+
+            NavigationStack {
+                SettingsView()
+                    .appDestinations()
+            }
+            .environment(\.hostTab, .settings)
+            .tabLayer(visible: router.tab == .settings)
+        }
+        .environment(\.tabBarClearance, reserved)
+    }
+
+    // MARK: Quick Add
+
+    private var showsQuickAdd: Bool {
+        router.tab == .home && router.homePath.isEmpty
+    }
+
+    private func quickAddLayer(aboveBottom: CGFloat) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            if router.isQuickAddOpen, showsQuickAddTip {
+                GeometryReader { proxy in
+                    let origin = proxy.frame(in: .global).origin
+                    QuickAddTip(journalChip: journalChipFrame.offsetBy(dx: -origin.x, dy: -origin.y),
+                                button: quickAddButtonFrame.offsetBy(dx: -origin.x, dy: -origin.y),
+                                size: proxy.size) {
+                        setQuickAdd(open: false)
+                    }
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            } else if router.isQuickAddOpen {
+                // Tapping anywhere outside the menu closes it.
+                Color.black.opacity(0.15)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { setQuickAdd(open: false) }
+                    .transition(.opacity)
+                    .accessibilityLabel("Close quick add")
+                    .accessibilityAddTraits(.isButton)
+            }
+
+            VStack(alignment: .trailing, spacing: 16) {
+                if router.isQuickAddOpen {
+                    QuickAddMenu(
+                        onTask: { quickAdd(.newTask(appState.today)) },
+                        onPriority: { quickAdd(.newPriority(appState.today)) },
+                        onJournal: {
+                            setQuickAdd(open: false)
+                            router.writeInJournal(on: .now, context: modelContext,
+                                                  isUnlocked: appState.isJournalUnlocked)
+                        }
+                    ) { journalChipFrame = $0 }
+                    .transition(.scale(scale: 0.4, anchor: .bottomTrailing).combined(with: .opacity))
+                }
+                QuickAddButton(isOpen: router.isQuickAddOpen) {
+                    setQuickAdd(open: !router.isQuickAddOpen)
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { quickAddButtonFrame = $0 }
+            }
+            .padding(.trailing, 12)
+            .padding(.bottom, aboveBottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .ignoresSafeArea(edges: .bottom)
+        .onChange(of: router.isQuickAddOpen, initial: true) { _, open in
+            if open {
+                // The first time Quick Add opens on My Day, its tip points at the choices.
+                guard !didShowQuickAddTip else { return }
+                Task {
+                    try? await Task.sleep(for: .seconds(0.4))
+                    // About the menu just opened, so it needs only a short gap after another tip.
+                    guard router.isQuickAddOpen, !didShowQuickAddTip, journalChipFrame != .zero,
+                          TipPacer.mayShow(contextual: true) else { return }
+                    TipPacer.shown()
+                    withAnimation(.easeOut(duration: 0.25)) { showsQuickAddTip = true }
+                }
+            } else if showsQuickAddTip {
+                didShowQuickAddTip = true
+                showsQuickAddTip = false
+            }
+        }
+    }
+
+    private func setQuickAdd(open: Bool) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            router.isQuickAddOpen = open
+        }
+    }
+
+    private func quickAdd(_ sheet: AppSheet) {
+        setQuickAdd(open: false)
+        router.sheet = sheet
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: AppSheet) -> some View {
+        switch sheet {
+        case .newTask(let date):
+            NewTaskSheet(date: date)
+        case .newPriority(let date):
+            NewPrioritySheet(date: date)
+        case .newJournal(let date):
+            NewJournalEntrySheet(date: date)
+        case .editJournal(let entry):
+            NewJournalEntrySheet(entry: entry)
+        case .reminders:
+            NavigationStack {
+                RemindersView(showsDoneButton: true)
+            }
+        case .achievements:
+            NavigationStack {
+                AchievementsView()
+            }
+        }
+    }
+
+    // MARK: Bindings
+
+    private var tabBinding: Binding<AppTab> {
+        Binding(get: { router.tab }, set: { router.tab = $0 })
+    }
+
+    private var homePathBinding: Binding<NavigationPath> {
+        Binding(get: { router.homePath }, set: { router.homePath = $0 })
+    }
+
+    private var calendarPathBinding: Binding<NavigationPath> {
+        Binding(get: { router.calendarPath }, set: { router.calendarPath = $0 })
+    }
+
+    private var sheetBinding: Binding<AppSheet?> {
+        Binding(get: { router.sheet }, set: { router.sheet = $0 })
+    }
+
+    // MARK: Actions
+
+    private func closeMenu() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            router.isMenuOpen = false
+        }
+    }
+
+    /// The pop-up's See All Achievements: the pop-up goes, and every badge shows.
+    private func seeAllAchievements() {
+        AchievementCenter.shared.close()
+        router.sheet = .achievements
+    }
+
+    /// "Rate Now": the card goes, then Apple's page to rate My Day opens.
+    private func rateNow() {
+        rating.rated()
+        Task {
+            try? await Task.sleep(for: .seconds(0.45))
+            AppReview.open(openURL: openURL, requestReview: requestReview)
+        }
+    }
+
+    // MARK: iCloud tip
+
+    private func closeICloudTip() {
+        withAnimation(.easeOut(duration: 0.25)) { router.iCloudTip = nil }
+        Haptics.tap()
+    }
+
+    /// The glowing switch was tapped: the tip goes, and iCloud Sync turns on when it is off (as
+    /// the switch would). When it is already on, nothing else happens: no "Stop syncing?" question
+    /// right after a tip about keeping memories safe.
+    private func syncFromICloudTip() {
+        closeICloudTip()
+        guard !store.syncsWithICloud else { return }
+        // The store closes for a moment: nothing open may hold one of its items.
+        router.closeAll()
+        Task { await store.setSyncsWithICloud(true) }
+    }
+
+    private func refreshDay() {
+        let today = Date().startOfDay
+        if appState.today != today {
+            appState.today = today
+        }
+        if carryOver {
+            DayRollover.carryOver(into: today, context: modelContext)
+        }
+    }
+}
+
+private extension View {
+    /// Keeps every tab alive (so each keeps its navigation state) and shows one at a time.
+    /// Screens keep clear of the tab bar with `tabBarSafeArea()`.
+    func tabLayer(visible: Bool) -> some View {
+        self
+            .opacity(visible ? 1 : 0)
+            // The chosen tab always draws above the others.
+            .zIndex(visible ? 1 : 0)
+            .allowsHitTesting(visible)
+            .accessibilityHidden(!visible)
+    }
+}
+
+#Preview {
+    RootView()
+        .environment(Router())
+        .environment(AppState())
+        .environment(DataStore())
+        .environment(RatingPrompt())
+        .modelContainer(for: [TaskItem.self, Priority.self, JournalEntry.self, JournalPhoto.self, JournalVoiceNote.self,
+                              TaskTemplate.self],
+                        inMemory: true)
+}
