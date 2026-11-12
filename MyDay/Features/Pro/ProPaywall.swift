@@ -157,6 +157,13 @@ struct ProPaywall: View {
             }
             .font(.rounded(.footnote, weight: .medium))
             .foregroundStyle(Color(hex: 0x6B2150))
+            // What the chosen plan is, costs and how it renews (App Review guideline 3.1.2).
+            Text(planTerms)
+                .font(.rounded(.caption2))
+                .foregroundStyle(Palette.inkSoft)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 8)
             HStack(spacing: 10) {
                 link("Terms of Use") { openURL(MoreLinks.terms ?? Self.appleTerms) }
                 Text("|").foregroundStyle(Palette.inkSoft.opacity(0.5))
@@ -208,6 +215,19 @@ struct ProPaywall: View {
         if DebugLaunchRoute.isScreenshotRun { return "₹74.92/mo" }
         #endif
         return nil
+    }
+
+    /// The chosen plan's title, length and price, and how a subscription renews and is cancelled.
+    private var planTerms: String {
+        let amount = price(selected).map { " " + $0 } ?? ""
+        switch selected {
+        case MyDayPro.lifetimeID:
+            return "My Day Pro Lifetime:\(amount), a one-time purchase. Not a subscription; nothing renews."
+        case MyDayPro.monthlyID:
+            return "My Day Pro Monthly:\(amount) per month, auto-renewing. Payment is charged to your Apple Account. It renews unless cancelled at least 24 hours before the period ends. Manage or cancel in Settings › Apple Account › Subscriptions."
+        default:
+            return "My Day Pro Annual:\(amount) per year, auto-renewing. Payment is charged to your Apple Account. It renews unless cancelled at least 24 hours before the period ends. Manage or cancel in Settings › Apple Account › Subscriptions."
+        }
     }
 
     private var selectedSummary: String {

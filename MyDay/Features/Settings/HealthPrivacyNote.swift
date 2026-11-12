@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// Shown just before Apple Health asks for the steps: what My Day reads (only the day's step
-/// count), what it never does, and that nothing leaves the iPhone. Continue goes on to Health's
-/// own sheet; Not Now turns Show my steps off (Settings can turn it on again, and asks then).
+/// count), what it never does, and that nothing leaves the iPhone. Its only button, Continue,
+/// always goes on to Health's own sheet, where the person allows or declines (App Review
+/// guideline 5.1.1(iv): a message before a permission request must not offer a way out of it).
 struct HealthPrivacyNote: View {
     let onContinue: () -> Void
-    let onNotNow: () -> Void
 
     private struct Point: Identifiable {
         let icon: String
@@ -55,7 +55,8 @@ struct HealthPrivacyNote: View {
         .background(LinearGradient(colors: [Palette.petal, Palette.blush],
                                    startPoint: .top, endPoint: .bottom).ignoresSafeArea())
         .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+        .presentationDragIndicator(.hidden)
+        .interactiveDismissDisabled()
     }
 
     private var header: some View {
@@ -116,20 +117,16 @@ struct HealthPrivacyNote: View {
         VStack(spacing: 6) {
             Button("Continue", action: onContinue)
                 .buttonStyle(PillButtonStyle())
-            Button("Not Now", action: onNotNow)
-                .font(.rounded(.subheadline, weight: .semibold))
-                .foregroundStyle(Palette.inkSoft)
-                .frame(maxWidth: .infinity, minHeight: 44)
         }
         .padding(.horizontal, 22)
         .padding(.top, 10)
+        .padding(.bottom, 12)
         .background(Palette.blush.opacity(0.95).ignoresSafeArea())
     }
 }
 
 extension View {
-    /// Shows `HealthPrivacyNote` while `isPresented`. Continue then asks Health for the steps;
-    /// Not Now (or swiping the note away) turns Show my steps off.
+    /// Shows `HealthPrivacyNote` while `isPresented`. Continue then asks Health for the steps.
     func healthPrivacyNote(isPresented: Binding<Bool>) -> some View {
         modifier(HealthPrivacyNoteModifier(isPresented: isPresented))
     }
@@ -137,25 +134,13 @@ extension View {
 
 private struct HealthPrivacyNoteModifier: ViewModifier {
     @Binding var isPresented: Bool
-    @AppStorage(Prefs.showSteps) private var showSteps = true
-    /// Continue was tapped: once the note is gone, Health's own sheet shows.
-    @State private var continues = false
 
     func body(content: Content) -> some View {
+        // Once the note is gone, Health's own sheet shows.
         content.sheet(isPresented: $isPresented, onDismiss: {
-            if continues {
-                Task { await StepCounter.shared.requestAccess() }
-            } else {
-                showSteps = false
-            }
-            continues = false
+            Task { await StepCounter.shared.requestAccess() }
         }) {
-            HealthPrivacyNote(onContinue: {
-                continues = true
-                isPresented = false
-            }, onNotNow: {
-                isPresented = false
-            })
+            HealthPrivacyNote(onContinue: { isPresented = false })
         }
     }
 }
