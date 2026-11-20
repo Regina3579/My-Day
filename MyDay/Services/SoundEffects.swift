@@ -48,9 +48,8 @@ enum SoundEffects {
     /// Set while a voice note or spoken to-do or priority is being recorded.
     static var isRecording = false
 
-    private static var players: [Sound: AVAudioPlayer] = [:]
-    /// The reminder sound playing in Settings → Reminder Sound.
-    private static var previewPlayer: AVAudioPlayer?
+    /// Plays the sounds away from the main thread.
+    private static let audio = SoundPlayer()
 
     /// Whether the sound's switch in Settings is on (every switch is on unless turned off).
     static func isEnabled(_ sound: Sound) -> Bool {
@@ -60,7 +59,75 @@ enum SoundEffects {
 
     /// Loads every sound, so the first one plays without a delay.
     static func preload() {
-        for sound in Sound.allCases where players[sound] == nil {
+        audio.preload()
+    }
+
+    static func play(_ sound: Sound) {
+        guard isEnabled(sound), !isRecording else { return }
+        audio.play(sound)
+    }
+
+    /// Plays a reminder sound in Settings → Reminder Sound, stopping the one playing, if any.
+    /// It is loaded only then: Settings is the one place it plays from My Day.
+    static func preview(_ sound: ReminderSound) {
+        guard !isRecording, let url = sound.bundleURL else {
+            stopPreview()
+            return
+        }
+        audio.preview(url)
+    }
+
+    static func stopPreview() {
+        audio.stopPreview()
+    }
+}
+
+/// Loading, preparing and playing the sounds, and setting up the audio session, can wait on the
+/// audio hardware, so all of it runs in order on one background queue and the screen never waits
+/// for it. Its players are used only on that queue.
+private final class SoundPlayer: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.regina3579.myday.sounds", qos: .userInitiated)
+    private var players: [SoundEffects.Sound: AVAudioPlayer] = [:]
+    /// The reminder sound playing in Settings → Reminder Sound.
+    private var previewPlayer: AVAudioPlayer?
+
+    func preload() {
+        queue.async { self.loadAll() }
+    }
+
+    func play(_ sound: SoundEffects.Sound) {
+        queue.async {
+            self.activateSession()
+            self.loadAll()
+            guard let player = self.players[sound] else { return }
+            player.currentTime = 0
+            player.play()
+        }
+    }
+
+    func preview(_ url: URL) {
+        queue.async {
+            self.endPreview()
+            guard let player = try? AVAudioPlayer(contentsOf: url) else { return }
+            self.activateSession()
+            // As loud as Gentle Bloom's preview always was: the sounds are matched to it.
+            player.volume = 0.6
+            player.play()
+            self.previewPlayer = player
+        }
+    }
+
+    func stopPreview() {
+        queue.async { self.endPreview() }
+    }
+
+    private func endPreview() {
+        previewPlayer?.stop()
+        previewPlayer = nil
+    }
+
+    private func loadAll() {
+        for sound in SoundEffects.Sound.allCases where players[sound] == nil {
             let url = Bundle.main.url(forResource: sound.rawValue, withExtension: "wav")
                 ?? Bundle.main.url(forResource: sound.rawValue, withExtension: "wav", subdirectory: "Sounds")
             guard let url, let player = try? AVAudioPlayer(contentsOf: url) else { continue }
@@ -70,35 +137,9 @@ enum SoundEffects {
         }
     }
 
-    static func play(_ sound: Sound) {
-        guard isEnabled(sound), !isRecording else { return }
-        activateSession()
-        preload()
-        guard let player = players[sound] else { return }
-        player.currentTime = 0
-        player.play()
-    }
-
-    /// Plays a reminder sound in Settings → Reminder Sound, stopping the one playing, if any.
-    /// It is loaded only then: Settings is the one place it plays from My Day.
-    static func preview(_ sound: ReminderSound) {
-        stopPreview()
-        guard !isRecording, let url = sound.bundleURL, let player = try? AVAudioPlayer(contentsOf: url) else { return }
-        activateSession()
-        // As loud as Gentle Bloom's preview always was: the sounds are matched to it.
-        player.volume = 0.6
-        player.play()
-        previewPlayer = player
-    }
-
-    static func stopPreview() {
-        previewPlayer?.stop()
-        previewPlayer = nil
-    }
-
     /// Ambient: mixes with music and podcasts instead of stopping them, and stays quiet when the
     /// Silent switch is on.
-    private static func activateSession() {
+    private func activateSession() {
         let session = AVAudioSession.sharedInstance()
         if session.category != .ambient {
             try? session.setCategory(.ambient, mode: .default)
