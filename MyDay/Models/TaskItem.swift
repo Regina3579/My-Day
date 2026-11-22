@@ -115,6 +115,32 @@ enum TaskCategory: String, CaseIterable, Identifiable, Codable {
     static let core: [TaskCategory] = [.personal, .work, .health, .learning, .shopping]
     static let later: [TaskCategory] = [.entertainment, .hobbies, .finance, .appointments]
 
+    /// Every built-in category but Personal can be deleted (hidden); Personal is where the
+    /// to-dos of a deleted category go.
+    var canDelete: Bool { self != .personal }
+
+    /// The built-in categories the person deleted, from `Prefs.hiddenCategories`.
+    static func hidden(in stored: String) -> Set<TaskCategory> {
+        Set(stored.split(separator: ",").compactMap { TaskCategory(rawValue: String($0)) })
+    }
+
+    /// `stored` with `category` deleted too.
+    static func hiding(_ category: TaskCategory, in stored: String) -> String {
+        let all = hidden(in: stored).union([category])
+        return allCases.filter(all.contains).map(\.rawValue).joined(separator: ",")
+    }
+
+    /// The first five and the four added later, without the ones the person deleted.
+    static func visibleCore(hiding stored: String) -> [TaskCategory] {
+        let gone = hidden(in: stored)
+        return core.filter { !gone.contains($0) }
+    }
+
+    static func visibleLater(hiding stored: String) -> [TaskCategory] {
+        let gone = hidden(in: stored)
+        return later.filter { !gone.contains($0) }
+    }
+
     /// Reads a stored value, including the names used by earlier versions.
     init(storedValue: String) {
         switch storedValue {

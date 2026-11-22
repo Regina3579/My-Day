@@ -2,6 +2,8 @@ import Foundation
 
 /// UserDefaults keys used with `@AppStorage`.
 enum Prefs {
+    /// The built-in categories the person deleted (raw values, comma-separated).
+    static let hiddenCategories = "hiddenCategories"
     static let userName = "userName"
     static let carryOver = "carryOverUnfinishedTasks"
     static let showCompleted = "showCompletedTasks"

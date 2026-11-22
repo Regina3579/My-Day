@@ -128,7 +128,9 @@ struct TodayHeaderCard: View {
 // MARK: - Category filter
 
 /// "All · Personal · Work · Health · Learning · Shopping", then the categories the person
-/// added, then ＋ to add one. Press and hold an added category to delete it.
+/// added, then Entertainment · Hobbies · Finance · Appointments and ＋ to add one. Press and
+/// hold any category but All and Personal to delete it: its to-dos move to Personal. A
+/// built-in one is hidden (its name can be added again); an added one is removed.
 struct CategoryChipBar: View {
     @Binding var selection: CategoryChoice?
     /// The 👤+ button wears a crown: sharing a category is My Day Pro.
@@ -138,8 +140,10 @@ struct CategoryChipBar: View {
 
     @Environment(\.modelContext) private var context
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
+    @AppStorage(Prefs.hiddenCategories) private var hiddenCategories = ""
     @State private var showsNewCategory = false
-    @State private var pendingDelete: CustomCategory?
+    /// The category whose Delete was chosen, waiting for the person to confirm.
+    @State private var pendingDelete: CategoryChoice?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -188,22 +192,15 @@ struct CategoryChipBar: View {
                 CategoryChip(title: "All", icon: nil, tint: Palette.hotPink, isOn: selection == nil) {
                     selection = nil
                 }
-                ForEach(TaskCategory.core) { category in
-                    chip(.builtIn(category))
+                ForEach(TaskCategory.visibleCore(hiding: hiddenCategories)) { category in
+                    deletableChip(.builtIn(category))
                 }
                 ForEach(customs) { custom in
-                    chip(.custom(custom))
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                pendingDelete = custom
-                            } label: {
-                                Label("Delete Category", systemImage: "trash")
-                            }
-                        }
+                    deletableChip(.custom(custom))
                 }
                 // Entertainment, Hobbies, Finance and Appointments, after the person's own.
-                ForEach(TaskCategory.later) { category in
-                    chip(.builtIn(category))
+                ForEach(TaskCategory.visibleLater(hiding: hiddenCategories)) { category in
+                    deletableChip(.builtIn(category))
                 }
                 addChip
             }
@@ -216,11 +213,30 @@ struct CategoryChipBar: View {
                 withAnimation(.snappy) { selection = .custom(added) }
             }
         }
-        .confirmationDialog("Delete this category?", isPresented: deleteBinding, titleVisibility: .visible,
-                            presenting: pendingDelete) { custom in
-            Button("Delete “\(custom.name)”", role: .destructive) { delete(custom) }
-        } message: { _ in
-            Text("Its to-dos stay, in Personal.")
+    }
+
+    /// A chip with Delete Category on press and hold (not Personal, where to-dos go). The
+    /// question is attached to the chip itself, so on iPhone and iPad it points at the
+    /// category that was pressed and names it.
+    @ViewBuilder
+    private func deletableChip(_ choice: CategoryChoice) -> some View {
+        if case .builtIn(let builtIn) = choice, !builtIn.canDelete {
+            chip(choice)
+        } else {
+            chip(choice)
+                .contextMenu {
+                    Button(role: .destructive) {
+                        pendingDelete = choice
+                    } label: {
+                        Label("Delete “\(choice.label)”", systemImage: "trash")
+                    }
+                }
+                .confirmationDialog("Delete “\(choice.label)”?", isPresented: deleteBinding(for: choice),
+                                    titleVisibility: .visible) {
+                    Button("Delete “\(choice.label)”", role: .destructive) { delete(choice) }
+                } message: {
+                    Text("Its to-dos stay, in Personal.")
+                }
         }
     }
 
@@ -251,16 +267,35 @@ struct CategoryChipBar: View {
         .accessibilityLabel("Add a category")
     }
 
-    private func delete(_ custom: CustomCategory) {
-        if selection == .custom(custom) {
+    private func delete(_ choice: CategoryChoice) {
+        if selection == choice {
             selection = nil
         }
-        withAnimation(.snappy) { context.delete(custom) }
+        withAnimation(.snappy) {
+            switch choice {
+            case .custom(let custom):
+                // Its to-dos lose the link and show as Personal (`categoryRaw` stays "personal").
+                context.delete(custom)
+            case .builtIn(let builtIn):
+                moveToPersonal(builtIn)
+                hiddenCategories = TaskCategory.hiding(builtIn, in: hiddenCategories)
+            }
+        }
         Haptics.success()
     }
 
-    private var deleteBinding: Binding<Bool> {
-        Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })
+    /// A deleted built-in category's to-dos go to Personal.
+    private func moveToPersonal(_ category: TaskCategory) {
+        let raw = category.rawValue
+        let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { $0.categoryRaw == raw })
+        guard let tasks = try? context.fetch(descriptor) else { return }
+        for task in tasks where task.customCategory == nil {
+            task.category = .personal
+        }
+    }
+
+    private func deleteBinding(for choice: CategoryChoice) -> Binding<Bool> {
+        Binding(get: { pendingDelete == choice }, set: { if !$0, pendingDelete == choice { pendingDelete = nil } })
     }
 }
 

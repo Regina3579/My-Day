@@ -9,6 +9,7 @@ struct NewCategorySheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
+    @AppStorage(Prefs.hiddenCategories) private var hiddenCategories = ""
     @State private var name = ""
     @State private var emoji = "✨"
     /// Pink (the first colour) unless the person picks another.
@@ -25,7 +26,8 @@ struct NewCategorySheet: View {
     /// A built-in or added category already has this name.
     private var isTaken: Bool {
         let wanted = trimmedName.lowercased()
-        return TaskCategory.allCases.contains { $0.label.lowercased() == wanted }
+        let deleted = TaskCategory.hidden(in: hiddenCategories)
+        return TaskCategory.allCases.contains { !deleted.contains($0) && $0.label.lowercased() == wanted }
             || customs.contains { $0.name.trimmed.lowercased() == wanted }
     }
 
