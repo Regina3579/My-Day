@@ -19,6 +19,9 @@ final class TaskItem {
     var completedAt: Date?
     /// Shared by every occurrence of a repeating task.
     var seriesID: UUID = UUID()
+    /// The day's list runs from the lowest value to the highest. A new to-do takes minus the
+    /// time it was added, so it comes first, above the older ones (dragging a row renumbers
+    /// the day's to-dos from 0, which still keeps later new ones on top).
     var sortOrder: Double = 0
     /// Marked with the ☆ in its row; important to-dos are listed first.
     var isImportant: Bool = false
@@ -55,8 +58,13 @@ final class TaskItem {
         self.reminderDate = reminderEnabled ? reminderDate : nil
         self.repeatRaw = repeatOption.rawValue
         self.seriesID = seriesID
-        self.sortOrder = Date().timeIntervalSinceReferenceDate
+        self.sortOrder = TaskItem.newestFirstOrder()
         self.createdAt = Date()
+    }
+
+    /// A sort order that puts a to-do added now above every to-do already in the list.
+    static func newestFirstOrder(at date: Date = Date()) -> Double {
+        -date.timeIntervalSinceReferenceDate
     }
 
     var category: TaskCategory {

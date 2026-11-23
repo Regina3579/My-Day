@@ -45,12 +45,12 @@ enum TaskActions {
         delete(task, in: context)
     }
 
-    /// Adds one to-do per title to `day`, after the ones already there.
+    /// Adds one to-do per title to `day`, above the ones already there, in the order given.
     static func add(titles: [String], category: TaskCategory, to day: Date, in context: ModelContext) {
-        let base = Date().timeIntervalSinceReferenceDate
+        let top = TaskItem.newestFirstOrder()
         for (index, title) in titles.enumerated() {
             let task = TaskItem(title: title, category: category, date: day)
-            task.sortOrder = base + Double(index)
+            task.sortOrder = top - Double(titles.count - index)
             context.insert(task)
         }
     }
