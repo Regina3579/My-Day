@@ -428,7 +428,7 @@ struct TodoRow: View {
                     // the top say what each symbol means).
                     Text(task.title)
                         .strikethrough(task.isCompleted, color: tint.accent.opacity(0.7))
-                        .font(.rounded(.body, weight: .bold))
+                        .font(.rounded(.subheadline, weight: .bold))
                         .foregroundStyle(task.isCompleted ? Palette.inkSoft.opacity(0.75) : Palette.ink)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
