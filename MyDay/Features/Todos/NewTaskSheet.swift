@@ -1031,11 +1031,12 @@ struct CategoryPicker: View {
     var includesCustom = true
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
     @AppStorage(Prefs.hiddenCategories) private var hiddenCategories = ""
+    @AppStorage(Prefs.categoryOrder) private var categoryOrder = ""
 
     private var choices: [CategoryChoice] {
-        let core = TaskCategory.visibleCore(hiding: hiddenCategories).map(CategoryChoice.builtIn)
-        let later = TaskCategory.visibleLater(hiding: hiddenCategories).map(CategoryChoice.builtIn)
-        return includesCustom ? core + customs.map(CategoryChoice.custom) + later : core + later
+        let all = CategoryOrder.arrange(customs: customs, hidden: hiddenCategories, order: categoryOrder)
+        guard !includesCustom else { return all }
+        return all.filter { if case .builtIn = $0 { true } else { false } }
     }
 
     var body: some View {
@@ -1101,11 +1102,10 @@ struct CategoryMenuChip: View {
     @Binding var selection: CategoryChoice
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
     @AppStorage(Prefs.hiddenCategories) private var hiddenCategories = ""
+    @AppStorage(Prefs.categoryOrder) private var categoryOrder = ""
 
     private var choices: [CategoryChoice] {
-        TaskCategory.visibleCore(hiding: hiddenCategories).map(CategoryChoice.builtIn)
-            + customs.map(CategoryChoice.custom)
-            + TaskCategory.visibleLater(hiding: hiddenCategories).map(CategoryChoice.builtIn)
+        CategoryOrder.arrange(customs: customs, hidden: hiddenCategories, order: categoryOrder)
     }
 
     var body: some View {

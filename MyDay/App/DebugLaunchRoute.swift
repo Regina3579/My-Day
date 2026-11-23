@@ -263,6 +263,8 @@ enum DebugLaunchRoute {
     @MainActor private static var settingsICloudTip = false
     /// The privacy note before Health asks for the steps, over My Journal ("health-privacy").
     @MainActor private static var healthPrivacy = false
+    /// Reorder Categories, over Today's To-Dos ("todos-reorder").
+    @MainActor private static var reorderCategories = false
     /// Scroll Settings to Tips, with Show tips again ("settings-tips").
     @MainActor private static var settingsTips = false
     /// Scroll Settings to Rate My Day ("settings-rate").
@@ -379,6 +381,12 @@ enum DebugLaunchRoute {
     static func takeHealthPrivacy() -> Bool {
         defer { healthPrivacy = false }
         return healthPrivacy
+    }
+
+    @MainActor
+    static func takeReorderCategories() -> Bool {
+        defer { reorderCategories = false }
+        return reorderCategories
     }
 
     @MainActor
@@ -595,6 +603,9 @@ enum DebugLaunchRoute {
         case "health-privacy":
             healthPrivacy = true
             router.open(.journal)
+        case "todos-reorder":
+            reorderCategories = true
+            router.open(.todos(today))
         case "journal-lock-offer":
             journalLockOffer = true
             router.open(.journal)

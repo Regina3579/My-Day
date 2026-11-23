@@ -4,6 +4,8 @@ import Foundation
 enum Prefs {
     /// The built-in categories the person deleted (raw values, comma-separated).
     static let hiddenCategories = "hiddenCategories"
+    /// The order the person put the categories in (`CategoryChoice.key`s, comma-separated).
+    static let categoryOrder = "categoryOrder"
     static let userName = "userName"
     static let carryOver = "carryOverUnfinishedTasks"
     static let showCompleted = "showCompletedTasks"

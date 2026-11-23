@@ -115,6 +115,32 @@ enum CategoryChoice: Hashable {
     }
 }
 
+/// The order of the categories on the To-Dos screen and in every category picker. Until the
+/// person reorders them it is Personal · Work · Health · Learning · Shopping, the categories
+/// they added (oldest first), then Entertainment · Hobbies · Finance · Appointments. Deleted
+/// built-in categories are left out; a category added after reordering goes at the end.
+enum CategoryOrder {
+    static func arrange(customs: [CustomCategory], hidden: String, order: String) -> [CategoryChoice] {
+        let standard = TaskCategory.visibleCore(hiding: hidden).map(CategoryChoice.builtIn)
+            + customs.map(CategoryChoice.custom)
+            + TaskCategory.visibleLater(hiding: hidden).map(CategoryChoice.builtIn)
+        let saved = order.split(separator: ",").map(String.init)
+        guard !saved.isEmpty else { return standard }
+        var rank: [String: Int] = [:]
+        for (index, key) in saved.enumerated() where rank[key] == nil {
+            rank[key] = index
+        }
+        return standard.enumerated()
+            .sorted { (rank[$0.element.key] ?? Int.max, $0.offset) < (rank[$1.element.key] ?? Int.max, $1.offset) }
+            .map(\.element)
+    }
+
+    /// What `Prefs.categoryOrder` keeps for this order.
+    static func stored(_ choices: [CategoryChoice]) -> String {
+        choices.map(\.key).joined(separator: ",")
+    }
+}
+
 enum TaskCategory: String, CaseIterable, Identifiable, Codable {
     case personal, work, health, learning, shopping
     case entertainment, hobbies, finance, appointments

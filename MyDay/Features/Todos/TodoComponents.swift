@@ -127,10 +127,10 @@ struct TodayHeaderCard: View {
 
 // MARK: - Category filter
 
-/// "All · Personal · Work · Health · Learning · Shopping", then the categories the person
-/// added, then Entertainment · Hobbies · Finance · Appointments and ＋ to add one. Press and
-/// hold any category but All and Personal to delete it: its to-dos move to Personal. A
-/// built-in one is hidden (its name can be added again); an added one is removed.
+/// "All", the categories in the person's order (`CategoryOrder`), then ＋ to add one. Press
+/// and hold a category for Reorder Categories (drag them into any order) and, on any but
+/// Personal, Delete: its to-dos move to Personal. A deleted built-in category is hidden (its
+/// name can be added again); an added one is removed.
 struct CategoryChipBar: View {
     @Binding var selection: CategoryChoice?
     /// The 👤+ button wears a crown: sharing a category is My Day Pro.
@@ -141,7 +141,9 @@ struct CategoryChipBar: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \CustomCategory.createdAt) private var customs: [CustomCategory]
     @AppStorage(Prefs.hiddenCategories) private var hiddenCategories = ""
+    @AppStorage(Prefs.categoryOrder) private var categoryOrder = ""
     @State private var showsNewCategory = false
+    @State private var showsReorder = false
     /// The category whose Delete was chosen, waiting for the person to confirm.
     @State private var pendingDelete: CategoryChoice?
 
@@ -192,15 +194,8 @@ struct CategoryChipBar: View {
                 CategoryChip(title: "All", icon: nil, tint: Palette.hotPink, isOn: selection == nil) {
                     selection = nil
                 }
-                ForEach(TaskCategory.visibleCore(hiding: hiddenCategories)) { category in
-                    deletableChip(.builtIn(category))
-                }
-                ForEach(customs) { custom in
-                    deletableChip(.custom(custom))
-                }
-                // Entertainment, Hobbies, Finance and Appointments, after the person's own.
-                ForEach(TaskCategory.visibleLater(hiding: hiddenCategories)) { category in
-                    deletableChip(.builtIn(category))
+                ForEach(arranged, id: \.key) { choice in
+                    menuChip(choice)
                 }
                 addChip
             }
@@ -213,31 +208,56 @@ struct CategoryChipBar: View {
                 withAnimation(.snappy) { selection = .custom(added) }
             }
         }
+        #if DEBUG
+        .task {
+            if DebugLaunchRoute.takeReorderCategories() { showsReorder = true }
+        }
+        #endif
+        .sheet(isPresented: $showsReorder) {
+            let standard = CategoryOrder.arrange(customs: customs, hidden: hiddenCategories, order: "")
+            ReorderCategoriesSheet(categories: arranged, standard: standard) { reordered in
+                // Back in My Day's own order: forget the saved one, so new categories keep their usual place.
+                let isStandard = reordered.map(\.key) == standard.map(\.key)
+                withAnimation(.snappy) { categoryOrder = isStandard ? "" : CategoryOrder.stored(reordered) }
+            }
+        }
     }
 
-    /// A chip with Delete Category on press and hold (not Personal, where to-dos go). The
-    /// question is attached to the chip itself, so on iPhone and iPad it points at the
-    /// category that was pressed and names it.
-    @ViewBuilder
-    private func deletableChip(_ choice: CategoryChoice) -> some View {
-        if case .builtIn(let builtIn) = choice, !builtIn.canDelete {
-            chip(choice)
-        } else {
-            chip(choice)
-                .contextMenu {
+    /// The categories in the person's order.
+    private var arranged: [CategoryChoice] {
+        CategoryOrder.arrange(customs: customs, hidden: hiddenCategories, order: categoryOrder)
+    }
+
+    /// A chip with Reorder Categories and Delete on press and hold (no Delete on Personal,
+    /// where to-dos go). The delete question is attached to the chip itself, so on iPhone and
+    /// iPad it points at the category that was pressed and names it.
+    private func menuChip(_ choice: CategoryChoice) -> some View {
+        chip(choice)
+            .contextMenu {
+                Button {
+                    showsReorder = true
+                } label: {
+                    Label("Reorder Categories", systemImage: "arrow.left.arrow.right")
+                }
+                if canDelete(choice) {
                     Button(role: .destructive) {
                         pendingDelete = choice
                     } label: {
                         Label("Delete “\(choice.label)”", systemImage: "trash")
                     }
                 }
-                .confirmationDialog("Delete “\(choice.label)”?", isPresented: deleteBinding(for: choice),
-                                    titleVisibility: .visible) {
-                    Button("Delete “\(choice.label)”", role: .destructive) { delete(choice) }
-                } message: {
-                    Text("Its to-dos stay, in Personal.")
-                }
-        }
+            }
+            .confirmationDialog("Delete “\(choice.label)”?", isPresented: deleteBinding(for: choice),
+                                titleVisibility: .visible) {
+                Button("Delete “\(choice.label)”", role: .destructive) { delete(choice) }
+            } message: {
+                Text("Its to-dos stay, in Personal.")
+            }
+    }
+
+    private func canDelete(_ choice: CategoryChoice) -> Bool {
+        if case .builtIn(let builtIn) = choice { return builtIn.canDelete }
+        return true
     }
 
     private func chip(_ choice: CategoryChoice) -> some View {
