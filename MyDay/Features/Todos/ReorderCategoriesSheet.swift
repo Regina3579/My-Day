@@ -39,6 +39,14 @@ struct ReorderCategoriesSheet: View {
                 } footer: {
                     Text("Drag a category by its handle. The first one comes right after All.")
                 }
+
+                Section {
+                    Button("Reset to My Day's Order") {
+                        withAnimation(.snappy) { rows = standard }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .disabled(rows.map(\.key) == standard.map(\.key))
+                }
             }
             .environment(\.editMode, .constant(.active))
             .navigationTitle("Reorder Categories")
@@ -54,14 +62,9 @@ struct ReorderCategoriesSheet: View {
                     }
                     .fontWeight(.bold)
                 }
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Reset to My Day's Order") {
-                        withAnimation(.snappy) { rows = standard }
-                    }
-                    .disabled(rows.map(\.key) == standard.map(\.key))
-                }
             }
         }
         .presentationDetents([.medium, .large])
+        .presentationBackground(Color(hex: 0xFFF5F9))
     }
 }
